@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vault-desktop"
+version = "0.1.0"
+description = "Desktop client for the personal vault project"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+  { name = "Steven Druesne" }
+]
+dependencies = [
+  "PySide6>=6.8.0",
+  "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
