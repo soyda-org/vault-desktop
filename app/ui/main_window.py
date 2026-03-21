@@ -1,18 +1,21 @@
 from __future__ import annotations
 
+import json
+
 from PySide6.QtWidgets import (
     QFormLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
     QPushButton,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
 from app.core.config import DesktopSettings
 from app.core.session import DesktopSession, SessionStore
-from app.services.api_client import LoginPayload, VaultApiClient
+from app.services.api_client import LoginPayload, ObjectListResult, VaultApiClient
 
 
 class MainWindow(QMainWindow):
@@ -23,7 +26,7 @@ class MainWindow(QMainWindow):
         self.session_store = SessionStore()
 
         self.setWindowTitle(settings.app_name)
-        self.resize(720, 380)
+        self.resize(860, 620)
 
         self.status_label = QLabel("Press 'Probe API' or login.")
         self.status_label.setWordWrap(True)
@@ -53,6 +56,19 @@ class MainWindow(QMainWindow):
         self.logout_button = QPushButton("Logout")
         self.logout_button.clicked.connect(self.run_logout)
 
+        self.load_credentials_button = QPushButton("Load Credentials")
+        self.load_credentials_button.clicked.connect(self.load_credentials)
+
+        self.load_notes_button = QPushButton("Load Notes")
+        self.load_notes_button.clicked.connect(self.load_notes)
+
+        self.load_files_button = QPushButton("Load Files")
+        self.load_files_button.clicked.connect(self.load_files)
+
+        self.dashboard_output = QTextEdit()
+        self.dashboard_output.setReadOnly(True)
+        self.dashboard_output.setPlaceholderText("Dashboard output will appear here.")
+
         form_layout = QFormLayout()
         form_layout.addRow("Identifier", self.identifier_input)
         form_layout.addRow("Password", self.password_input)
@@ -67,8 +83,13 @@ class MainWindow(QMainWindow):
         layout.addLayout(form_layout)
         layout.addWidget(self.login_button)
         layout.addWidget(self.logout_button)
+        layout.addWidget(self.load_credentials_button)
+        layout.addWidget(self.load_notes_button)
+        layout.addWidget(self.load_files_button)
         layout.addWidget(self.status_label)
         layout.addWidget(self.session_label)
+        layout.addWidget(QLabel("Dashboard data"))
+        layout.addWidget(self.dashboard_output)
 
         container = QWidget()
         container.setLayout(layout)
@@ -140,7 +161,62 @@ class MainWindow(QMainWindow):
     def run_logout(self) -> None:
         self.session_store.clear()
         self.status_label.setText("Session cleared locally.")
+        self.dashboard_output.clear()
         self.refresh_session_label()
+
+    def load_credentials(self) -> None:
+        session = self._require_session()
+        if session is None:
+            return
+
+        result = self.api_client.fetch_credentials(
+            identifier=session.identifier,
+            access_token=session.access_token,
+        )
+        self._render_object_list("Credentials", result)
+
+    def load_notes(self) -> None:
+        session = self._require_session()
+        if session is None:
+            return
+
+        result = self.api_client.fetch_notes(
+            identifier=session.identifier,
+            access_token=session.access_token,
+        )
+        self._render_object_list("Notes", result)
+
+    def load_files(self) -> None:
+        session = self._require_session()
+        if session is None:
+            return
+
+        result = self.api_client.fetch_files(
+            identifier=session.identifier,
+            access_token=session.access_token,
+        )
+        self._render_object_list("Files", result)
+
+    def _require_session(self) -> DesktopSession | None:
+        session = self.session_store.current
+        if session is None:
+            self.status_label.setText("No active session. Login first.")
+            return None
+        return session
+
+    def _render_object_list(self, title: str, result: ObjectListResult) -> None:
+        if result.error:
+            self.dashboard_output.setPlainText(
+                f"{title} fetch failed.\nError: {result.error}"
+            )
+            return
+
+        pretty_items = json.dumps(result.items, indent=2)
+        self.dashboard_output.setPlainText(
+            f"{title} loaded successfully.\n"
+            f"Count: {len(result.items)}\n\n"
+            f"{pretty_items}"
+        )
 
     def refresh_session_label(self) -> None:
         if not self.session_store.is_authenticated():

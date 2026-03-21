@@ -33,6 +33,12 @@ class LoginResult:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class ObjectListResult:
+    items: list[dict]
+    error: str | None = None
+
+
 class VaultApiClient:
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
@@ -98,5 +104,45 @@ class VaultApiClient:
                 access_token=None,
                 refresh_token=None,
                 token_type=None,
+                error=str(exc),
+            )
+
+    def fetch_credentials(self, identifier: str, access_token: str | None = None) -> ObjectListResult:
+        return self._fetch_object_list(
+            f"/api/v1/dev/credentials/user/{identifier}",
+            access_token=access_token,
+        )
+
+    def fetch_notes(self, identifier: str, access_token: str | None = None) -> ObjectListResult:
+        return self._fetch_object_list(
+            f"/api/v1/dev/notes/user/{identifier}",
+            access_token=access_token,
+        )
+
+    def fetch_files(self, identifier: str, access_token: str | None = None) -> ObjectListResult:
+        return self._fetch_object_list(
+            f"/api/v1/dev/files/user/{identifier}",
+            access_token=access_token,
+        )
+
+    def _fetch_object_list(self, path: str, access_token: str | None = None) -> ObjectListResult:
+        try:
+            headers = {}
+            if access_token:
+                headers["Authorization"] = f"Bearer {access_token}"
+
+            with httpx.Client(base_url=self.base_url, timeout=10.0) as client:
+                response = client.get(path, headers=headers)
+
+            response.raise_for_status()
+            data = response.json()
+
+            return ObjectListResult(
+                items=data.get("items", []),
+                error=None,
+            )
+        except Exception as exc:
+            return ObjectListResult(
+                items=[],
                 error=str(exc),
             )
