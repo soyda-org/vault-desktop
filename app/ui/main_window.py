@@ -16,10 +16,18 @@ from PySide6.QtWidgets import (
 
 from app.core.config import DesktopSettings
 from app.core.session import DesktopSession, SessionStore
-from app.services.api_client import LoginPayload, ObjectListResult, VaultApiClient
+from app.services.api_client import (
+    LoginPayload,
+    ObjectDetailResult,
+    ObjectListResult,
+    VaultApiClient,
+)
 from app.ui.dashboard_formatters import (
+    format_credential_detail,
     format_credentials_items,
+    format_file_detail,
     format_files_items,
+    format_note_detail,
     format_notes_items,
 )
 
@@ -32,7 +40,7 @@ class MainWindow(QMainWindow):
         self.session_store = SessionStore()
 
         self.setWindowTitle(settings.app_name)
-        self.resize(980, 720)
+        self.resize(1080, 760)
 
         self.status_label = QLabel("Press 'Probe API' or login.")
         self.status_label.setWordWrap(True)
@@ -77,6 +85,24 @@ class MainWindow(QMainWindow):
         self.load_all_button = QPushButton("Load All")
         self.load_all_button.clicked.connect(self.load_all)
 
+        self.credential_id_input = QLineEdit()
+        self.credential_id_input.setPlaceholderText("Selected credential ID")
+
+        self.note_id_input = QLineEdit()
+        self.note_id_input.setPlaceholderText("Selected note ID")
+
+        self.file_id_input = QLineEdit()
+        self.file_id_input.setPlaceholderText("Selected file ID")
+
+        self.load_credential_detail_button = QPushButton("Load Selected Credential")
+        self.load_credential_detail_button.clicked.connect(self.load_credential_detail)
+
+        self.load_note_detail_button = QPushButton("Load Selected Note")
+        self.load_note_detail_button.clicked.connect(self.load_note_detail)
+
+        self.load_file_detail_button = QPushButton("Load Selected File")
+        self.load_file_detail_button.clicked.connect(self.load_file_detail)
+
         self.credentials_output = QTextEdit()
         self.credentials_output.setReadOnly(True)
         self.credentials_output.setPlaceholderText("Credentials output will appear here.")
@@ -90,9 +116,30 @@ class MainWindow(QMainWindow):
         self.files_output.setPlaceholderText("Files output will appear here.")
 
         self.tabs = QTabWidget()
-        self.tabs.addTab(self.credentials_output, "Credentials")
-        self.tabs.addTab(self.notes_output, "Notes")
-        self.tabs.addTab(self.files_output, "Files")
+        self.tabs.addTab(
+            self._build_tab(
+                self.credential_id_input,
+                self.load_credential_detail_button,
+                self.credentials_output,
+            ),
+            "Credentials",
+        )
+        self.tabs.addTab(
+            self._build_tab(
+                self.note_id_input,
+                self.load_note_detail_button,
+                self.notes_output,
+            ),
+            "Notes",
+        )
+        self.tabs.addTab(
+            self._build_tab(
+                self.file_id_input,
+                self.load_file_detail_button,
+                self.files_output,
+            ),
+            "Files",
+        )
 
         form_layout = QFormLayout()
         form_layout.addRow("Identifier", self.identifier_input)
@@ -129,6 +176,24 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
 
         self.refresh_session_label()
+
+    def _build_tab(
+        self,
+        id_input: QLineEdit,
+        detail_button: QPushButton,
+        output: QTextEdit,
+    ) -> QWidget:
+        controls_layout = QHBoxLayout()
+        controls_layout.addWidget(id_input)
+        controls_layout.addWidget(detail_button)
+
+        layout = QVBoxLayout()
+        layout.addLayout(controls_layout)
+        layout.addWidget(output)
+
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget
 
     def run_probe(self) -> None:
         result = self.api_client.probe()
@@ -194,6 +259,9 @@ class MainWindow(QMainWindow):
     def run_logout(self) -> None:
         self.session_store.clear()
         self.status_label.setText("Session cleared locally.")
+        self.credential_id_input.clear()
+        self.note_id_input.clear()
+        self.file_id_input.clear()
         self.credentials_output.clear()
         self.notes_output.clear()
         self.files_output.clear()
@@ -263,6 +331,57 @@ class MainWindow(QMainWindow):
 
         self.status_label.setText("Dashboard refresh completed.")
 
+    def load_credential_detail(self) -> None:
+        session = self._require_session()
+        if session is None:
+            return
+
+        credential_id = self.credential_id_input.text().strip()
+        if not credential_id:
+            self.status_label.setText("Provide a credential ID first.")
+            return
+
+        result = self.api_client.fetch_credential_detail(
+            identifier=session.identifier,
+            credential_id=credential_id,
+            access_token=session.access_token,
+        )
+        self._render_credential_detail(result)
+
+    def load_note_detail(self) -> None:
+        session = self._require_session()
+        if session is None:
+            return
+
+        note_id = self.note_id_input.text().strip()
+        if not note_id:
+            self.status_label.setText("Provide a note ID first.")
+            return
+
+        result = self.api_client.fetch_note_detail(
+            identifier=session.identifier,
+            note_id=note_id,
+            access_token=session.access_token,
+        )
+        self._render_note_detail(result)
+
+    def load_file_detail(self) -> None:
+        session = self._require_session()
+        if session is None:
+            return
+
+        file_id = self.file_id_input.text().strip()
+        if not file_id:
+            self.status_label.setText("Provide a file ID first.")
+            return
+
+        result = self.api_client.fetch_file_detail(
+            identifier=session.identifier,
+            file_id=file_id,
+            access_token=session.access_token,
+        )
+        self._render_file_detail(result)
+
     def _require_session(self) -> DesktopSession | None:
         session = self.session_store.current
         if session is None:
@@ -277,6 +396,11 @@ class MainWindow(QMainWindow):
             )
             return
 
+        if result.items and not self.credential_id_input.text().strip():
+            first_id = result.items[0].get("credential_id")
+            if first_id:
+                self.credential_id_input.setText(first_id)
+
         self.credentials_output.setPlainText(format_credentials_items(result.items))
 
     def _render_notes(self, result: ObjectListResult) -> None:
@@ -285,6 +409,11 @@ class MainWindow(QMainWindow):
                 f"Notes fetch failed.\nError: {result.error}"
             )
             return
+
+        if result.items and not self.note_id_input.text().strip():
+            first_id = result.items[0].get("note_id")
+            if first_id:
+                self.note_id_input.setText(first_id)
 
         self.notes_output.setPlainText(format_notes_items(result.items))
 
@@ -295,7 +424,42 @@ class MainWindow(QMainWindow):
             )
             return
 
+        if result.items and not self.file_id_input.text().strip():
+            first_id = result.items[0].get("file_id")
+            if first_id:
+                self.file_id_input.setText(first_id)
+
         self.files_output.setPlainText(format_files_items(result.items))
+
+    def _render_credential_detail(self, result: ObjectDetailResult) -> None:
+        if result.error:
+            self.credentials_output.setPlainText(
+                f"Credential detail fetch failed.\nError: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        self.credentials_output.setPlainText(format_credential_detail(item))
+
+    def _render_note_detail(self, result: ObjectDetailResult) -> None:
+        if result.error:
+            self.notes_output.setPlainText(
+                f"Note detail fetch failed.\nError: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        self.notes_output.setPlainText(format_note_detail(item))
+
+    def _render_file_detail(self, result: ObjectDetailResult) -> None:
+        if result.error:
+            self.files_output.setPlainText(
+                f"File detail fetch failed.\nError: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        self.files_output.setPlainText(format_file_detail(item))
 
     def refresh_session_label(self) -> None:
         if not self.session_store.is_authenticated():

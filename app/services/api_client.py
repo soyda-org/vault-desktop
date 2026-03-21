@@ -39,6 +39,12 @@ class ObjectListResult:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class ObjectDetailResult:
+    item: dict | None
+    error: str | None = None
+
+
 class VaultApiClient:
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
@@ -125,6 +131,39 @@ class VaultApiClient:
             access_token=access_token,
         )
 
+    def fetch_credential_detail(
+        self,
+        identifier: str,
+        credential_id: str,
+        access_token: str | None = None,
+    ) -> ObjectDetailResult:
+        return self._fetch_object_detail(
+            f"/api/v1/dev/credentials/user/{identifier}/{credential_id}",
+            access_token=access_token,
+        )
+
+    def fetch_note_detail(
+        self,
+        identifier: str,
+        note_id: str,
+        access_token: str | None = None,
+    ) -> ObjectDetailResult:
+        return self._fetch_object_detail(
+            f"/api/v1/dev/notes/user/{identifier}/{note_id}",
+            access_token=access_token,
+        )
+
+    def fetch_file_detail(
+        self,
+        identifier: str,
+        file_id: str,
+        access_token: str | None = None,
+    ) -> ObjectDetailResult:
+        return self._fetch_object_detail(
+            f"/api/v1/dev/files/user/{identifier}/{file_id}",
+            access_token=access_token,
+        )
+
     def _fetch_object_list(self, path: str, access_token: str | None = None) -> ObjectListResult:
         try:
             headers = {}
@@ -144,5 +183,27 @@ class VaultApiClient:
         except Exception as exc:
             return ObjectListResult(
                 items=[],
+                error=str(exc),
+            )
+
+    def _fetch_object_detail(self, path: str, access_token: str | None = None) -> ObjectDetailResult:
+        try:
+            headers = {}
+            if access_token:
+                headers["Authorization"] = f"Bearer {access_token}"
+
+            with httpx.Client(base_url=self.base_url, timeout=10.0) as client:
+                response = client.get(path, headers=headers)
+
+            response.raise_for_status()
+            data = response.json()
+
+            return ObjectDetailResult(
+                item=data,
+                error=None,
+            )
+        except Exception as exc:
+            return ObjectDetailResult(
+                item=None,
                 error=str(exc),
             )

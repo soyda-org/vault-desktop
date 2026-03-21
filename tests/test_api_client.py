@@ -2,6 +2,7 @@ from app.services.api_client import (
     ApiProbeResult,
     LoginPayload,
     LoginResult,
+    ObjectDetailResult,
     ObjectListResult,
     VaultApiClient,
 )
@@ -220,4 +221,79 @@ def test_fetch_files_success(monkeypatch) -> None:
     assert isinstance(result, ObjectListResult)
     assert len(result.items) == 1
     assert result.items[0]["file_id"] == "file_001"
+    assert result.error is None
+
+
+def test_fetch_credential_detail_success(monkeypatch) -> None:
+    responses = {
+        "/api/v1/dev/credentials/user/alice/cred_001": DummyResponse(
+            {
+                "credential_id": "cred_001",
+                "state": "active",
+                "current_version": 1,
+            }
+        )
+    }
+
+    def fake_client(*args, **kwargs):
+        return DummyClient(responses)
+
+    monkeypatch.setattr("app.services.api_client.httpx.Client", fake_client)
+
+    client = VaultApiClient("http://127.0.0.1:8000")
+    result = client.fetch_credential_detail("alice", "cred_001", access_token="access-token")
+
+    assert isinstance(result, ObjectDetailResult)
+    assert result.item is not None
+    assert result.item["credential_id"] == "cred_001"
+    assert result.error is None
+
+
+def test_fetch_note_detail_success(monkeypatch) -> None:
+    responses = {
+        "/api/v1/dev/notes/user/alice/note_001": DummyResponse(
+            {
+                "note_id": "note_001",
+                "note_type": "note",
+                "state": "active",
+            }
+        )
+    }
+
+    def fake_client(*args, **kwargs):
+        return DummyClient(responses)
+
+    monkeypatch.setattr("app.services.api_client.httpx.Client", fake_client)
+
+    client = VaultApiClient("http://127.0.0.1:8000")
+    result = client.fetch_note_detail("alice", "note_001", access_token="access-token")
+
+    assert isinstance(result, ObjectDetailResult)
+    assert result.item is not None
+    assert result.item["note_id"] == "note_001"
+    assert result.error is None
+
+
+def test_fetch_file_detail_success(monkeypatch) -> None:
+    responses = {
+        "/api/v1/dev/files/user/alice/file_001": DummyResponse(
+            {
+                "file_id": "file_001",
+                "state": "active",
+                "current_version": 1,
+            }
+        )
+    }
+
+    def fake_client(*args, **kwargs):
+        return DummyClient(responses)
+
+    monkeypatch.setattr("app.services.api_client.httpx.Client", fake_client)
+
+    client = VaultApiClient("http://127.0.0.1:8000")
+    result = client.fetch_file_detail("alice", "file_001", access_token="access-token")
+
+    assert isinstance(result, ObjectDetailResult)
+    assert result.item is not None
+    assert result.item["file_id"] == "file_001"
     assert result.error is None

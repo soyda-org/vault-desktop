@@ -13,6 +13,7 @@ This phase provides:
 - in-memory session state
 - post-login read-only dashboard fetches
 - tabbed dashboard layout for credentials, notes, and files
+- selected object detail fetches
 - config layer
 - test scaffold
 
@@ -20,6 +21,6 @@ This phase provides:
 
 - desktop client is separate from the backend API
 - local crypto and unlock flows will be added later
-- current UI supports backend probing, login, logout, and read-only dev fetches
+- current UI supports backend probing, login, logout, list fetches, and detail fetches
 - session state is currently kept in memory only
 - current dashboard fetches use backend dev routes and are not the final authenticated client contract

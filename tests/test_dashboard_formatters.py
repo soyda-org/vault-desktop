@@ -1,6 +1,9 @@
 from app.ui.dashboard_formatters import (
+    format_credential_detail,
     format_credentials_items,
+    format_file_detail,
     format_files_items,
+    format_note_detail,
     format_notes_items,
 )
 
@@ -59,3 +62,51 @@ def test_format_files_items_with_one_item() -> None:
 
     assert "file_001" in text
     assert "Current version: 1" in text
+
+
+def test_format_credential_detail() -> None:
+    text = format_credential_detail(
+        {
+            "credential_id": "cred_001",
+            "state": "active",
+            "current_version": 1,
+            "encrypted_payload": {"ciphertext_b64": "abc"},
+            "encryption_header": {"nonce_b64": "xyz"},
+        }
+    )
+
+    assert "Credential detail loaded successfully." in text
+    assert "cred_001" in text
+    assert "ciphertext_b64" in text
+
+
+def test_format_note_detail() -> None:
+    text = format_note_detail(
+        {
+            "note_id": "note_001",
+            "note_type": "note",
+            "state": "active",
+            "encrypted_payload": {"ciphertext_b64": "abc"},
+            "encryption_header": {"nonce_b64": "xyz"},
+        }
+    )
+
+    assert "Note detail loaded successfully." in text
+    assert "note_001" in text
+    assert "ciphertext_b64" in text
+
+
+def test_format_file_detail() -> None:
+    text = format_file_detail(
+        {
+            "file_id": "file_001",
+            "state": "active",
+            "encrypted_manifest": {"ciphertext_b64": "abc"},
+            "encryption_header": {"nonce_b64": "xyz"},
+            "blobs": [{"object_key": "files/x.bin"}],
+        }
+    )
+
+    assert "File detail loaded successfully." in text
+    assert "file_001" in text
+    assert "object_key" in text

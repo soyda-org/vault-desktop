@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 
 def format_credentials_items(items: list[dict]) -> str:
     if not items:
@@ -75,3 +77,58 @@ def format_files_items(items: list[dict]) -> str:
         )
 
     return "\n".join(lines).rstrip()
+
+
+def format_credential_detail(item: dict) -> str:
+    return (
+        "Credential detail loaded successfully.\n\n"
+        f"ID: {item.get('credential_id', '-')}\n"
+        f"User ID: {item.get('user_id', '-')}\n"
+        f"State: {item.get('state', '-')}\n"
+        f"Current version: {item.get('current_version', '-')}\n"
+        f"Created by device ID: {item.get('created_by_device_id', '-')}\n"
+        f"Created at: {item.get('created_at', '-')}\n\n"
+        "Encrypted metadata:\n"
+        f"{json.dumps(item.get('encrypted_metadata'), indent=2)}\n\n"
+        "Encrypted payload:\n"
+        f"{json.dumps(item.get('encrypted_payload'), indent=2)}\n\n"
+        "Encryption header:\n"
+        f"{json.dumps(item.get('encryption_header'), indent=2)}"
+    )
+
+
+def format_note_detail(item: dict) -> str:
+    return (
+        "Note detail loaded successfully.\n\n"
+        f"ID: {item.get('note_id', '-')}\n"
+        f"User ID: {item.get('user_id', '-')}\n"
+        f"Type: {item.get('note_type', '-')}\n"
+        f"State: {item.get('state', '-')}\n"
+        f"Current version: {item.get('current_version', '-')}\n"
+        f"Created by device ID: {item.get('created_by_device_id', '-')}\n"
+        f"Created at: {item.get('created_at', '-')}\n\n"
+        "Encrypted metadata:\n"
+        f"{json.dumps(item.get('encrypted_metadata'), indent=2)}\n\n"
+        "Encrypted payload:\n"
+        f"{json.dumps(item.get('encrypted_payload'), indent=2)}\n\n"
+        "Encryption header:\n"
+        f"{json.dumps(item.get('encryption_header'), indent=2)}"
+    )
+
+
+def format_file_detail(item: dict) -> str:
+    return (
+        "File detail loaded successfully.\n\n"
+        f"ID: {item.get('file_id', '-')}\n"
+        f"User ID: {item.get('user_id', '-')}\n"
+        f"State: {item.get('state', '-')}\n"
+        f"Current version: {item.get('current_version', '-')}\n"
+        f"Created by device ID: {item.get('created_by_device_id', '-')}\n"
+        f"Created at: {item.get('created_at', '-')}\n\n"
+        "Encrypted manifest:\n"
+        f"{json.dumps(item.get('encrypted_manifest'), indent=2)}\n\n"
+        "Encryption header:\n"
+        f"{json.dumps(item.get('encryption_header'), indent=2)}\n\n"
+        "Blobs:\n"
+        f"{json.dumps(item.get('blobs'), indent=2)}"
+    )
