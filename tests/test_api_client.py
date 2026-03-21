@@ -1,4 +1,4 @@
-from app.services.api_client import ApiProbeResult, VaultApiClient
+from app.services.api_client import ApiProbeResult, LoginPayload, LoginResult, VaultApiClient
 
 
 class DummyResponse:
@@ -25,6 +25,9 @@ class DummyClient:
         return False
 
     def get(self, path: str):
+        return self.responses[path]
+
+    def post(self, path: str, json: dict):
         return self.responses[path]
 
 
@@ -66,4 +69,65 @@ def test_probe_failure(monkeypatch) -> None:
     result = client.probe()
 
     assert result.health_ok is False
+    assert result.error is not None
+
+
+def test_login_success(monkeypatch) -> None:
+    responses = {
+        "/api/v1/auth/login": DummyResponse(
+            {
+                "user_id": "user_001",
+                "device_id": "device_001",
+                "session": {
+                    "session_id": "session_001",
+                },
+                "tokens": {
+                    "access_token": "access-token",
+                    "refresh_token": "refresh-token",
+                    "token_type": "bearer",
+                },
+            }
+        )
+    }
+
+    def fake_client(*args, **kwargs):
+        return DummyClient(responses)
+
+    monkeypatch.setattr("app.services.api_client.httpx.Client", fake_client)
+
+    client = VaultApiClient("http://127.0.0.1:8000")
+    result = client.login(
+        LoginPayload(
+            identifier="alice",
+            password="strong-password",
+            device_name="desktop-dev",
+            platform="linux",
+        )
+    )
+
+    assert isinstance(result, LoginResult)
+    assert result.user_id == "user_001"
+    assert result.device_id == "device_001"
+    assert result.session_id == "session_001"
+    assert result.access_token == "access-token"
+    assert result.error is None
+
+
+def test_login_failure(monkeypatch) -> None:
+    def fake_client(*args, **kwargs):
+        raise RuntimeError("login failed")
+
+    monkeypatch.setattr("app.services.api_client.httpx.Client", fake_client)
+
+    client = VaultApiClient("http://127.0.0.1:8000")
+    result = client.login(
+        LoginPayload(
+            identifier="alice",
+            password="wrong-password",
+            device_name="desktop-dev",
+            platform="linux",
+        )
+    )
+
+    assert result.user_id is None
     assert result.error is not None

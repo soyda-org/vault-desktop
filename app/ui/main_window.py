@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
+    QFormLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QPushButton,
     QVBoxLayout,
@@ -9,7 +11,8 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.config import DesktopSettings
-from app.services.api_client import VaultApiClient
+from app.core.session import DesktopSession, SessionStore
+from app.services.api_client import LoginPayload, VaultApiClient
 
 
 class MainWindow(QMainWindow):
@@ -17,26 +20,61 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.settings = settings
         self.api_client = VaultApiClient(settings.api_base_url)
+        self.session_store = SessionStore()
 
         self.setWindowTitle(settings.app_name)
-        self.resize(640, 240)
+        self.resize(720, 380)
 
-        self.status_label = QLabel("Press 'Probe API' to test backend connectivity.")
+        self.status_label = QLabel("Press 'Probe API' or login.")
         self.status_label.setWordWrap(True)
+
+        self.session_label = QLabel("No active session.")
+        self.session_label.setWordWrap(True)
+
+        self.identifier_input = QLineEdit()
+        self.identifier_input.setText("alice")
+
+        self.password_input = QLineEdit()
+        self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.password_input.setText("strong-password")
+
+        self.device_name_input = QLineEdit()
+        self.device_name_input.setText("vault-desktop-dev")
+
+        self.platform_input = QLineEdit()
+        self.platform_input.setText("linux")
 
         self.probe_button = QPushButton("Probe API")
         self.probe_button.clicked.connect(self.run_probe)
+
+        self.login_button = QPushButton("Login")
+        self.login_button.clicked.connect(self.run_login)
+
+        self.logout_button = QPushButton("Logout")
+        self.logout_button.clicked.connect(self.run_logout)
+
+        form_layout = QFormLayout()
+        form_layout.addRow("Identifier", self.identifier_input)
+        form_layout.addRow("Password", self.password_input)
+        form_layout.addRow("Device name", self.device_name_input)
+        form_layout.addRow("Platform", self.platform_input)
 
         layout = QVBoxLayout()
         layout.addWidget(QLabel(f"App: {settings.app_name}"))
         layout.addWidget(QLabel(f"Environment: {settings.environment}"))
         layout.addWidget(QLabel(f"API base URL: {settings.api_base_url}"))
         layout.addWidget(self.probe_button)
+        layout.addLayout(form_layout)
+        layout.addWidget(self.login_button)
+        layout.addWidget(self.logout_button)
         layout.addWidget(self.status_label)
+        layout.addWidget(self.session_label)
 
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
+
+        self.refresh_session_label()
 
     def run_probe(self) -> None:
         result = self.api_client.probe()
@@ -54,4 +92,68 @@ class MainWindow(QMainWindow):
             f"Project: {result.project_name}\n"
             f"Version: {result.version}\n"
             f"Environment: {result.environment}"
+        )
+
+    def run_login(self) -> None:
+        payload = LoginPayload(
+            identifier=self.identifier_input.text().strip(),
+            password=self.password_input.text(),
+            device_name=self.device_name_input.text().strip(),
+            platform=self.platform_input.text().strip(),
+        )
+        result = self.api_client.login(payload)
+
+        if result.error:
+            self.status_label.setText(
+                "Login failed.\n"
+                f"Error: {result.error}"
+            )
+            return
+
+        session = DesktopSession(
+            identifier=payload.identifier,
+            user_id=result.user_id or "",
+            device_id=result.device_id or "",
+            session_id=result.session_id or "",
+            access_token=result.access_token or "",
+            refresh_token=result.refresh_token or "",
+            token_type=result.token_type or "",
+        )
+        self.session_store.set_session(session)
+
+        access_preview = (
+            session.access_token[:24] + "..."
+            if len(session.access_token) > 24
+            else session.access_token
+        )
+
+        self.status_label.setText(
+            "Login succeeded.\n"
+            f"User ID: {session.user_id}\n"
+            f"Device ID: {session.device_id}\n"
+            f"Session ID: {session.session_id}\n"
+            f"Token type: {session.token_type}\n"
+            f"Access token preview: {access_preview}"
+        )
+        self.refresh_session_label()
+
+    def run_logout(self) -> None:
+        self.session_store.clear()
+        self.status_label.setText("Session cleared locally.")
+        self.refresh_session_label()
+
+    def refresh_session_label(self) -> None:
+        if not self.session_store.is_authenticated():
+            self.session_label.setText("No active session.")
+            return
+
+        session = self.session_store.current
+        assert session is not None
+
+        self.session_label.setText(
+            "Active session.\n"
+            f"Identifier: {session.identifier}\n"
+            f"User ID: {session.user_id}\n"
+            f"Device ID: {session.device_id}\n"
+            f"Session ID: {session.session_id}"
         )

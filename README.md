@@ -10,6 +10,8 @@ This phase provides:
 - PySide6 application shell
 - API connectivity client
 - simple status window
+- login form
+- in-memory session state
 - config layer
 - test scaffold
 
@@ -17,4 +19,5 @@ This phase provides:
 
 - desktop client is separate from the backend API
 - local crypto and unlock flows will be added later
-- current UI is only a connectivity and structure baseline
+- current UI supports backend probing and login only
+- session state is currently kept in memory only

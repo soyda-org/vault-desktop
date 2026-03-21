@@ -14,6 +14,25 @@ class ApiProbeResult:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class LoginPayload:
+    identifier: str
+    password: str
+    device_name: str
+    platform: str
+
+
+@dataclass(frozen=True)
+class LoginResult:
+    user_id: str | None
+    device_id: str | None
+    session_id: str | None
+    access_token: str | None
+    refresh_token: str | None
+    token_type: str | None
+    error: str | None = None
+
+
 class VaultApiClient:
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
@@ -43,5 +62,41 @@ class VaultApiClient:
                 project_name=None,
                 version=None,
                 environment=None,
+                error=str(exc),
+            )
+
+    def login(self, payload: LoginPayload) -> LoginResult:
+        try:
+            with httpx.Client(base_url=self.base_url, timeout=10.0) as client:
+                response = client.post(
+                    "/api/v1/auth/login",
+                    json={
+                        "identifier": payload.identifier,
+                        "password": payload.password,
+                        "device_name": payload.device_name,
+                        "platform": payload.platform,
+                    },
+                )
+
+            response.raise_for_status()
+            data = response.json()
+
+            return LoginResult(
+                user_id=data.get("user_id"),
+                device_id=data.get("device_id"),
+                session_id=(data.get("session") or {}).get("session_id"),
+                access_token=(data.get("tokens") or {}).get("access_token"),
+                refresh_token=(data.get("tokens") or {}).get("refresh_token"),
+                token_type=(data.get("tokens") or {}).get("token_type"),
+                error=None,
+            )
+        except Exception as exc:
+            return LoginResult(
+                user_id=None,
+                device_id=None,
+                session_id=None,
+                access_token=None,
+                refresh_token=None,
+                token_type=None,
                 error=str(exc),
             )
