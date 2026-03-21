@@ -15,13 +15,9 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.config import DesktopSettings
-from app.core.session import DesktopSession, SessionStore
-from app.services.api_client import (
-    LoginPayload,
-    ObjectDetailResult,
-    ObjectListResult,
-    VaultApiClient,
-)
+from app.core.session import DesktopSession
+from app.services.api_client import ObjectDetailResult, ObjectListResult, VaultApiClient
+from app.services.desktop_service import VaultDesktopService
 from app.ui.dashboard_formatters import (
     format_credential_detail,
     format_credentials_items,
@@ -36,8 +32,9 @@ class MainWindow(QMainWindow):
     def __init__(self, settings: DesktopSettings) -> None:
         super().__init__()
         self.settings = settings
-        self.api_client = VaultApiClient(settings.api_base_url)
-        self.session_store = SessionStore()
+        self.desktop_service = VaultDesktopService(
+            api_client=VaultApiClient(settings.api_base_url)
+        )
 
         self.setWindowTitle(settings.app_name)
         self.resize(1080, 760)
@@ -196,7 +193,7 @@ class MainWindow(QMainWindow):
         return widget
 
     def run_probe(self) -> None:
-        result = self.api_client.probe()
+        result = self.desktop_service.probe()
 
         if result.error:
             self.status_label.setText(
@@ -214,13 +211,12 @@ class MainWindow(QMainWindow):
         )
 
     def run_login(self) -> None:
-        payload = LoginPayload(
+        result = self.desktop_service.login(
             identifier=self.identifier_input.text().strip(),
             password=self.password_input.text(),
             device_name=self.device_name_input.text().strip(),
             platform=self.platform_input.text().strip(),
         )
-        result = self.api_client.login(payload)
 
         if result.error:
             self.status_label.setText(
@@ -229,16 +225,8 @@ class MainWindow(QMainWindow):
             )
             return
 
-        session = DesktopSession(
-            identifier=payload.identifier,
-            user_id=result.user_id or "",
-            device_id=result.device_id or "",
-            session_id=result.session_id or "",
-            access_token=result.access_token or "",
-            refresh_token=result.refresh_token or "",
-            token_type=result.token_type or "",
-        )
-        self.session_store.set_session(session)
+        session = self.desktop_service.current_session()
+        assert session is not None
 
         access_preview = (
             session.access_token[:24] + "..."
@@ -257,7 +245,7 @@ class MainWindow(QMainWindow):
         self.refresh_session_label()
 
     def run_logout(self) -> None:
-        self.session_store.clear()
+        self.desktop_service.logout()
         self.status_label.setText("Session cleared locally.")
         self.credential_id_input.clear()
         self.note_id_input.clear()
@@ -275,55 +263,21 @@ class MainWindow(QMainWindow):
             self.close()
 
     def load_credentials(self) -> None:
-        session = self._require_session()
-        if session is None:
-            return
-
-        result = self.api_client.fetch_credentials(
-            identifier=session.identifier,
-            access_token=session.access_token,
-        )
+        result = self.desktop_service.fetch_credentials()
         self._render_credentials(result)
 
     def load_notes(self) -> None:
-        session = self._require_session()
-        if session is None:
-            return
-
-        result = self.api_client.fetch_notes(
-            identifier=session.identifier,
-            access_token=session.access_token,
-        )
+        result = self.desktop_service.fetch_notes()
         self._render_notes(result)
 
     def load_files(self) -> None:
-        session = self._require_session()
-        if session is None:
-            return
-
-        result = self.api_client.fetch_files(
-            identifier=session.identifier,
-            access_token=session.access_token,
-        )
+        result = self.desktop_service.fetch_files()
         self._render_files(result)
 
     def load_all(self) -> None:
-        session = self._require_session()
-        if session is None:
-            return
-
-        credentials_result = self.api_client.fetch_credentials(
-            identifier=session.identifier,
-            access_token=session.access_token,
-        )
-        notes_result = self.api_client.fetch_notes(
-            identifier=session.identifier,
-            access_token=session.access_token,
-        )
-        files_result = self.api_client.fetch_files(
-            identifier=session.identifier,
-            access_token=session.access_token,
-        )
+        credentials_result = self.desktop_service.fetch_credentials()
+        notes_result = self.desktop_service.fetch_notes()
+        files_result = self.desktop_service.fetch_files()
 
         self._render_credentials(credentials_result)
         self._render_notes(notes_result)
@@ -332,62 +286,31 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Dashboard refresh completed.")
 
     def load_credential_detail(self) -> None:
-        session = self._require_session()
-        if session is None:
-            return
-
         credential_id = self.credential_id_input.text().strip()
         if not credential_id:
             self.status_label.setText("Provide a credential ID first.")
             return
 
-        result = self.api_client.fetch_credential_detail(
-            identifier=session.identifier,
-            credential_id=credential_id,
-            access_token=session.access_token,
-        )
+        result = self.desktop_service.fetch_credential_detail(credential_id)
         self._render_credential_detail(result)
 
     def load_note_detail(self) -> None:
-        session = self._require_session()
-        if session is None:
-            return
-
         note_id = self.note_id_input.text().strip()
         if not note_id:
             self.status_label.setText("Provide a note ID first.")
             return
 
-        result = self.api_client.fetch_note_detail(
-            identifier=session.identifier,
-            note_id=note_id,
-            access_token=session.access_token,
-        )
+        result = self.desktop_service.fetch_note_detail(note_id)
         self._render_note_detail(result)
 
     def load_file_detail(self) -> None:
-        session = self._require_session()
-        if session is None:
-            return
-
         file_id = self.file_id_input.text().strip()
         if not file_id:
             self.status_label.setText("Provide a file ID first.")
             return
 
-        result = self.api_client.fetch_file_detail(
-            identifier=session.identifier,
-            file_id=file_id,
-            access_token=session.access_token,
-        )
+        result = self.desktop_service.fetch_file_detail(file_id)
         self._render_file_detail(result)
-
-    def _require_session(self) -> DesktopSession | None:
-        session = self.session_store.current
-        if session is None:
-            self.status_label.setText("No active session. Login first.")
-            return None
-        return session
 
     def _render_credentials(self, result: ObjectListResult) -> None:
         if result.error:
@@ -462,11 +385,11 @@ class MainWindow(QMainWindow):
         self.files_output.setPlainText(format_file_detail(item))
 
     def refresh_session_label(self) -> None:
-        if not self.session_store.is_authenticated():
+        if not self.desktop_service.is_authenticated():
             self.session_label.setText("No active session.")
             return
 
-        session = self.session_store.current
+        session = self.desktop_service.current_session()
         assert session is not None
 
         self.session_label.setText(
