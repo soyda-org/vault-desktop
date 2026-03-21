@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
+    QApplication,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -61,6 +62,9 @@ class MainWindow(QMainWindow):
         self.logout_button = QPushButton("Logout")
         self.logout_button.clicked.connect(self.run_logout)
 
+        self.close_button = QPushButton("Close App")
+        self.close_button.clicked.connect(self.run_close)
+
         self.load_credentials_button = QPushButton("Load Credentials")
         self.load_credentials_button.clicked.connect(self.load_credentials)
 
@@ -99,6 +103,7 @@ class MainWindow(QMainWindow):
         auth_buttons_layout = QHBoxLayout()
         auth_buttons_layout.addWidget(self.login_button)
         auth_buttons_layout.addWidget(self.logout_button)
+        auth_buttons_layout.addWidget(self.close_button)
 
         dashboard_buttons_layout = QHBoxLayout()
         dashboard_buttons_layout.addWidget(self.load_credentials_button)
@@ -193,6 +198,13 @@ class MainWindow(QMainWindow):
         self.notes_output.clear()
         self.files_output.clear()
         self.refresh_session_label()
+
+    def run_close(self) -> None:
+        app = QApplication.instance()
+        if app is not None:
+            app.quit()
+        else:
+            self.close()
 
     def load_credentials(self) -> None:
         session = self._require_session()
