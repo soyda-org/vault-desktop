@@ -9,10 +9,10 @@ This phase provides:
 - desktop repository scaffold
 - PySide6 application shell
 - API connectivity client
-- simple status window
 - login form
 - in-memory session state
 - post-login read-only dashboard fetches
+- tabbed dashboard layout for credentials, notes, and files
 - config layer
 - test scaffold
 

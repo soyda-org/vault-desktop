@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import json
-
 from PySide6.QtWidgets import (
     QFormLayout,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
     QPushButton,
+    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -16,6 +16,11 @@ from PySide6.QtWidgets import (
 from app.core.config import DesktopSettings
 from app.core.session import DesktopSession, SessionStore
 from app.services.api_client import LoginPayload, ObjectListResult, VaultApiClient
+from app.ui.dashboard_formatters import (
+    format_credentials_items,
+    format_files_items,
+    format_notes_items,
+)
 
 
 class MainWindow(QMainWindow):
@@ -26,7 +31,7 @@ class MainWindow(QMainWindow):
         self.session_store = SessionStore()
 
         self.setWindowTitle(settings.app_name)
-        self.resize(860, 620)
+        self.resize(980, 720)
 
         self.status_label = QLabel("Press 'Probe API' or login.")
         self.status_label.setWordWrap(True)
@@ -65,9 +70,25 @@ class MainWindow(QMainWindow):
         self.load_files_button = QPushButton("Load Files")
         self.load_files_button.clicked.connect(self.load_files)
 
-        self.dashboard_output = QTextEdit()
-        self.dashboard_output.setReadOnly(True)
-        self.dashboard_output.setPlaceholderText("Dashboard output will appear here.")
+        self.load_all_button = QPushButton("Load All")
+        self.load_all_button.clicked.connect(self.load_all)
+
+        self.credentials_output = QTextEdit()
+        self.credentials_output.setReadOnly(True)
+        self.credentials_output.setPlaceholderText("Credentials output will appear here.")
+
+        self.notes_output = QTextEdit()
+        self.notes_output.setReadOnly(True)
+        self.notes_output.setPlaceholderText("Notes output will appear here.")
+
+        self.files_output = QTextEdit()
+        self.files_output.setReadOnly(True)
+        self.files_output.setPlaceholderText("Files output will appear here.")
+
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self.credentials_output, "Credentials")
+        self.tabs.addTab(self.notes_output, "Notes")
+        self.tabs.addTab(self.files_output, "Files")
 
         form_layout = QFormLayout()
         form_layout.addRow("Identifier", self.identifier_input)
@@ -75,21 +96,28 @@ class MainWindow(QMainWindow):
         form_layout.addRow("Device name", self.device_name_input)
         form_layout.addRow("Platform", self.platform_input)
 
+        auth_buttons_layout = QHBoxLayout()
+        auth_buttons_layout.addWidget(self.login_button)
+        auth_buttons_layout.addWidget(self.logout_button)
+
+        dashboard_buttons_layout = QHBoxLayout()
+        dashboard_buttons_layout.addWidget(self.load_credentials_button)
+        dashboard_buttons_layout.addWidget(self.load_notes_button)
+        dashboard_buttons_layout.addWidget(self.load_files_button)
+        dashboard_buttons_layout.addWidget(self.load_all_button)
+
         layout = QVBoxLayout()
         layout.addWidget(QLabel(f"App: {settings.app_name}"))
         layout.addWidget(QLabel(f"Environment: {settings.environment}"))
         layout.addWidget(QLabel(f"API base URL: {settings.api_base_url}"))
         layout.addWidget(self.probe_button)
         layout.addLayout(form_layout)
-        layout.addWidget(self.login_button)
-        layout.addWidget(self.logout_button)
-        layout.addWidget(self.load_credentials_button)
-        layout.addWidget(self.load_notes_button)
-        layout.addWidget(self.load_files_button)
+        layout.addLayout(auth_buttons_layout)
         layout.addWidget(self.status_label)
         layout.addWidget(self.session_label)
-        layout.addWidget(QLabel("Dashboard data"))
-        layout.addWidget(self.dashboard_output)
+        layout.addWidget(QLabel("Dashboard"))
+        layout.addLayout(dashboard_buttons_layout)
+        layout.addWidget(self.tabs)
 
         container = QWidget()
         container.setLayout(layout)
@@ -161,7 +189,9 @@ class MainWindow(QMainWindow):
     def run_logout(self) -> None:
         self.session_store.clear()
         self.status_label.setText("Session cleared locally.")
-        self.dashboard_output.clear()
+        self.credentials_output.clear()
+        self.notes_output.clear()
+        self.files_output.clear()
         self.refresh_session_label()
 
     def load_credentials(self) -> None:
@@ -173,7 +203,7 @@ class MainWindow(QMainWindow):
             identifier=session.identifier,
             access_token=session.access_token,
         )
-        self._render_object_list("Credentials", result)
+        self._render_credentials(result)
 
     def load_notes(self) -> None:
         session = self._require_session()
@@ -184,7 +214,7 @@ class MainWindow(QMainWindow):
             identifier=session.identifier,
             access_token=session.access_token,
         )
-        self._render_object_list("Notes", result)
+        self._render_notes(result)
 
     def load_files(self) -> None:
         session = self._require_session()
@@ -195,7 +225,31 @@ class MainWindow(QMainWindow):
             identifier=session.identifier,
             access_token=session.access_token,
         )
-        self._render_object_list("Files", result)
+        self._render_files(result)
+
+    def load_all(self) -> None:
+        session = self._require_session()
+        if session is None:
+            return
+
+        credentials_result = self.api_client.fetch_credentials(
+            identifier=session.identifier,
+            access_token=session.access_token,
+        )
+        notes_result = self.api_client.fetch_notes(
+            identifier=session.identifier,
+            access_token=session.access_token,
+        )
+        files_result = self.api_client.fetch_files(
+            identifier=session.identifier,
+            access_token=session.access_token,
+        )
+
+        self._render_credentials(credentials_result)
+        self._render_notes(notes_result)
+        self._render_files(files_result)
+
+        self.status_label.setText("Dashboard refresh completed.")
 
     def _require_session(self) -> DesktopSession | None:
         session = self.session_store.current
@@ -204,19 +258,32 @@ class MainWindow(QMainWindow):
             return None
         return session
 
-    def _render_object_list(self, title: str, result: ObjectListResult) -> None:
+    def _render_credentials(self, result: ObjectListResult) -> None:
         if result.error:
-            self.dashboard_output.setPlainText(
-                f"{title} fetch failed.\nError: {result.error}"
+            self.credentials_output.setPlainText(
+                f"Credentials fetch failed.\nError: {result.error}"
             )
             return
 
-        pretty_items = json.dumps(result.items, indent=2)
-        self.dashboard_output.setPlainText(
-            f"{title} loaded successfully.\n"
-            f"Count: {len(result.items)}\n\n"
-            f"{pretty_items}"
-        )
+        self.credentials_output.setPlainText(format_credentials_items(result.items))
+
+    def _render_notes(self, result: ObjectListResult) -> None:
+        if result.error:
+            self.notes_output.setPlainText(
+                f"Notes fetch failed.\nError: {result.error}"
+            )
+            return
+
+        self.notes_output.setPlainText(format_notes_items(result.items))
+
+    def _render_files(self, result: ObjectListResult) -> None:
+        if result.error:
+            self.files_output.setPlainText(
+                f"Files fetch failed.\nError: {result.error}"
+            )
+            return
+
+        self.files_output.setPlainText(format_files_items(result.items))
 
     def refresh_session_label(self) -> None:
         if not self.session_store.is_authenticated():
