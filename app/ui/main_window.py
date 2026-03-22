@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
@@ -22,7 +24,12 @@ from PySide6.QtWidgets import (
 
 from app.core.config import DesktopSettings
 from app.core.local_settings import LocalSettingsStore, PersistedUiSettings
-from app.services.api_client import ObjectDetailResult, ObjectListResult, VaultApiClient
+from app.services.api_client import (
+    ObjectCreateResult,
+    ObjectDetailResult,
+    ObjectListResult,
+    VaultApiClient,
+)
 from app.services.desktop_service import VaultDesktopService
 from app.services.password_generator import (
     PasswordGenerationError,
@@ -57,7 +64,7 @@ class MainWindow(QMainWindow):
         )
 
         self.setWindowTitle(settings.app_name)
-        self.resize(1180, 860)
+        self.resize(1280, 940)
 
         self.status_label = QLabel("Press 'Probe API' or login.")
         self.status_label.setWordWrap(True)
@@ -105,6 +112,12 @@ class MainWindow(QMainWindow):
         self.load_credential_detail_button = QPushButton("Load Selected Credential")
         self.load_credential_detail_button.clicked.connect(self.load_credential_detail)
 
+        self.create_credential_button = QPushButton("Create Credential")
+        self.create_credential_button.clicked.connect(self.run_create_credential)
+
+        self.reset_credential_payload_button = QPushButton("Reset Payload")
+        self.reset_credential_payload_button.clicked.connect(self.reset_credential_create_fields)
+
         self.load_note_detail_button = QPushButton("Load Selected Note")
         self.load_note_detail_button.clicked.connect(self.load_note_detail)
 
@@ -132,15 +145,28 @@ class MainWindow(QMainWindow):
         self.files_output.setReadOnly(True)
         self.files_output.setPlaceholderText("File details will appear here.")
 
-        self.tabs = QTabWidget()
-        self.tabs.addTab(
-            self._build_tab(
-                self.credentials_list,
-                self.load_credential_detail_button,
-                self.credentials_output,
-            ),
-            "Credentials",
+        self.credential_metadata_input = QTextEdit()
+        self.credential_metadata_input.setPlaceholderText(
+            'Optional JSON object, for example {"ciphertext_b64": "..."}'
         )
+        self.credential_metadata_input.setMaximumHeight(90)
+
+        self.credential_payload_input = QTextEdit()
+        self.credential_payload_input.setPlaceholderText(
+            'Required JSON object, for example {"ciphertext_b64": "..."}'
+        )
+        self.credential_payload_input.setMaximumHeight(90)
+
+        self.credential_header_input = QTextEdit()
+        self.credential_header_input.setPlaceholderText(
+            'Required JSON object, for example {"nonce_b64": "..."}'
+        )
+        self.credential_header_input.setMaximumHeight(90)
+
+        self.reset_credential_create_fields()
+
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self._build_credentials_tab(), "Credentials")
         self.tabs.addTab(
             self._build_tab(
                 self.notes_list,
@@ -254,6 +280,44 @@ class MainWindow(QMainWindow):
         splitter.addWidget(left_widget)
         splitter.addWidget(output)
         splitter.setSizes([360, 700])
+
+        layout = QVBoxLayout()
+        layout.addWidget(splitter)
+
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget
+
+    def _build_credentials_tab(self) -> QWidget:
+        create_buttons_layout = QHBoxLayout()
+        create_buttons_layout.addWidget(self.load_credential_detail_button)
+        create_buttons_layout.addWidget(self.create_credential_button)
+        create_buttons_layout.addWidget(self.reset_credential_payload_button)
+
+        create_hint_label = QLabel(
+            "Create uses the current 'Device name' value from the auth form above. "
+            "Until the crypto/UI flow is implemented, enter JSON objects manually."
+        )
+        create_hint_label.setWordWrap(True)
+
+        create_form_layout = QFormLayout()
+        create_form_layout.addRow("Metadata JSON", self.credential_metadata_input)
+        create_form_layout.addRow("Payload JSON", self.credential_payload_input)
+        create_form_layout.addRow("Header JSON", self.credential_header_input)
+
+        left_layout = QVBoxLayout()
+        left_layout.addLayout(create_buttons_layout)
+        left_layout.addWidget(create_hint_label)
+        left_layout.addLayout(create_form_layout)
+        left_layout.addWidget(self.credentials_list)
+
+        left_widget = QWidget()
+        left_widget.setLayout(left_layout)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(self.credentials_output)
+        splitter.setSizes([520, 680])
 
         layout = QVBoxLayout()
         layout.addWidget(splitter)
@@ -389,6 +453,57 @@ class MainWindow(QMainWindow):
         clipboard.setText(password)
         self.status_label.setText("Generated password copied to clipboard.")
 
+    def run_create_credential(self) -> None:
+        device_name = self.device_name_input.text().strip()
+        if not device_name:
+            self.status_label.setText(
+                "Credential creation failed.\n"
+                "Error: Device name is empty."
+            )
+            return
+
+        try:
+            encrypted_metadata = self._parse_json_object_text(
+                self.credential_metadata_input,
+                field_name="Metadata JSON",
+                allow_empty=True,
+            )
+            encrypted_payload = self._parse_json_object_text(
+                self.credential_payload_input,
+                field_name="Payload JSON",
+                allow_empty=False,
+            )
+            encryption_header = self._parse_json_object_text(
+                self.credential_header_input,
+                field_name="Header JSON",
+                allow_empty=False,
+            )
+        except ValueError as exc:
+            self.status_label.setText(
+                "Credential creation failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        result = self.desktop_service.create_credential(
+            device_name=device_name,
+            encrypted_metadata=encrypted_metadata,
+            encrypted_payload=encrypted_payload,
+            encryption_header=encryption_header,
+        )
+        self._render_credential_create_result(result)
+
+    def reset_credential_create_fields(self) -> None:
+        self.credential_metadata_input.setPlainText(
+            json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
+        )
+        self.credential_payload_input.setPlainText(
+            json.dumps({"ciphertext_b64": "ZGVm"}, indent=2)
+        )
+        self.credential_header_input.setPlainText(
+            json.dumps({"nonce_b64": "bm9uY2U="}, indent=2)
+        )
+
     def load_credentials(self) -> None:
         result = self.desktop_service.fetch_credentials()
         self._render_credentials(result)
@@ -497,6 +612,39 @@ class MainWindow(QMainWindow):
         if self.files_list.count() > 0:
             self.files_list.setCurrentRow(0)
 
+    def _render_credential_create_result(self, result: ObjectCreateResult) -> None:
+        if result.error:
+            self.credentials_output.setPlainText(
+                f"Credential create failed.\nError: {result.error}"
+            )
+            self.status_label.setText(
+                "Credential creation failed.\n"
+                f"Error: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        credential_id = str(item.get("credential_id", ""))
+
+        list_result = self.desktop_service.fetch_credentials()
+        self._render_credentials(list_result)
+
+        if credential_id and not list_result.error:
+            self._select_credential_item_by_id(credential_id)
+
+        self.credentials_output.setPlainText(format_credential_detail(item))
+        self.tabs.setCurrentIndex(0)
+
+        status_lines = [
+            "Credential created.",
+            f"Credential ID: {credential_id or '<unknown>'}",
+        ]
+        if list_result.error:
+            status_lines.append(f"List refresh warning: {list_result.error}")
+
+        self.status_label.setText("\n".join(status_lines))
+        self._save_ui_preferences()
+
     def _render_credential_detail(self, result: ObjectDetailResult) -> None:
         if result.error:
             self.credentials_output.setPlainText(
@@ -526,6 +674,42 @@ class MainWindow(QMainWindow):
 
         item = result.item or {}
         self.files_output.setPlainText(format_file_detail(item))
+
+    def _parse_json_object_text(
+        self,
+        widget: QTextEdit,
+        *,
+        field_name: str,
+        allow_empty: bool,
+    ) -> dict | None:
+        raw = widget.toPlainText().strip()
+        if not raw:
+            if allow_empty:
+                return None
+            raise ValueError(f"{field_name} is empty.")
+
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"{field_name} must be valid JSON. "
+                f"Error: {exc.msg} at line {exc.lineno} column {exc.colno}."
+            ) from exc
+
+        if parsed is None and allow_empty:
+            return None
+
+        if not isinstance(parsed, dict):
+            raise ValueError(f"{field_name} must be a JSON object.")
+
+        return parsed
+
+    def _select_credential_item_by_id(self, credential_id: str) -> None:
+        for index in range(self.credentials_list.count()):
+            item = self.credentials_list.item(index)
+            if item.data(Qt.ItemDataRole.UserRole) == credential_id:
+                self.credentials_list.setCurrentRow(index)
+                return
 
     def refresh_session_label(self) -> None:
         if not self.desktop_service.is_authenticated():
