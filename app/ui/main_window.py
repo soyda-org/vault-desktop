@@ -22,7 +22,7 @@ from app.core.config import DesktopSettings
 from app.core.local_settings import LocalSettingsStore, PersistedUiSettings
 from app.services.api_client import ObjectDetailResult, ObjectListResult, VaultApiClient
 from app.services.desktop_service import VaultDesktopService
-from app.services.vault_gateway import DevVaultGateway
+from app.services.vault_gateway import AuthenticatedVaultGateway
 from app.ui.dashboard_formatters import (
     credential_list_label,
     file_list_label,
@@ -46,7 +46,7 @@ class MainWindow(QMainWindow):
         self.api_client = VaultApiClient(self.persisted_ui_settings.api_base_url)
         self.desktop_service = VaultDesktopService(
             api_client=self.api_client,
-            vault_gateway=DevVaultGateway(self.api_client),
+            vault_gateway=AuthenticatedVaultGateway(self.api_client),
         )
 
         self.setWindowTitle(settings.app_name)

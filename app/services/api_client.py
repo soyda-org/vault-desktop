@@ -113,6 +113,7 @@ class VaultApiClient:
                 error=str(exc),
             )
 
+    # Legacy dev-route helpers kept for compatibility during transition.
     def fetch_credentials(self, identifier: str, access_token: str | None = None) -> ObjectListResult:
         return self._fetch_object_list(
             f"/api/v1/dev/credentials/user/{identifier}",
@@ -161,6 +162,55 @@ class VaultApiClient:
     ) -> ObjectDetailResult:
         return self._fetch_object_detail(
             f"/api/v1/dev/files/user/{identifier}/{file_id}",
+            access_token=access_token,
+        )
+
+    # New authenticated contract helpers.
+    def fetch_vault_credentials(self, access_token: str) -> ObjectListResult:
+        return self._fetch_object_list(
+            "/api/v1/vault/credentials",
+            access_token=access_token,
+        )
+
+    def fetch_vault_notes(self, access_token: str) -> ObjectListResult:
+        return self._fetch_object_list(
+            "/api/v1/vault/notes",
+            access_token=access_token,
+        )
+
+    def fetch_vault_files(self, access_token: str) -> ObjectListResult:
+        return self._fetch_object_list(
+            "/api/v1/vault/files",
+            access_token=access_token,
+        )
+
+    def fetch_vault_credential_detail(
+        self,
+        credential_id: str,
+        access_token: str,
+    ) -> ObjectDetailResult:
+        return self._fetch_object_detail(
+            f"/api/v1/vault/credentials/{credential_id}",
+            access_token=access_token,
+        )
+
+    def fetch_vault_note_detail(
+        self,
+        note_id: str,
+        access_token: str,
+    ) -> ObjectDetailResult:
+        return self._fetch_object_detail(
+            f"/api/v1/vault/notes/{note_id}",
+            access_token=access_token,
+        )
+
+    def fetch_vault_file_detail(
+        self,
+        file_id: str,
+        access_token: str,
+    ) -> ObjectDetailResult:
+        return self._fetch_object_detail(
+            f"/api/v1/vault/files/{file_id}",
             access_token=access_token,
         )
 
