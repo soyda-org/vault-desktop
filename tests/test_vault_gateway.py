@@ -1,5 +1,5 @@
 from app.core.session import DesktopSession
-from app.services.api_client import ObjectDetailResult, ObjectListResult
+from app.services.api_client import ObjectCreateResult, ObjectDetailResult, ObjectListResult
 from app.services.vault_gateway import AuthenticatedVaultGateway
 
 
@@ -30,6 +30,31 @@ class FakeApiClient:
     def fetch_file_detail(self, file_id, access_token=None):
         self.calls.append(("fetch_file_detail", file_id, access_token))
         return ObjectDetailResult(item={"file_id": file_id}, error=None, status_code=200)
+
+    def create_credential(
+        self,
+        *,
+        device_name,
+        encrypted_metadata,
+        encrypted_payload,
+        encryption_header,
+        access_token=None,
+    ):
+        self.calls.append(
+            (
+                "create_credential",
+                device_name,
+                encrypted_metadata,
+                encrypted_payload,
+                encryption_header,
+                access_token,
+            )
+        )
+        return ObjectCreateResult(
+            item={"credential_id": "cred_001"},
+            error=None,
+            status_code=201,
+        )
 
 
 def make_session() -> DesktopSession:
@@ -92,5 +117,30 @@ def test_authenticated_gateway_fetch_credential_detail_uses_access_token() -> No
     assert api_client.calls[0] == (
         "fetch_credential_detail",
         "cred_001",
+        "access-token",
+    )
+
+
+def test_authenticated_gateway_create_credential_uses_access_token() -> None:
+    api_client = FakeApiClient()
+    gateway = AuthenticatedVaultGateway(api_client)
+
+    result = gateway.create_credential(
+        make_session(),
+        device_name="desktop-dev",
+        encrypted_metadata={"ciphertext_b64": "YWJj"},
+        encrypted_payload={"ciphertext_b64": "ZGVm"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+    )
+
+    assert result.error is None
+    assert result.item is not None
+    assert result.item["credential_id"] == "cred_001"
+    assert api_client.calls[0] == (
+        "create_credential",
+        "desktop-dev",
+        {"ciphertext_b64": "YWJj"},
+        {"ciphertext_b64": "ZGVm"},
+        {"nonce_b64": "bm9uY2U="},
         "access-token",
     )

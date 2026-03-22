@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import Protocol
 
 from app.core.session import DesktopSession
-from app.services.api_client import ObjectDetailResult, ObjectListResult, VaultApiClient
+from app.services.api_client import (
+    ObjectCreateResult,
+    ObjectDetailResult,
+    ObjectListResult,
+    VaultApiClient,
+)
 
 
 class VaultGateway(Protocol):
@@ -13,6 +18,15 @@ class VaultGateway(Protocol):
     def fetch_credential_detail(self, session: DesktopSession, credential_id: str) -> ObjectDetailResult: ...
     def fetch_note_detail(self, session: DesktopSession, note_id: str) -> ObjectDetailResult: ...
     def fetch_file_detail(self, session: DesktopSession, file_id: str) -> ObjectDetailResult: ...
+    def create_credential(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult: ...
 
 
 class AuthenticatedVaultGateway:
@@ -55,6 +69,23 @@ class AuthenticatedVaultGateway:
     ) -> ObjectDetailResult:
         return self.api_client.fetch_file_detail(
             file_id,
+            access_token=session.access_token,
+        )
+
+    def create_credential(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self.api_client.create_credential(
+            device_name=device_name,
+            encrypted_metadata=encrypted_metadata,
+            encrypted_payload=encrypted_payload,
+            encryption_header=encryption_header,
             access_token=session.access_token,
         )
 

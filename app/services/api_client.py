@@ -67,6 +67,13 @@ class ObjectDetailResult:
     status_code: int | None = None
 
 
+@dataclass(frozen=True)
+class ObjectCreateResult:
+    item: dict[str, Any] | None
+    error: str | None = None
+    status_code: int | None = None
+
+
 class VaultApiClient:
     def __init__(self, base_url: str, timeout_seconds: float = 8.0) -> None:
         self.base_url = base_url.rstrip("/")
@@ -268,6 +275,26 @@ class VaultApiClient:
             access_token=access_token,
         )
 
+    def create_credential(
+        self,
+        *,
+        device_name: str,
+        encrypted_metadata: dict[str, Any] | None,
+        encrypted_payload: dict[str, Any],
+        encryption_header: dict[str, Any],
+        access_token: str | None = None,
+    ) -> ObjectCreateResult:
+        return self._post_object(
+            "/api/v1/vault/credentials",
+            payload={
+                "device_name": device_name,
+                "encrypted_metadata": encrypted_metadata,
+                "encrypted_payload": encrypted_payload,
+                "encryption_header": encryption_header,
+            },
+            access_token=access_token,
+        )
+
     def _fetch_list(self, path: str, *, access_token: str | None) -> ObjectListResult:
         try:
             response = httpx.get(
@@ -319,6 +346,41 @@ class VaultApiClient:
             )
         except httpx.RequestError as exc:
             return ObjectDetailResult(
+                item=None,
+                error=str(exc),
+                status_code=None,
+            )
+
+    def _post_object(
+        self,
+        path: str,
+        *,
+        payload: dict[str, Any],
+        access_token: str | None,
+    ) -> ObjectCreateResult:
+        try:
+            response = httpx.post(
+                f"{self.base_url}{path}",
+                json=payload,
+                headers=self._headers(access_token),
+                timeout=self.timeout_seconds,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            return ObjectCreateResult(
+                item=data,
+                error=None,
+                status_code=response.status_code,
+            )
+        except httpx.HTTPStatusError as exc:
+            return ObjectCreateResult(
+                item=None,
+                error=self._error_text(exc.response),
+                status_code=exc.response.status_code,
+            )
+        except httpx.RequestError as exc:
+            return ObjectCreateResult(
                 item=None,
                 error=str(exc),
                 status_code=None,

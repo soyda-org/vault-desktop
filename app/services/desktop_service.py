@@ -7,6 +7,7 @@ from app.services.api_client import (
     ApiProbeResult,
     LoginPayload,
     LoginResult,
+    ObjectCreateResult,
     ObjectDetailResult,
     ObjectListResult,
     RefreshPayload,
@@ -133,6 +134,24 @@ class VaultDesktopService:
             lambda session: self.vault_gateway.fetch_file_detail(session, file_id)
         )
 
+    def create_credential(
+        self,
+        *,
+        device_name: str,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.create_credential(
+                session,
+                device_name=device_name,
+                encrypted_metadata=encrypted_metadata,
+                encrypted_payload=encrypted_payload,
+                encryption_header=encryption_header,
+            )
+        )
+
     def _fetch_list_with_refresh(
         self,
         fetcher: Callable[[DesktopSession], ObjectListResult],
@@ -200,3 +219,37 @@ class VaultDesktopService:
             )
 
         return fetcher(refreshed_session)
+
+    def _execute_create_with_refresh(
+        self,
+        creator: Callable[[DesktopSession], ObjectCreateResult],
+    ) -> ObjectCreateResult:
+        session = self.session_store.current
+        if session is None:
+            return ObjectCreateResult(
+                item=None,
+                error="No active session.",
+                status_code=401,
+            )
+
+        result = creator(session)
+        if result.status_code != 401:
+            return result
+
+        refresh_result = self.refresh_session()
+        if refresh_result.error is not None:
+            return ObjectCreateResult(
+                item=None,
+                error=f"Session refresh failed. Error: {refresh_result.error}",
+                status_code=401,
+            )
+
+        refreshed_session = self.session_store.current
+        if refreshed_session is None:
+            return ObjectCreateResult(
+                item=None,
+                error="Session refresh failed.",
+                status_code=401,
+            )
+
+        return creator(refreshed_session)
