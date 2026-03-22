@@ -3,11 +3,15 @@ from app.services.api_client import (
     LoginResult,
     ObjectDetailResult,
     ObjectListResult,
+    RefreshResult,
 )
 from app.services.desktop_service import VaultDesktopService
 
 
 class FakeApiClient:
+    def __init__(self) -> None:
+        self.refresh_calls = 0
+
     def probe(self):
         return ApiProbeResult(
             health_ok=True,
@@ -15,6 +19,7 @@ class FakeApiClient:
             version="0.1.0",
             environment="dev",
             error=None,
+            status_code=200,
         )
 
     def login(self, payload):
@@ -22,10 +27,39 @@ class FakeApiClient:
             user_id="user_001",
             device_id="device_001",
             session_id="session_001",
-            access_token="access-token",
-            refresh_token="refresh-token",
+            access_token="access-token-1",
+            refresh_token="refresh-token-1",
             token_type="bearer",
             error=None,
+            status_code=200,
+        )
+
+    def refresh(self, payload):
+        self.refresh_calls += 1
+        return RefreshResult(
+            user_id="user_001",
+            device_id="device_001",
+            session_id="session_001",
+            access_token="access-token-2",
+            refresh_token="refresh-token-2",
+            token_type="bearer",
+            error=None,
+            status_code=200,
+        )
+
+
+class FailingRefreshApiClient(FakeApiClient):
+    def refresh(self, payload):
+        self.refresh_calls += 1
+        return RefreshResult(
+            user_id=None,
+            device_id=None,
+            session_id=None,
+            access_token=None,
+            refresh_token=None,
+            token_type=None,
+            error="Invalid refresh token",
+            status_code=401,
         )
 
 
@@ -34,45 +68,72 @@ class FakeVaultGateway:
         self.calls = []
 
     def fetch_credentials(self, session):
-        self.calls.append(("fetch_credentials", session.identifier))
+        self.calls.append(("fetch_credentials", session.access_token))
         return ObjectListResult(
             items=[{"credential_id": "cred_001"}],
             error=None,
+            status_code=200,
         )
 
     def fetch_notes(self, session):
-        self.calls.append(("fetch_notes", session.identifier))
+        self.calls.append(("fetch_notes", session.access_token))
         return ObjectListResult(
             items=[{"note_id": "note_001"}],
             error=None,
+            status_code=200,
         )
 
     def fetch_files(self, session):
-        self.calls.append(("fetch_files", session.identifier))
+        self.calls.append(("fetch_files", session.access_token))
         return ObjectListResult(
             items=[{"file_id": "file_001"}],
             error=None,
+            status_code=200,
         )
 
     def fetch_credential_detail(self, session, credential_id):
-        self.calls.append(("fetch_credential_detail", session.identifier, credential_id))
+        self.calls.append(("fetch_credential_detail", credential_id, session.access_token))
         return ObjectDetailResult(
             item={"credential_id": credential_id},
             error=None,
+            status_code=200,
         )
 
     def fetch_note_detail(self, session, note_id):
-        self.calls.append(("fetch_note_detail", session.identifier, note_id))
+        self.calls.append(("fetch_note_detail", note_id, session.access_token))
         return ObjectDetailResult(
             item={"note_id": note_id},
             error=None,
+            status_code=200,
         )
 
     def fetch_file_detail(self, session, file_id):
-        self.calls.append(("fetch_file_detail", session.identifier, file_id))
+        self.calls.append(("fetch_file_detail", file_id, session.access_token))
         return ObjectDetailResult(
             item={"file_id": file_id},
             error=None,
+            status_code=200,
+        )
+
+
+class One401ThenSuccessGateway(FakeVaultGateway):
+    def __init__(self) -> None:
+        super().__init__()
+        self.first = True
+
+    def fetch_credentials(self, session):
+        self.calls.append(("fetch_credentials", session.access_token))
+        if self.first:
+            self.first = False
+            return ObjectListResult(
+                items=[],
+                error="Unauthorized",
+                status_code=401,
+            )
+        return ObjectListResult(
+            items=[{"credential_id": "cred_001"}],
+            error=None,
+            status_code=200,
         )
 
 
@@ -93,6 +154,7 @@ def test_login_populates_session() -> None:
     assert service.is_authenticated() is True
     assert service.current_session() is not None
     assert service.current_session().identifier == "alice"
+    assert service.current_session().refresh_token == "refresh-token-1"
 
 
 def test_fetch_credentials_requires_session() -> None:
@@ -124,7 +186,7 @@ def test_fetch_credentials_uses_gateway_with_current_session() -> None:
 
     assert result.error is None
     assert result.items[0]["credential_id"] == "cred_001"
-    assert gateway.calls[0] == ("fetch_credentials", "alice")
+    assert gateway.calls[0] == ("fetch_credentials", "access-token-1")
 
 
 def test_fetch_file_detail_uses_gateway_with_current_session() -> None:
@@ -144,4 +206,53 @@ def test_fetch_file_detail_uses_gateway_with_current_session() -> None:
 
     assert result.error is None
     assert result.item["file_id"] == "file_001"
-    assert gateway.calls[0] == ("fetch_file_detail", "alice", "file_001")
+    assert gateway.calls[0] == ("fetch_file_detail", "file_001", "access-token-1")
+
+
+def test_fetch_credentials_refreshes_and_retries_once_after_401() -> None:
+    api_client = FakeApiClient()
+    gateway = One401ThenSuccessGateway()
+    service = VaultDesktopService(
+        api_client=api_client,
+        vault_gateway=gateway,
+    )
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    result = service.fetch_credentials()
+
+    assert result.error is None
+    assert result.items[0]["credential_id"] == "cred_001"
+    assert api_client.refresh_calls == 1
+    assert gateway.calls == [
+        ("fetch_credentials", "access-token-1"),
+        ("fetch_credentials", "access-token-2"),
+    ]
+    assert service.current_session().access_token == "access-token-2"
+    assert service.current_session().refresh_token == "refresh-token-2"
+
+
+def test_fetch_credentials_clears_session_when_refresh_fails() -> None:
+    api_client = FailingRefreshApiClient()
+    gateway = One401ThenSuccessGateway()
+    service = VaultDesktopService(
+        api_client=api_client,
+        vault_gateway=gateway,
+    )
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    result = service.fetch_credentials()
+
+    assert result.items == []
+    assert "Session refresh failed." in (result.error or "")
+    assert api_client.refresh_calls == 1
+    assert service.current_session() is None

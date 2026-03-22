@@ -1,59 +1,35 @@
 from app.core.session import DesktopSession
 from app.services.api_client import ObjectDetailResult, ObjectListResult
-from app.services.vault_gateway import AuthenticatedVaultGateway, DevVaultGateway
+from app.services.vault_gateway import AuthenticatedVaultGateway
 
 
 class FakeApiClient:
     def __init__(self) -> None:
         self.calls = []
 
-    def fetch_credentials(self, identifier, access_token=None):
-        self.calls.append(("fetch_credentials", identifier, access_token))
-        return ObjectListResult(items=[{"credential_id": "cred_001"}], error=None)
+    def fetch_credentials(self, access_token=None):
+        self.calls.append(("fetch_credentials", access_token))
+        return ObjectListResult(items=[{"credential_id": "cred_001"}], error=None, status_code=200)
 
-    def fetch_notes(self, identifier, access_token=None):
-        self.calls.append(("fetch_notes", identifier, access_token))
-        return ObjectListResult(items=[{"note_id": "note_001"}], error=None)
+    def fetch_notes(self, access_token=None):
+        self.calls.append(("fetch_notes", access_token))
+        return ObjectListResult(items=[{"note_id": "note_001"}], error=None, status_code=200)
 
-    def fetch_files(self, identifier, access_token=None):
-        self.calls.append(("fetch_files", identifier, access_token))
-        return ObjectListResult(items=[{"file_id": "file_001"}], error=None)
+    def fetch_files(self, access_token=None):
+        self.calls.append(("fetch_files", access_token))
+        return ObjectListResult(items=[{"file_id": "file_001"}], error=None, status_code=200)
 
-    def fetch_credential_detail(self, identifier, credential_id, access_token=None):
-        self.calls.append(("fetch_credential_detail", identifier, credential_id, access_token))
-        return ObjectDetailResult(item={"credential_id": credential_id}, error=None)
+    def fetch_credential_detail(self, credential_id, access_token=None):
+        self.calls.append(("fetch_credential_detail", credential_id, access_token))
+        return ObjectDetailResult(item={"credential_id": credential_id}, error=None, status_code=200)
 
-    def fetch_note_detail(self, identifier, note_id, access_token=None):
-        self.calls.append(("fetch_note_detail", identifier, note_id, access_token))
-        return ObjectDetailResult(item={"note_id": note_id}, error=None)
+    def fetch_note_detail(self, note_id, access_token=None):
+        self.calls.append(("fetch_note_detail", note_id, access_token))
+        return ObjectDetailResult(item={"note_id": note_id}, error=None, status_code=200)
 
-    def fetch_file_detail(self, identifier, file_id, access_token=None):
-        self.calls.append(("fetch_file_detail", identifier, file_id, access_token))
-        return ObjectDetailResult(item={"file_id": file_id}, error=None)
-
-    def fetch_vault_credentials(self, access_token):
-        self.calls.append(("fetch_vault_credentials", access_token))
-        return ObjectListResult(items=[{"credential_id": "cred_001"}], error=None)
-
-    def fetch_vault_notes(self, access_token):
-        self.calls.append(("fetch_vault_notes", access_token))
-        return ObjectListResult(items=[{"note_id": "note_001"}], error=None)
-
-    def fetch_vault_files(self, access_token):
-        self.calls.append(("fetch_vault_files", access_token))
-        return ObjectListResult(items=[{"file_id": "file_001"}], error=None)
-
-    def fetch_vault_credential_detail(self, credential_id, access_token):
-        self.calls.append(("fetch_vault_credential_detail", credential_id, access_token))
-        return ObjectDetailResult(item={"credential_id": credential_id}, error=None)
-
-    def fetch_vault_note_detail(self, note_id, access_token):
-        self.calls.append(("fetch_vault_note_detail", note_id, access_token))
-        return ObjectDetailResult(item={"note_id": note_id}, error=None)
-
-    def fetch_vault_file_detail(self, file_id, access_token):
-        self.calls.append(("fetch_vault_file_detail", file_id, access_token))
-        return ObjectDetailResult(item={"file_id": file_id}, error=None)
+    def fetch_file_detail(self, file_id, access_token=None):
+        self.calls.append(("fetch_file_detail", file_id, access_token))
+        return ObjectDetailResult(item={"file_id": file_id}, error=None, status_code=200)
 
 
 def make_session() -> DesktopSession:
@@ -68,31 +44,31 @@ def make_session() -> DesktopSession:
     )
 
 
-def test_dev_gateway_fetch_credentials_uses_session_identity() -> None:
+def test_authenticated_gateway_fetch_credentials_uses_access_token() -> None:
     api_client = FakeApiClient()
-    gateway = DevVaultGateway(api_client)
+    gateway = AuthenticatedVaultGateway(api_client)
 
     result = gateway.fetch_credentials(make_session())
 
     assert result.error is None
     assert result.items[0]["credential_id"] == "cred_001"
-    assert api_client.calls[0] == ("fetch_credentials", "alice", "access-token")
+    assert api_client.calls[0] == ("fetch_credentials", "access-token")
 
 
-def test_dev_gateway_fetch_notes_uses_session_identity() -> None:
+def test_authenticated_gateway_fetch_notes_uses_access_token() -> None:
     api_client = FakeApiClient()
-    gateway = DevVaultGateway(api_client)
+    gateway = AuthenticatedVaultGateway(api_client)
 
     result = gateway.fetch_notes(make_session())
 
     assert result.error is None
     assert result.items[0]["note_id"] == "note_001"
-    assert api_client.calls[0] == ("fetch_notes", "alice", "access-token")
+    assert api_client.calls[0] == ("fetch_notes", "access-token")
 
 
-def test_dev_gateway_fetch_file_detail_uses_session_and_id() -> None:
+def test_authenticated_gateway_fetch_file_detail_uses_access_token() -> None:
     api_client = FakeApiClient()
-    gateway = DevVaultGateway(api_client)
+    gateway = AuthenticatedVaultGateway(api_client)
 
     result = gateway.fetch_file_detail(make_session(), "file_001")
 
@@ -100,15 +76,14 @@ def test_dev_gateway_fetch_file_detail_uses_session_and_id() -> None:
     assert result.item["file_id"] == "file_001"
     assert api_client.calls[0] == (
         "fetch_file_detail",
-        "alice",
         "file_001",
         "access-token",
     )
 
 
-def test_dev_gateway_fetch_credential_detail_uses_session_and_id() -> None:
+def test_authenticated_gateway_fetch_credential_detail_uses_access_token() -> None:
     api_client = FakeApiClient()
-    gateway = DevVaultGateway(api_client)
+    gateway = AuthenticatedVaultGateway(api_client)
 
     result = gateway.fetch_credential_detail(make_session(), "cred_001")
 
@@ -116,33 +91,6 @@ def test_dev_gateway_fetch_credential_detail_uses_session_and_id() -> None:
     assert result.item["credential_id"] == "cred_001"
     assert api_client.calls[0] == (
         "fetch_credential_detail",
-        "alice",
         "cred_001",
-        "access-token",
-    )
-
-
-def test_authenticated_gateway_fetch_credentials_uses_token_only() -> None:
-    api_client = FakeApiClient()
-    gateway = AuthenticatedVaultGateway(api_client)
-
-    result = gateway.fetch_credentials(make_session())
-
-    assert result.error is None
-    assert result.items[0]["credential_id"] == "cred_001"
-    assert api_client.calls[0] == ("fetch_vault_credentials", "access-token")
-
-
-def test_authenticated_gateway_fetch_note_detail_uses_token_and_id() -> None:
-    api_client = FakeApiClient()
-    gateway = AuthenticatedVaultGateway(api_client)
-
-    result = gateway.fetch_note_detail(make_session(), "note_001")
-
-    assert result.error is None
-    assert result.item["note_id"] == "note_001"
-    assert api_client.calls[0] == (
-        "fetch_vault_note_detail",
-        "note_001",
         "access-token",
     )

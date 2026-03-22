@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
 
 
 @dataclass(frozen=True)
@@ -14,17 +16,37 @@ class DesktopSession:
 
 class SessionStore:
     def __init__(self) -> None:
-        self._current: DesktopSession | None = None
-
-    @property
-    def current(self) -> DesktopSession | None:
-        return self._current
-
-    def is_authenticated(self) -> bool:
-        return self._current is not None
+        self.current: DesktopSession | None = None
 
     def set_session(self, session: DesktopSession) -> None:
-        self._current = session
+        self.current = session
 
     def clear(self) -> None:
-        self._current = None
+        self.current = None
+
+    def is_authenticated(self) -> bool:
+        return self.current is not None and bool(self.current.access_token)
+
+    def rotate_tokens(
+        self,
+        *,
+        access_token: str,
+        refresh_token: str,
+        token_type: str,
+        session_id: str | None = None,
+        user_id: str | None = None,
+        device_id: str | None = None,
+    ) -> DesktopSession | None:
+        if self.current is None:
+            return None
+
+        self.current = replace(
+            self.current,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type=token_type,
+            session_id=session_id or self.current.session_id,
+            user_id=user_id or self.current.user_id,
+            device_id=device_id or self.current.device_id,
+        )
+        return self.current

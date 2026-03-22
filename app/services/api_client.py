@@ -1,17 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
-
-
-@dataclass(frozen=True)
-class ApiProbeResult:
-    health_ok: bool
-    project_name: str | None
-    version: str | None
-    environment: str | None
-    error: str | None = None
 
 
 @dataclass(frozen=True)
@@ -23,6 +15,21 @@ class LoginPayload:
 
 
 @dataclass(frozen=True)
+class RefreshPayload:
+    refresh_token: str
+
+
+@dataclass(frozen=True)
+class ApiProbeResult:
+    health_ok: bool
+    project_name: str | None
+    version: str | None
+    environment: str | None
+    error: str | None = None
+    status_code: int | None = None
+
+
+@dataclass(frozen=True)
 class LoginResult:
     user_id: str | None
     device_id: str | None
@@ -31,78 +38,140 @@ class LoginResult:
     refresh_token: str | None
     token_type: str | None
     error: str | None = None
+    status_code: int | None = None
+
+
+@dataclass(frozen=True)
+class RefreshResult:
+    user_id: str | None
+    device_id: str | None
+    session_id: str | None
+    access_token: str | None
+    refresh_token: str | None
+    token_type: str | None
+    error: str | None = None
+    status_code: int | None = None
 
 
 @dataclass(frozen=True)
 class ObjectListResult:
-    items: list[dict]
+    items: list[dict[str, Any]]
     error: str | None = None
+    status_code: int | None = None
 
 
 @dataclass(frozen=True)
 class ObjectDetailResult:
-    item: dict | None
+    item: dict[str, Any] | None
     error: str | None = None
+    status_code: int | None = None
 
 
 class VaultApiClient:
-    def __init__(self, base_url: str) -> None:
+    def __init__(self, base_url: str, timeout_seconds: float = 8.0) -> None:
         self.base_url = base_url.rstrip("/")
+        self.timeout_seconds = timeout_seconds
+
+    def _headers(self, access_token: str | None = None) -> dict[str, str]:
+        headers = {"Content-Type": "application/json"}
+        if access_token:
+            headers["Authorization"] = f"Bearer {access_token}"
+        return headers
+
+    def _error_text(self, response: httpx.Response) -> str:
+        try:
+            data = response.json()
+        except ValueError:
+            return response.text or f"HTTP {response.status_code}"
+
+        detail = data.get("detail")
+        if isinstance(detail, str) and detail.strip():
+            return detail
+        return response.text or f"HTTP {response.status_code}"
 
     def probe(self) -> ApiProbeResult:
         try:
-            with httpx.Client(base_url=self.base_url, timeout=5.0) as client:
-                health_response = client.get("/health")
-                system_response = client.get("/api/v1/system")
-
+            health_response = httpx.get(
+                f"{self.base_url}/health",
+                timeout=self.timeout_seconds,
+            )
             health_response.raise_for_status()
+
+            system_response = httpx.get(
+                f"{self.base_url}/api/v1/system",
+                timeout=self.timeout_seconds,
+            )
             system_response.raise_for_status()
 
-            health_json = health_response.json()
-            system_json = system_response.json()
+            system_data = system_response.json()
 
             return ApiProbeResult(
-                health_ok=health_json.get("status") == "ok",
-                project_name=system_json.get("project_name"),
-                version=system_json.get("version"),
-                environment=system_json.get("environment"),
+                health_ok=health_response.json().get("status") == "ok",
+                project_name=system_data.get("project_name"),
+                version=system_data.get("version"),
+                environment=system_data.get("environment"),
                 error=None,
+                status_code=system_response.status_code,
             )
-        except Exception as exc:
+        except httpx.HTTPStatusError as exc:
+            return ApiProbeResult(
+                health_ok=False,
+                project_name=None,
+                version=None,
+                environment=None,
+                error=self._error_text(exc.response),
+                status_code=exc.response.status_code,
+            )
+        except httpx.RequestError as exc:
             return ApiProbeResult(
                 health_ok=False,
                 project_name=None,
                 version=None,
                 environment=None,
                 error=str(exc),
+                status_code=None,
             )
 
     def login(self, payload: LoginPayload) -> LoginResult:
         try:
-            with httpx.Client(base_url=self.base_url, timeout=10.0) as client:
-                response = client.post(
-                    "/api/v1/auth/login",
-                    json={
-                        "identifier": payload.identifier,
-                        "password": payload.password,
-                        "device_name": payload.device_name,
-                        "platform": payload.platform,
-                    },
-                )
-
+            response = httpx.post(
+                f"{self.base_url}/api/v1/auth/login",
+                json={
+                    "identifier": payload.identifier,
+                    "password": payload.password,
+                    "device_name": payload.device_name,
+                    "platform": payload.platform,
+                },
+                headers=self._headers(),
+                timeout=self.timeout_seconds,
+            )
             response.raise_for_status()
             data = response.json()
+            session = data.get("session", {})
+            tokens = data.get("tokens", {})
 
             return LoginResult(
                 user_id=data.get("user_id"),
                 device_id=data.get("device_id"),
-                session_id=(data.get("session") or {}).get("session_id"),
-                access_token=(data.get("tokens") or {}).get("access_token"),
-                refresh_token=(data.get("tokens") or {}).get("refresh_token"),
-                token_type=(data.get("tokens") or {}).get("token_type"),
+                session_id=session.get("session_id"),
+                access_token=tokens.get("access_token"),
+                refresh_token=tokens.get("refresh_token"),
+                token_type=tokens.get("token_type"),
                 error=None,
+                status_code=response.status_code,
             )
-        except Exception as exc:
+        except httpx.HTTPStatusError as exc:
+            return LoginResult(
+                user_id=None,
+                device_id=None,
+                session_id=None,
+                access_token=None,
+                refresh_token=None,
+                token_type=None,
+                error=self._error_text(exc.response),
+                status_code=exc.response.status_code,
+            )
+        except httpx.RequestError as exc:
             return LoginResult(
                 user_id=None,
                 device_id=None,
@@ -111,149 +180,146 @@ class VaultApiClient:
                 refresh_token=None,
                 token_type=None,
                 error=str(exc),
+                status_code=None,
             )
 
-    # Legacy dev-route helpers kept for compatibility during transition.
-    def fetch_credentials(self, identifier: str, access_token: str | None = None) -> ObjectListResult:
-        return self._fetch_object_list(
-            f"/api/v1/dev/credentials/user/{identifier}",
-            access_token=access_token,
-        )
+    def refresh(self, payload: RefreshPayload) -> RefreshResult:
+        try:
+            response = httpx.post(
+                f"{self.base_url}/api/v1/auth/refresh",
+                json={"refresh_token": payload.refresh_token},
+                headers=self._headers(),
+                timeout=self.timeout_seconds,
+            )
+            response.raise_for_status()
+            data = response.json()
+            session = data.get("session", {})
+            tokens = data.get("tokens", {})
 
-    def fetch_notes(self, identifier: str, access_token: str | None = None) -> ObjectListResult:
-        return self._fetch_object_list(
-            f"/api/v1/dev/notes/user/{identifier}",
-            access_token=access_token,
-        )
+            return RefreshResult(
+                user_id=session.get("user_id"),
+                device_id=session.get("device_id"),
+                session_id=session.get("session_id"),
+                access_token=tokens.get("access_token"),
+                refresh_token=tokens.get("refresh_token"),
+                token_type=tokens.get("token_type"),
+                error=None,
+                status_code=response.status_code,
+            )
+        except httpx.HTTPStatusError as exc:
+            return RefreshResult(
+                user_id=None,
+                device_id=None,
+                session_id=None,
+                access_token=None,
+                refresh_token=None,
+                token_type=None,
+                error=self._error_text(exc.response),
+                status_code=exc.response.status_code,
+            )
+        except httpx.RequestError as exc:
+            return RefreshResult(
+                user_id=None,
+                device_id=None,
+                session_id=None,
+                access_token=None,
+                refresh_token=None,
+                token_type=None,
+                error=str(exc),
+                status_code=None,
+            )
 
-    def fetch_files(self, identifier: str, access_token: str | None = None) -> ObjectListResult:
-        return self._fetch_object_list(
-            f"/api/v1/dev/files/user/{identifier}",
-            access_token=access_token,
-        )
+    def fetch_credentials(self, access_token: str | None = None) -> ObjectListResult:
+        return self._fetch_list("/api/v1/vault/credentials", access_token=access_token)
+
+    def fetch_notes(self, access_token: str | None = None) -> ObjectListResult:
+        return self._fetch_list("/api/v1/vault/notes", access_token=access_token)
+
+    def fetch_files(self, access_token: str | None = None) -> ObjectListResult:
+        return self._fetch_list("/api/v1/vault/files", access_token=access_token)
 
     def fetch_credential_detail(
         self,
-        identifier: str,
         credential_id: str,
         access_token: str | None = None,
     ) -> ObjectDetailResult:
-        return self._fetch_object_detail(
-            f"/api/v1/dev/credentials/user/{identifier}/{credential_id}",
+        return self._fetch_detail(
+            f"/api/v1/vault/credentials/{credential_id}",
             access_token=access_token,
         )
 
     def fetch_note_detail(
         self,
-        identifier: str,
         note_id: str,
         access_token: str | None = None,
     ) -> ObjectDetailResult:
-        return self._fetch_object_detail(
-            f"/api/v1/dev/notes/user/{identifier}/{note_id}",
+        return self._fetch_detail(
+            f"/api/v1/vault/notes/{note_id}",
             access_token=access_token,
         )
 
     def fetch_file_detail(
         self,
-        identifier: str,
         file_id: str,
         access_token: str | None = None,
     ) -> ObjectDetailResult:
-        return self._fetch_object_detail(
-            f"/api/v1/dev/files/user/{identifier}/{file_id}",
-            access_token=access_token,
-        )
-
-    # New authenticated contract helpers.
-    def fetch_vault_credentials(self, access_token: str) -> ObjectListResult:
-        return self._fetch_object_list(
-            "/api/v1/vault/credentials",
-            access_token=access_token,
-        )
-
-    def fetch_vault_notes(self, access_token: str) -> ObjectListResult:
-        return self._fetch_object_list(
-            "/api/v1/vault/notes",
-            access_token=access_token,
-        )
-
-    def fetch_vault_files(self, access_token: str) -> ObjectListResult:
-        return self._fetch_object_list(
-            "/api/v1/vault/files",
-            access_token=access_token,
-        )
-
-    def fetch_vault_credential_detail(
-        self,
-        credential_id: str,
-        access_token: str,
-    ) -> ObjectDetailResult:
-        return self._fetch_object_detail(
-            f"/api/v1/vault/credentials/{credential_id}",
-            access_token=access_token,
-        )
-
-    def fetch_vault_note_detail(
-        self,
-        note_id: str,
-        access_token: str,
-    ) -> ObjectDetailResult:
-        return self._fetch_object_detail(
-            f"/api/v1/vault/notes/{note_id}",
-            access_token=access_token,
-        )
-
-    def fetch_vault_file_detail(
-        self,
-        file_id: str,
-        access_token: str,
-    ) -> ObjectDetailResult:
-        return self._fetch_object_detail(
+        return self._fetch_detail(
             f"/api/v1/vault/files/{file_id}",
             access_token=access_token,
         )
 
-    def _fetch_object_list(self, path: str, access_token: str | None = None) -> ObjectListResult:
+    def _fetch_list(self, path: str, *, access_token: str | None) -> ObjectListResult:
         try:
-            headers = {}
-            if access_token:
-                headers["Authorization"] = f"Bearer {access_token}"
-
-            with httpx.Client(base_url=self.base_url, timeout=10.0) as client:
-                response = client.get(path, headers=headers)
-
+            response = httpx.get(
+                f"{self.base_url}{path}",
+                headers=self._headers(access_token),
+                timeout=self.timeout_seconds,
+            )
             response.raise_for_status()
             data = response.json()
 
             return ObjectListResult(
                 items=data.get("items", []),
                 error=None,
+                status_code=response.status_code,
             )
-        except Exception as exc:
+        except httpx.HTTPStatusError as exc:
+            return ObjectListResult(
+                items=[],
+                error=self._error_text(exc.response),
+                status_code=exc.response.status_code,
+            )
+        except httpx.RequestError as exc:
             return ObjectListResult(
                 items=[],
                 error=str(exc),
+                status_code=None,
             )
 
-    def _fetch_object_detail(self, path: str, access_token: str | None = None) -> ObjectDetailResult:
+    def _fetch_detail(self, path: str, *, access_token: str | None) -> ObjectDetailResult:
         try:
-            headers = {}
-            if access_token:
-                headers["Authorization"] = f"Bearer {access_token}"
-
-            with httpx.Client(base_url=self.base_url, timeout=10.0) as client:
-                response = client.get(path, headers=headers)
-
+            response = httpx.get(
+                f"{self.base_url}{path}",
+                headers=self._headers(access_token),
+                timeout=self.timeout_seconds,
+            )
             response.raise_for_status()
             data = response.json()
 
             return ObjectDetailResult(
                 item=data,
                 error=None,
+                status_code=response.status_code,
             )
-        except Exception as exc:
+        except httpx.HTTPStatusError as exc:
+            return ObjectDetailResult(
+                item=None,
+                error=self._error_text(exc.response),
+                status_code=exc.response.status_code,
+            )
+        except httpx.RequestError as exc:
             return ObjectDetailResult(
                 item=None,
                 error=str(exc),
+                status_code=None,
             )
