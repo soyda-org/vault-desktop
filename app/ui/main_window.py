@@ -3,6 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -11,6 +12,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMainWindow,
     QPushButton,
+    QSpinBox,
     QSplitter,
     QTabWidget,
     QTextEdit,
@@ -22,6 +24,11 @@ from app.core.config import DesktopSettings
 from app.core.local_settings import LocalSettingsStore, PersistedUiSettings
 from app.services.api_client import ObjectDetailResult, ObjectListResult, VaultApiClient
 from app.services.desktop_service import VaultDesktopService
+from app.services.password_generator import (
+    PasswordGenerationError,
+    PasswordPolicy,
+    generate_password,
+)
 from app.services.vault_gateway import AuthenticatedVaultGateway
 from app.ui.dashboard_formatters import (
     credential_list_label,
@@ -50,7 +57,7 @@ class MainWindow(QMainWindow):
         )
 
         self.setWindowTitle(settings.app_name)
-        self.resize(1180, 780)
+        self.resize(1180, 860)
 
         self.status_label = QLabel("Press 'Probe API' or login.")
         self.status_label.setWordWrap(True)
@@ -152,6 +159,32 @@ class MainWindow(QMainWindow):
         )
         self.tabs.setCurrentIndex(self.persisted_ui_settings.last_tab_index)
 
+        self.password_length_input = QSpinBox()
+        self.password_length_input.setRange(8, 256)
+        self.password_length_input.setValue(24)
+
+        self.use_uppercase_checkbox = QCheckBox("Uppercase")
+        self.use_uppercase_checkbox.setChecked(True)
+
+        self.use_lowercase_checkbox = QCheckBox("Lowercase")
+        self.use_lowercase_checkbox.setChecked(True)
+
+        self.use_digits_checkbox = QCheckBox("Digits")
+        self.use_digits_checkbox.setChecked(True)
+
+        self.use_symbols_checkbox = QCheckBox("Symbols")
+        self.use_symbols_checkbox.setChecked(True)
+
+        self.generated_password_output = QLineEdit()
+        self.generated_password_output.setReadOnly(True)
+        self.generated_password_output.setPlaceholderText("Generated password will appear here.")
+
+        self.generate_password_button = QPushButton("Generate Password")
+        self.generate_password_button.clicked.connect(self.run_generate_password)
+
+        self.copy_generated_password_button = QPushButton("Copy Generated Password")
+        self.copy_generated_password_button.clicked.connect(self.run_copy_generated_password)
+
         form_layout = QFormLayout()
         form_layout.addRow("Identifier", self.identifier_input)
         form_layout.addRow("Password", self.password_input)
@@ -169,6 +202,18 @@ class MainWindow(QMainWindow):
         dashboard_buttons_layout.addWidget(self.load_files_button)
         dashboard_buttons_layout.addWidget(self.load_all_button)
 
+        password_policy_layout = QHBoxLayout()
+        password_policy_layout.addWidget(QLabel("Length"))
+        password_policy_layout.addWidget(self.password_length_input)
+        password_policy_layout.addWidget(self.use_uppercase_checkbox)
+        password_policy_layout.addWidget(self.use_lowercase_checkbox)
+        password_policy_layout.addWidget(self.use_digits_checkbox)
+        password_policy_layout.addWidget(self.use_symbols_checkbox)
+
+        password_actions_layout = QHBoxLayout()
+        password_actions_layout.addWidget(self.generate_password_button)
+        password_actions_layout.addWidget(self.copy_generated_password_button)
+
         layout = QVBoxLayout()
         layout.addWidget(QLabel(f"App: {settings.app_name}"))
         layout.addWidget(QLabel(f"Environment: {settings.environment}"))
@@ -181,6 +226,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(QLabel("Dashboard"))
         layout.addLayout(dashboard_buttons_layout)
         layout.addWidget(self.tabs)
+        layout.addWidget(QLabel("Password Tools"))
+        layout.addLayout(password_policy_layout)
+        layout.addWidget(self.generated_password_output)
+        layout.addLayout(password_actions_layout)
 
         container = QWidget()
         container.setLayout(layout)
@@ -300,6 +349,45 @@ class MainWindow(QMainWindow):
             app.quit()
         else:
             self.close()
+
+    def run_generate_password(self) -> None:
+        policy = PasswordPolicy(
+            length=self.password_length_input.value(),
+            use_uppercase=self.use_uppercase_checkbox.isChecked(),
+            use_lowercase=self.use_lowercase_checkbox.isChecked(),
+            use_digits=self.use_digits_checkbox.isChecked(),
+            use_symbols=self.use_symbols_checkbox.isChecked(),
+        )
+
+        try:
+            password = generate_password(policy)
+        except PasswordGenerationError as exc:
+            self.status_label.setText(
+                "Password generation failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        self.generated_password_output.setText(password)
+        self.status_label.setText(
+            "Password generated locally.\n"
+            f"Length: {len(password)}"
+        )
+
+    def run_copy_generated_password(self) -> None:
+        password = self.generated_password_output.text()
+        if not password:
+            self.status_label.setText("Generate a password first.")
+            return
+
+        app = QApplication.instance()
+        if app is None:
+            self.status_label.setText("Clipboard is unavailable.")
+            return
+
+        clipboard = app.clipboard()
+        clipboard.setText(password)
+        self.status_label.setText("Generated password copied to clipboard.")
 
     def load_credentials(self) -> None:
         result = self.desktop_service.fetch_credentials()
