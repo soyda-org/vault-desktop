@@ -295,6 +295,28 @@ class VaultApiClient:
             access_token=access_token,
         )
 
+    def create_note(
+        self,
+        *,
+        device_name: str,
+        note_type: str,
+        encrypted_metadata: dict[str, Any] | None,
+        encrypted_payload: dict[str, Any],
+        encryption_header: dict[str, Any],
+        access_token: str | None = None,
+    ) -> ObjectCreateResult:
+        return self._post_object(
+            "/api/v1/vault/notes",
+            payload={
+                "device_name": device_name,
+                "note_type": note_type,
+                "encrypted_metadata": encrypted_metadata,
+                "encrypted_payload": encrypted_payload,
+                "encryption_header": encryption_header,
+            },
+            access_token=access_token,
+        )
+
     def _fetch_list(self, path: str, *, access_token: str | None) -> ObjectListResult:
         try:
             response = httpx.get(

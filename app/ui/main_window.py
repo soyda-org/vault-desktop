@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QSplitter,
     QTabWidget,
@@ -64,7 +65,27 @@ class MainWindow(QMainWindow):
         )
 
         self.setWindowTitle(settings.app_name)
-        self.resize(1280, 940)
+        self.resize(1120, 860)
+        self.setStyleSheet(
+            """
+            QWidget {
+                font-size: 11px;
+            }
+            QPushButton,
+            QLineEdit,
+            QTextEdit,
+            QListWidget,
+            QSpinBox,
+            QLabel,
+            QCheckBox,
+            QTabBar::tab {
+                font-size: 11px;
+            }
+            QPushButton {
+                padding: 2px 6px;
+            }
+            """
+        )
 
         self.status_label = QLabel("Press 'Probe API' or login.")
         self.status_label.setWordWrap(True)
@@ -121,6 +142,12 @@ class MainWindow(QMainWindow):
         self.load_note_detail_button = QPushButton("Load Selected Note")
         self.load_note_detail_button.clicked.connect(self.load_note_detail)
 
+        self.create_note_button = QPushButton("Create Note")
+        self.create_note_button.clicked.connect(self.run_create_note)
+
+        self.reset_note_payload_button = QPushButton("Reset Payload")
+        self.reset_note_payload_button.clicked.connect(self.reset_note_create_fields)
+
         self.load_file_detail_button = QPushButton("Load Selected File")
         self.load_file_detail_button.clicked.connect(self.load_file_detail)
 
@@ -163,18 +190,33 @@ class MainWindow(QMainWindow):
         )
         self.credential_header_input.setMaximumHeight(90)
 
+        self.note_type_input = QLineEdit()
+        self.note_type_input.setText("note")
+
+        self.note_metadata_input = QTextEdit()
+        self.note_metadata_input.setPlaceholderText(
+            'Optional JSON object, for example {"ciphertext_b64": "..."}'
+        )
+        self.note_metadata_input.setMaximumHeight(90)
+
+        self.note_payload_input = QTextEdit()
+        self.note_payload_input.setPlaceholderText(
+            'Required JSON object, for example {"ciphertext_b64": "..."}'
+        )
+        self.note_payload_input.setMaximumHeight(90)
+
+        self.note_header_input = QTextEdit()
+        self.note_header_input.setPlaceholderText(
+            'Required JSON object, for example {"nonce_b64": "..."}'
+        )
+        self.note_header_input.setMaximumHeight(90)
+
         self.reset_credential_create_fields()
+        self.reset_note_create_fields()
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self._build_credentials_tab(), "Credentials")
-        self.tabs.addTab(
-            self._build_tab(
-                self.notes_list,
-                self.load_note_detail_button,
-                self.notes_output,
-            ),
-            "Notes",
-        )
+        self.tabs.addTab(self._build_notes_tab(), "Notes")
         self.tabs.addTab(
             self._build_tab(
                 self.files_list,
@@ -259,7 +301,11 @@ class MainWindow(QMainWindow):
 
         container = QWidget()
         container.setLayout(layout)
-        self.setCentralWidget(container)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(container)
+        self.setCentralWidget(scroll_area)
 
         self.refresh_session_label()
 
@@ -317,6 +363,45 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(left_widget)
         splitter.addWidget(self.credentials_output)
+        splitter.setSizes([520, 680])
+
+        layout = QVBoxLayout()
+        layout.addWidget(splitter)
+
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget
+
+    def _build_notes_tab(self) -> QWidget:
+        create_buttons_layout = QHBoxLayout()
+        create_buttons_layout.addWidget(self.load_note_detail_button)
+        create_buttons_layout.addWidget(self.create_note_button)
+        create_buttons_layout.addWidget(self.reset_note_payload_button)
+
+        create_hint_label = QLabel(
+            "Create uses the current 'Device name' value from the auth form above. "
+            "Until the crypto/UI flow is implemented, enter JSON objects manually."
+        )
+        create_hint_label.setWordWrap(True)
+
+        create_form_layout = QFormLayout()
+        create_form_layout.addRow("Note type", self.note_type_input)
+        create_form_layout.addRow("Metadata JSON", self.note_metadata_input)
+        create_form_layout.addRow("Payload JSON", self.note_payload_input)
+        create_form_layout.addRow("Header JSON", self.note_header_input)
+
+        left_layout = QVBoxLayout()
+        left_layout.addLayout(create_buttons_layout)
+        left_layout.addWidget(create_hint_label)
+        left_layout.addLayout(create_form_layout)
+        left_layout.addWidget(self.notes_list)
+
+        left_widget = QWidget()
+        left_widget.setLayout(left_layout)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(self.notes_output)
         splitter.setSizes([520, 680])
 
         layout = QVBoxLayout()
@@ -493,6 +578,49 @@ class MainWindow(QMainWindow):
         )
         self._render_credential_create_result(result)
 
+    def run_create_note(self) -> None:
+        device_name = self.device_name_input.text().strip()
+        if not device_name:
+            self.status_label.setText(
+                "Note creation failed.\n"
+                "Error: Device name is empty."
+            )
+            return
+
+        note_type = self.note_type_input.text().strip() or "note"
+
+        try:
+            encrypted_metadata = self._parse_json_object_text(
+                self.note_metadata_input,
+                field_name="Metadata JSON",
+                allow_empty=True,
+            )
+            encrypted_payload = self._parse_json_object_text(
+                self.note_payload_input,
+                field_name="Payload JSON",
+                allow_empty=False,
+            )
+            encryption_header = self._parse_json_object_text(
+                self.note_header_input,
+                field_name="Header JSON",
+                allow_empty=False,
+            )
+        except ValueError as exc:
+            self.status_label.setText(
+                "Note creation failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        result = self.desktop_service.create_note(
+            device_name=device_name,
+            note_type=note_type,
+            encrypted_metadata=encrypted_metadata,
+            encrypted_payload=encrypted_payload,
+            encryption_header=encryption_header,
+        )
+        self._render_note_create_result(result)
+
     def reset_credential_create_fields(self) -> None:
         self.credential_metadata_input.setPlainText(
             json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
@@ -501,6 +629,18 @@ class MainWindow(QMainWindow):
             json.dumps({"ciphertext_b64": "ZGVm"}, indent=2)
         )
         self.credential_header_input.setPlainText(
+            json.dumps({"nonce_b64": "bm9uY2U="}, indent=2)
+        )
+
+    def reset_note_create_fields(self) -> None:
+        self.note_type_input.setText("note")
+        self.note_metadata_input.setPlainText(
+            json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
+        )
+        self.note_payload_input.setPlainText(
+            json.dumps({"ciphertext_b64": "ZGVm"}, indent=2)
+        )
+        self.note_header_input.setPlainText(
             json.dumps({"nonce_b64": "bm9uY2U="}, indent=2)
         )
 
@@ -645,6 +785,39 @@ class MainWindow(QMainWindow):
         self.status_label.setText("\n".join(status_lines))
         self._save_ui_preferences()
 
+    def _render_note_create_result(self, result: ObjectCreateResult) -> None:
+        if result.error:
+            self.notes_output.setPlainText(
+                f"Note create failed.\nError: {result.error}"
+            )
+            self.status_label.setText(
+                "Note creation failed.\n"
+                f"Error: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        note_id = str(item.get("note_id", ""))
+
+        list_result = self.desktop_service.fetch_notes()
+        self._render_notes(list_result)
+
+        if note_id and not list_result.error:
+            self._select_note_item_by_id(note_id)
+
+        self.notes_output.setPlainText(format_note_detail(item))
+        self.tabs.setCurrentIndex(1)
+
+        status_lines = [
+            "Note created.",
+            f"Note ID: {note_id or '<unknown>'}",
+        ]
+        if list_result.error:
+            status_lines.append(f"List refresh warning: {list_result.error}")
+
+        self.status_label.setText("\n".join(status_lines))
+        self._save_ui_preferences()
+
     def _render_credential_detail(self, result: ObjectDetailResult) -> None:
         if result.error:
             self.credentials_output.setPlainText(
@@ -709,6 +882,13 @@ class MainWindow(QMainWindow):
             item = self.credentials_list.item(index)
             if item.data(Qt.ItemDataRole.UserRole) == credential_id:
                 self.credentials_list.setCurrentRow(index)
+                return
+
+    def _select_note_item_by_id(self, note_id: str) -> None:
+        for index in range(self.notes_list.count()):
+            item = self.notes_list.item(index)
+            if item.data(Qt.ItemDataRole.UserRole) == note_id:
+                self.notes_list.setCurrentRow(index)
                 return
 
     def refresh_session_label(self) -> None:

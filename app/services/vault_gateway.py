@@ -27,6 +27,16 @@ class VaultGateway(Protocol):
         encrypted_payload: dict,
         encryption_header: dict,
     ) -> ObjectCreateResult: ...
+    def create_note(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        note_type: str,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult: ...
 
 
 class AuthenticatedVaultGateway:
@@ -83,6 +93,25 @@ class AuthenticatedVaultGateway:
     ) -> ObjectCreateResult:
         return self.api_client.create_credential(
             device_name=device_name,
+            encrypted_metadata=encrypted_metadata,
+            encrypted_payload=encrypted_payload,
+            encryption_header=encryption_header,
+            access_token=session.access_token,
+        )
+
+    def create_note(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        note_type: str,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self.api_client.create_note(
+            device_name=device_name,
+            note_type=note_type,
             encrypted_metadata=encrypted_metadata,
             encrypted_payload=encrypted_payload,
             encryption_header=encryption_header,

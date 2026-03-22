@@ -152,6 +152,26 @@ class VaultDesktopService:
             )
         )
 
+    def create_note(
+        self,
+        *,
+        device_name: str,
+        note_type: str,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.create_note(
+                session,
+                device_name=device_name,
+                note_type=note_type,
+                encrypted_metadata=encrypted_metadata,
+                encrypted_payload=encrypted_payload,
+                encryption_header=encryption_header,
+            )
+        )
+
     def _fetch_list_with_refresh(
         self,
         fetcher: Callable[[DesktopSession], ObjectListResult],

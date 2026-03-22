@@ -138,6 +138,30 @@ class FakeVaultGateway:
             status_code=201,
         )
 
+    def create_note(
+        self,
+        session,
+        *,
+        device_name,
+        note_type,
+        encrypted_metadata,
+        encrypted_payload,
+        encryption_header,
+    ):
+        self.calls.append(("create_note", note_type, device_name, session.access_token))
+        return ObjectCreateResult(
+            item={
+                "note_id": "note_001",
+                "note_type": note_type,
+                "device_name": device_name,
+                "encrypted_metadata": encrypted_metadata,
+                "encrypted_payload": encrypted_payload,
+                "encryption_header": encryption_header,
+            },
+            error=None,
+            status_code=201,
+        )
+
 
 class One401ThenSuccessGateway(FakeVaultGateway):
     def __init__(self) -> None:
@@ -186,6 +210,39 @@ class OneCreate401ThenSuccessGateway(FakeVaultGateway):
             item={
                 "credential_id": "cred_001",
                 "device_name": device_name,
+            },
+            error=None,
+            status_code=201,
+        )
+
+
+class OneCreateNote401ThenSuccessGateway(FakeVaultGateway):
+    def __init__(self) -> None:
+        super().__init__()
+        self.first = True
+
+    def create_note(
+        self,
+        session,
+        *,
+        device_name,
+        note_type,
+        encrypted_metadata,
+        encrypted_payload,
+        encryption_header,
+    ):
+        self.calls.append(("create_note", note_type, device_name, session.access_token))
+        if self.first:
+            self.first = False
+            return ObjectCreateResult(
+                item=None,
+                error="Unauthorized",
+                status_code=401,
+            )
+        return ObjectCreateResult(
+            item={
+                "note_id": "note_001",
+                "note_type": note_type,
             },
             error=None,
             status_code=201,
@@ -308,6 +365,52 @@ def test_create_credential_uses_gateway_with_current_session() -> None:
     assert gateway.calls[0] == ("create_credential", "desktop-dev", "access-token-1")
 
 
+def test_create_note_requires_session() -> None:
+    service = VaultDesktopService(
+        api_client=FakeApiClient(),
+        vault_gateway=FakeVaultGateway(),
+    )
+
+    result = service.create_note(
+        device_name="desktop-dev",
+        note_type="note",
+        encrypted_metadata={"ciphertext_b64": "YWJj"},
+        encrypted_payload={"ciphertext_b64": "ZGVm"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+    )
+
+    assert result.item is None
+    assert result.error == "No active session."
+    assert result.status_code == 401
+
+
+def test_create_note_uses_gateway_with_current_session() -> None:
+    gateway = FakeVaultGateway()
+    service = VaultDesktopService(
+        api_client=FakeApiClient(),
+        vault_gateway=gateway,
+    )
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    result = service.create_note(
+        device_name="desktop-dev",
+        note_type="note",
+        encrypted_metadata={"ciphertext_b64": "YWJj"},
+        encrypted_payload={"ciphertext_b64": "ZGVm"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+    )
+
+    assert result.error is None
+    assert result.item is not None
+    assert result.item["note_id"] == "note_001"
+    assert gateway.calls[0] == ("create_note", "note", "desktop-dev", "access-token-1")
+
+
 def test_fetch_credentials_refreshes_and_retries_once_after_401() -> None:
     api_client = FakeApiClient()
     gateway = One401ThenSuccessGateway()
@@ -363,6 +466,40 @@ def test_create_credential_refreshes_and_retries_once_after_401() -> None:
     assert gateway.calls == [
         ("create_credential", "desktop-dev", "access-token-1"),
         ("create_credential", "desktop-dev", "access-token-2"),
+    ]
+    assert service.current_session().access_token == "access-token-2"
+    assert service.current_session().refresh_token == "refresh-token-2"
+
+
+def test_create_note_refreshes_and_retries_once_after_401() -> None:
+    api_client = FakeApiClient()
+    gateway = OneCreateNote401ThenSuccessGateway()
+    service = VaultDesktopService(
+        api_client=api_client,
+        vault_gateway=gateway,
+    )
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    result = service.create_note(
+        device_name="desktop-dev",
+        note_type="note",
+        encrypted_metadata={"ciphertext_b64": "YWJj"},
+        encrypted_payload={"ciphertext_b64": "ZGVm"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+    )
+
+    assert result.error is None
+    assert result.item is not None
+    assert result.item["note_id"] == "note_001"
+    assert api_client.refresh_calls == 1
+    assert gateway.calls == [
+        ("create_note", "note", "desktop-dev", "access-token-1"),
+        ("create_note", "note", "desktop-dev", "access-token-2"),
     ]
     assert service.current_session().access_token == "access-token-2"
     assert service.current_session().refresh_token == "refresh-token-2"

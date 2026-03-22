@@ -56,6 +56,33 @@ class FakeApiClient:
             status_code=201,
         )
 
+    def create_note(
+        self,
+        *,
+        device_name,
+        note_type,
+        encrypted_metadata,
+        encrypted_payload,
+        encryption_header,
+        access_token=None,
+    ):
+        self.calls.append(
+            (
+                "create_note",
+                device_name,
+                note_type,
+                encrypted_metadata,
+                encrypted_payload,
+                encryption_header,
+                access_token,
+            )
+        )
+        return ObjectCreateResult(
+            item={"note_id": "note_001"},
+            error=None,
+            status_code=201,
+        )
+
 
 def make_session() -> DesktopSession:
     return DesktopSession(
@@ -139,6 +166,33 @@ def test_authenticated_gateway_create_credential_uses_access_token() -> None:
     assert api_client.calls[0] == (
         "create_credential",
         "desktop-dev",
+        {"ciphertext_b64": "YWJj"},
+        {"ciphertext_b64": "ZGVm"},
+        {"nonce_b64": "bm9uY2U="},
+        "access-token",
+    )
+
+
+def test_authenticated_gateway_create_note_uses_access_token() -> None:
+    api_client = FakeApiClient()
+    gateway = AuthenticatedVaultGateway(api_client)
+
+    result = gateway.create_note(
+        make_session(),
+        device_name="desktop-dev",
+        note_type="note",
+        encrypted_metadata={"ciphertext_b64": "YWJj"},
+        encrypted_payload={"ciphertext_b64": "ZGVm"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+    )
+
+    assert result.error is None
+    assert result.item is not None
+    assert result.item["note_id"] == "note_001"
+    assert api_client.calls[0] == (
+        "create_note",
+        "desktop-dev",
+        "note",
         {"ciphertext_b64": "YWJj"},
         {"ciphertext_b64": "ZGVm"},
         {"nonce_b64": "bm9uY2U="},

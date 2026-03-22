@@ -143,3 +143,49 @@ def test_create_credential_posts_authenticated_payload(monkeypatch) -> None:
     assert captured["url"] == "http://127.0.0.1:8000/api/v1/vault/credentials"
     assert captured["headers"]["Authorization"] == "Bearer access-token"
     assert captured["json"]["device_name"] == "desktop-dev"
+
+
+def test_create_note_posts_authenticated_payload(monkeypatch) -> None:
+    captured = {}
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        captured["url"] = url
+        captured["json"] = json
+        captured["headers"] = headers
+        captured["timeout"] = timeout
+        return FakeResponse(
+            201,
+            {
+                "note_id": "note_001",
+                "user_id": "user_001",
+                "note_type": "note",
+                "state": "active",
+                "current_version": 1,
+                "encrypted_metadata": {"ciphertext_b64": "YWJj"},
+                "encrypted_payload": {"ciphertext_b64": "ZGVm"},
+                "encryption_header": {"nonce_b64": "bm9uY2U="},
+                "created_by_device_id": "device_001",
+                "created_at": "2030-01-01T00:00:00Z",
+            },
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    client = VaultApiClient("http://127.0.0.1:8000")
+    result = client.create_note(
+        device_name="desktop-dev",
+        note_type="note",
+        encrypted_metadata={"ciphertext_b64": "YWJj"},
+        encrypted_payload={"ciphertext_b64": "ZGVm"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+        access_token="access-token",
+    )
+
+    assert result.error is None
+    assert result.status_code == 201
+    assert result.item is not None
+    assert result.item["note_id"] == "note_001"
+    assert captured["url"] == "http://127.0.0.1:8000/api/v1/vault/notes"
+    assert captured["headers"]["Authorization"] == "Bearer access-token"
+    assert captured["json"]["device_name"] == "desktop-dev"
+    assert captured["json"]["note_type"] == "note"
