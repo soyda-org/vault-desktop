@@ -3,6 +3,31 @@ from __future__ import annotations
 import json
 
 
+def credential_list_label(item: dict) -> str:
+    return (
+        f"{item.get('credential_id', '-')}"
+        f" | {item.get('state', '-')}"
+        f" | v{item.get('current_version', '-')}"
+    )
+
+
+def note_list_label(item: dict) -> str:
+    return (
+        f"{item.get('note_id', '-')}"
+        f" | {item.get('note_type', '-')}"
+        f" | {item.get('state', '-')}"
+        f" | v{item.get('current_version', '-')}"
+    )
+
+
+def file_list_label(item: dict) -> str:
+    return (
+        f"{item.get('file_id', '-')}"
+        f" | {item.get('state', '-')}"
+        f" | v{item.get('current_version', '-')}"
+    )
+
+
 def format_credentials_items(items: list[dict]) -> str:
     if not items:
         return "Credentials loaded successfully.\nCount: 0\n\nNo credentials found."

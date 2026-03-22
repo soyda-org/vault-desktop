@@ -15,6 +15,7 @@ This phase provides:
 - tabbed dashboard layout for credentials, notes, and files
 - selected object detail fetches
 - desktop-side authenticated service abstraction
+- selection-driven dashboard lists
 - config layer
 - test scaffold
 
@@ -24,5 +25,5 @@ This phase provides:
 - local crypto and unlock flows will be added later
 - current UI supports backend probing, login, logout, list fetches, and detail fetches
 - session state is currently kept in memory only
-- the desktop service layer now centralizes session-aware backend access
+- the desktop service layer centralizes session-aware backend access
 - current dashboard fetches use backend dev routes and are not the final authenticated client contract

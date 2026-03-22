@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QPushButton,
+    QSplitter,
     QTabWidget,
     QTextEdit,
     QVBoxLayout,
@@ -15,16 +19,19 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.config import DesktopSettings
-from app.core.session import DesktopSession
-from app.services.api_client import ObjectDetailResult, ObjectListResult, VaultApiClient
+from app.services.api_client import ObjectDetailResult, ObjectListResult
 from app.services.desktop_service import VaultDesktopService
+from app.services.api_client import VaultApiClient
 from app.ui.dashboard_formatters import (
+    credential_list_label,
+    file_list_label,
     format_credential_detail,
     format_credentials_items,
     format_file_detail,
     format_files_items,
     format_note_detail,
     format_notes_items,
+    note_list_label,
 )
 
 
@@ -37,7 +44,7 @@ class MainWindow(QMainWindow):
         )
 
         self.setWindowTitle(settings.app_name)
-        self.resize(1080, 760)
+        self.resize(1180, 780)
 
         self.status_label = QLabel("Press 'Probe API' or login.")
         self.status_label.setWordWrap(True)
@@ -82,15 +89,6 @@ class MainWindow(QMainWindow):
         self.load_all_button = QPushButton("Load All")
         self.load_all_button.clicked.connect(self.load_all)
 
-        self.credential_id_input = QLineEdit()
-        self.credential_id_input.setPlaceholderText("Selected credential ID")
-
-        self.note_id_input = QLineEdit()
-        self.note_id_input.setPlaceholderText("Selected note ID")
-
-        self.file_id_input = QLineEdit()
-        self.file_id_input.setPlaceholderText("Selected file ID")
-
         self.load_credential_detail_button = QPushButton("Load Selected Credential")
         self.load_credential_detail_button.clicked.connect(self.load_credential_detail)
 
@@ -100,22 +98,31 @@ class MainWindow(QMainWindow):
         self.load_file_detail_button = QPushButton("Load Selected File")
         self.load_file_detail_button.clicked.connect(self.load_file_detail)
 
+        self.credentials_list = QListWidget()
+        self.credentials_list.itemDoubleClicked.connect(lambda _: self.load_credential_detail())
+
+        self.notes_list = QListWidget()
+        self.notes_list.itemDoubleClicked.connect(lambda _: self.load_note_detail())
+
+        self.files_list = QListWidget()
+        self.files_list.itemDoubleClicked.connect(lambda _: self.load_file_detail())
+
         self.credentials_output = QTextEdit()
         self.credentials_output.setReadOnly(True)
-        self.credentials_output.setPlaceholderText("Credentials output will appear here.")
+        self.credentials_output.setPlaceholderText("Credential details will appear here.")
 
         self.notes_output = QTextEdit()
         self.notes_output.setReadOnly(True)
-        self.notes_output.setPlaceholderText("Notes output will appear here.")
+        self.notes_output.setPlaceholderText("Note details will appear here.")
 
         self.files_output = QTextEdit()
         self.files_output.setReadOnly(True)
-        self.files_output.setPlaceholderText("Files output will appear here.")
+        self.files_output.setPlaceholderText("File details will appear here.")
 
         self.tabs = QTabWidget()
         self.tabs.addTab(
             self._build_tab(
-                self.credential_id_input,
+                self.credentials_list,
                 self.load_credential_detail_button,
                 self.credentials_output,
             ),
@@ -123,7 +130,7 @@ class MainWindow(QMainWindow):
         )
         self.tabs.addTab(
             self._build_tab(
-                self.note_id_input,
+                self.notes_list,
                 self.load_note_detail_button,
                 self.notes_output,
             ),
@@ -131,7 +138,7 @@ class MainWindow(QMainWindow):
         )
         self.tabs.addTab(
             self._build_tab(
-                self.file_id_input,
+                self.files_list,
                 self.load_file_detail_button,
                 self.files_output,
             ),
@@ -176,17 +183,24 @@ class MainWindow(QMainWindow):
 
     def _build_tab(
         self,
-        id_input: QLineEdit,
+        object_list: QListWidget,
         detail_button: QPushButton,
         output: QTextEdit,
     ) -> QWidget:
-        controls_layout = QHBoxLayout()
-        controls_layout.addWidget(id_input)
-        controls_layout.addWidget(detail_button)
+        left_layout = QVBoxLayout()
+        left_layout.addWidget(detail_button)
+        left_layout.addWidget(object_list)
+
+        left_widget = QWidget()
+        left_widget.setLayout(left_layout)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(output)
+        splitter.setSizes([360, 700])
 
         layout = QVBoxLayout()
-        layout.addLayout(controls_layout)
-        layout.addWidget(output)
+        layout.addWidget(splitter)
 
         widget = QWidget()
         widget.setLayout(layout)
@@ -247,9 +261,9 @@ class MainWindow(QMainWindow):
     def run_logout(self) -> None:
         self.desktop_service.logout()
         self.status_label.setText("Session cleared locally.")
-        self.credential_id_input.clear()
-        self.note_id_input.clear()
-        self.file_id_input.clear()
+        self.credentials_list.clear()
+        self.notes_list.clear()
+        self.files_list.clear()
         self.credentials_output.clear()
         self.notes_output.clear()
         self.files_output.clear()
@@ -286,29 +300,32 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Dashboard refresh completed.")
 
     def load_credential_detail(self) -> None:
-        credential_id = self.credential_id_input.text().strip()
-        if not credential_id:
-            self.status_label.setText("Provide a credential ID first.")
+        item = self.credentials_list.currentItem()
+        if item is None:
+            self.status_label.setText("Select a credential first.")
             return
 
+        credential_id = item.data(Qt.ItemDataRole.UserRole)
         result = self.desktop_service.fetch_credential_detail(credential_id)
         self._render_credential_detail(result)
 
     def load_note_detail(self) -> None:
-        note_id = self.note_id_input.text().strip()
-        if not note_id:
-            self.status_label.setText("Provide a note ID first.")
+        item = self.notes_list.currentItem()
+        if item is None:
+            self.status_label.setText("Select a note first.")
             return
 
+        note_id = item.data(Qt.ItemDataRole.UserRole)
         result = self.desktop_service.fetch_note_detail(note_id)
         self._render_note_detail(result)
 
     def load_file_detail(self) -> None:
-        file_id = self.file_id_input.text().strip()
-        if not file_id:
-            self.status_label.setText("Provide a file ID first.")
+        item = self.files_list.currentItem()
+        if item is None:
+            self.status_label.setText("Select a file first.")
             return
 
+        file_id = item.data(Qt.ItemDataRole.UserRole)
         result = self.desktop_service.fetch_file_detail(file_id)
         self._render_file_detail(result)
 
@@ -319,12 +336,16 @@ class MainWindow(QMainWindow):
             )
             return
 
-        if result.items and not self.credential_id_input.text().strip():
-            first_id = result.items[0].get("credential_id")
-            if first_id:
-                self.credential_id_input.setText(first_id)
+        self.credentials_list.clear()
+        for entry in result.items:
+            widget_item = QListWidgetItem(credential_list_label(entry))
+            widget_item.setData(Qt.ItemDataRole.UserRole, entry.get("credential_id"))
+            self.credentials_list.addItem(widget_item)
 
         self.credentials_output.setPlainText(format_credentials_items(result.items))
+
+        if self.credentials_list.count() > 0:
+            self.credentials_list.setCurrentRow(0)
 
     def _render_notes(self, result: ObjectListResult) -> None:
         if result.error:
@@ -333,12 +354,16 @@ class MainWindow(QMainWindow):
             )
             return
 
-        if result.items and not self.note_id_input.text().strip():
-            first_id = result.items[0].get("note_id")
-            if first_id:
-                self.note_id_input.setText(first_id)
+        self.notes_list.clear()
+        for entry in result.items:
+            widget_item = QListWidgetItem(note_list_label(entry))
+            widget_item.setData(Qt.ItemDataRole.UserRole, entry.get("note_id"))
+            self.notes_list.addItem(widget_item)
 
         self.notes_output.setPlainText(format_notes_items(result.items))
+
+        if self.notes_list.count() > 0:
+            self.notes_list.setCurrentRow(0)
 
     def _render_files(self, result: ObjectListResult) -> None:
         if result.error:
@@ -347,12 +372,16 @@ class MainWindow(QMainWindow):
             )
             return
 
-        if result.items and not self.file_id_input.text().strip():
-            first_id = result.items[0].get("file_id")
-            if first_id:
-                self.file_id_input.setText(first_id)
+        self.files_list.clear()
+        for entry in result.items:
+            widget_item = QListWidgetItem(file_list_label(entry))
+            widget_item.setData(Qt.ItemDataRole.UserRole, entry.get("file_id"))
+            self.files_list.addItem(widget_item)
 
         self.files_output.setPlainText(format_files_items(result.items))
+
+        if self.files_list.count() > 0:
+            self.files_list.setCurrentRow(0)
 
     def _render_credential_detail(self, result: ObjectDetailResult) -> None:
         if result.error:

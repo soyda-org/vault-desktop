@@ -1,11 +1,57 @@
 from app.ui.dashboard_formatters import (
+    credential_list_label,
+    file_list_label,
     format_credential_detail,
     format_credentials_items,
     format_file_detail,
     format_files_items,
     format_note_detail,
     format_notes_items,
+    note_list_label,
 )
+
+
+def test_credential_list_label() -> None:
+    text = credential_list_label(
+        {
+            "credential_id": "cred_001",
+            "state": "active",
+            "current_version": 1,
+        }
+    )
+
+    assert "cred_001" in text
+    assert "active" in text
+    assert "v1" in text
+
+
+def test_note_list_label() -> None:
+    text = note_list_label(
+        {
+            "note_id": "note_001",
+            "note_type": "note",
+            "state": "active",
+            "current_version": 1,
+        }
+    )
+
+    assert "note_001" in text
+    assert "note" in text
+    assert "v1" in text
+
+
+def test_file_list_label() -> None:
+    text = file_list_label(
+        {
+            "file_id": "file_001",
+            "state": "active",
+            "current_version": 1,
+        }
+    )
+
+    assert "file_001" in text
+    assert "active" in text
+    assert "v1" in text
 
 
 def test_format_credentials_items_with_empty_list() -> None:
