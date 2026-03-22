@@ -9,16 +9,19 @@ from app.services.api_client import (
     ObjectListResult,
     VaultApiClient,
 )
+from app.services.vault_gateway import DevVaultGateway, VaultGateway
 
 
 class VaultDesktopService:
     def __init__(
         self,
         api_client: VaultApiClient,
+        vault_gateway: VaultGateway | None = None,
         session_store: SessionStore | None = None,
     ) -> None:
         self.api_client = api_client
         self.session_store = session_store or SessionStore()
+        self.vault_gateway = vault_gateway or DevVaultGateway(api_client)
 
     def probe(self) -> ApiProbeResult:
         return self.api_client.probe()
@@ -69,60 +72,39 @@ class VaultDesktopService:
         if session is None:
             return ObjectListResult(items=[], error="No active session.")
 
-        return self.api_client.fetch_credentials(
-            identifier=session.identifier,
-            access_token=session.access_token,
-        )
+        return self.vault_gateway.fetch_credentials(session)
 
     def fetch_notes(self) -> ObjectListResult:
         session = self.session_store.current
         if session is None:
             return ObjectListResult(items=[], error="No active session.")
 
-        return self.api_client.fetch_notes(
-            identifier=session.identifier,
-            access_token=session.access_token,
-        )
+        return self.vault_gateway.fetch_notes(session)
 
     def fetch_files(self) -> ObjectListResult:
         session = self.session_store.current
         if session is None:
             return ObjectListResult(items=[], error="No active session.")
 
-        return self.api_client.fetch_files(
-            identifier=session.identifier,
-            access_token=session.access_token,
-        )
+        return self.vault_gateway.fetch_files(session)
 
     def fetch_credential_detail(self, credential_id: str) -> ObjectDetailResult:
         session = self.session_store.current
         if session is None:
             return ObjectDetailResult(item=None, error="No active session.")
 
-        return self.api_client.fetch_credential_detail(
-            identifier=session.identifier,
-            credential_id=credential_id,
-            access_token=session.access_token,
-        )
+        return self.vault_gateway.fetch_credential_detail(session, credential_id)
 
     def fetch_note_detail(self, note_id: str) -> ObjectDetailResult:
         session = self.session_store.current
         if session is None:
             return ObjectDetailResult(item=None, error="No active session.")
 
-        return self.api_client.fetch_note_detail(
-            identifier=session.identifier,
-            note_id=note_id,
-            access_token=session.access_token,
-        )
+        return self.vault_gateway.fetch_note_detail(session, note_id)
 
     def fetch_file_detail(self, file_id: str) -> ObjectDetailResult:
         session = self.session_store.current
         if session is None:
             return ObjectDetailResult(item=None, error="No active session.")
 
-        return self.api_client.fetch_file_detail(
-            identifier=session.identifier,
-            file_id=file_id,
-            access_token=session.access_token,
-        )
+        return self.vault_gateway.fetch_file_detail(session, file_id)

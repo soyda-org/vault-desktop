@@ -28,37 +28,48 @@ class FakeApiClient:
             error=None,
         )
 
-    def fetch_credentials(self, identifier, access_token=None):
+
+class FakeVaultGateway:
+    def __init__(self) -> None:
+        self.calls = []
+
+    def fetch_credentials(self, session):
+        self.calls.append(("fetch_credentials", session.identifier))
         return ObjectListResult(
             items=[{"credential_id": "cred_001"}],
             error=None,
         )
 
-    def fetch_notes(self, identifier, access_token=None):
+    def fetch_notes(self, session):
+        self.calls.append(("fetch_notes", session.identifier))
         return ObjectListResult(
             items=[{"note_id": "note_001"}],
             error=None,
         )
 
-    def fetch_files(self, identifier, access_token=None):
+    def fetch_files(self, session):
+        self.calls.append(("fetch_files", session.identifier))
         return ObjectListResult(
             items=[{"file_id": "file_001"}],
             error=None,
         )
 
-    def fetch_credential_detail(self, identifier, credential_id, access_token=None):
+    def fetch_credential_detail(self, session, credential_id):
+        self.calls.append(("fetch_credential_detail", session.identifier, credential_id))
         return ObjectDetailResult(
             item={"credential_id": credential_id},
             error=None,
         )
 
-    def fetch_note_detail(self, identifier, note_id, access_token=None):
+    def fetch_note_detail(self, session, note_id):
+        self.calls.append(("fetch_note_detail", session.identifier, note_id))
         return ObjectDetailResult(
             item={"note_id": note_id},
             error=None,
         )
 
-    def fetch_file_detail(self, identifier, file_id, access_token=None):
+    def fetch_file_detail(self, session, file_id):
+        self.calls.append(("fetch_file_detail", session.identifier, file_id))
         return ObjectDetailResult(
             item={"file_id": file_id},
             error=None,
@@ -66,7 +77,10 @@ class FakeApiClient:
 
 
 def test_login_populates_session() -> None:
-    service = VaultDesktopService(api_client=FakeApiClient())
+    service = VaultDesktopService(
+        api_client=FakeApiClient(),
+        vault_gateway=FakeVaultGateway(),
+    )
 
     result = service.login(
         identifier="alice",
@@ -82,7 +96,10 @@ def test_login_populates_session() -> None:
 
 
 def test_fetch_credentials_requires_session() -> None:
-    service = VaultDesktopService(api_client=FakeApiClient())
+    service = VaultDesktopService(
+        api_client=FakeApiClient(),
+        vault_gateway=FakeVaultGateway(),
+    )
 
     result = service.fetch_credentials()
 
@@ -90,8 +107,12 @@ def test_fetch_credentials_requires_session() -> None:
     assert result.error == "No active session."
 
 
-def test_fetch_credentials_uses_current_session() -> None:
-    service = VaultDesktopService(api_client=FakeApiClient())
+def test_fetch_credentials_uses_gateway_with_current_session() -> None:
+    gateway = FakeVaultGateway()
+    service = VaultDesktopService(
+        api_client=FakeApiClient(),
+        vault_gateway=gateway,
+    )
     service.login(
         identifier="alice",
         password="strong-password",
@@ -103,10 +124,15 @@ def test_fetch_credentials_uses_current_session() -> None:
 
     assert result.error is None
     assert result.items[0]["credential_id"] == "cred_001"
+    assert gateway.calls[0] == ("fetch_credentials", "alice")
 
 
-def test_fetch_file_detail_uses_current_session() -> None:
-    service = VaultDesktopService(api_client=FakeApiClient())
+def test_fetch_file_detail_uses_gateway_with_current_session() -> None:
+    gateway = FakeVaultGateway()
+    service = VaultDesktopService(
+        api_client=FakeApiClient(),
+        vault_gateway=gateway,
+    )
     service.login(
         identifier="alice",
         password="strong-password",
@@ -118,3 +144,4 @@ def test_fetch_file_detail_uses_current_session() -> None:
 
     assert result.error is None
     assert result.item["file_id"] == "file_001"
+    assert gateway.calls[0] == ("fetch_file_detail", "alice", "file_001")
