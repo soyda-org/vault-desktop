@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.config import DesktopSettings
+from app.core.local_settings import LocalSettingsStore, PersistedUiSettings
 from app.services.api_client import ObjectDetailResult, ObjectListResult
 from app.services.desktop_service import VaultDesktopService
 from app.services.api_client import VaultApiClient
@@ -39,8 +40,11 @@ class MainWindow(QMainWindow):
     def __init__(self, settings: DesktopSettings) -> None:
         super().__init__()
         self.settings = settings
+        self.local_settings_store = LocalSettingsStore()
+        self.persisted_ui_settings = self.local_settings_store.load()
+
         self.desktop_service = VaultDesktopService(
-            api_client=VaultApiClient(settings.api_base_url)
+            api_client=VaultApiClient(self.persisted_ui_settings.api_base_url)
         )
 
         self.setWindowTitle(settings.app_name)
@@ -53,17 +57,17 @@ class MainWindow(QMainWindow):
         self.session_label.setWordWrap(True)
 
         self.identifier_input = QLineEdit()
-        self.identifier_input.setText("alice")
+        self.identifier_input.setText(self.persisted_ui_settings.identifier)
 
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_input.setText("strong-password")
 
         self.device_name_input = QLineEdit()
-        self.device_name_input.setText("vault-desktop-dev")
+        self.device_name_input.setText(self.persisted_ui_settings.device_name)
 
         self.platform_input = QLineEdit()
-        self.platform_input.setText("linux")
+        self.platform_input.setText(self.persisted_ui_settings.platform)
 
         self.probe_button = QPushButton("Probe API")
         self.probe_button.clicked.connect(self.run_probe)
@@ -144,6 +148,7 @@ class MainWindow(QMainWindow):
             ),
             "Files",
         )
+        self.tabs.setCurrentIndex(self.persisted_ui_settings.last_tab_index)
 
         form_layout = QFormLayout()
         form_layout.addRow("Identifier", self.identifier_input)
@@ -165,7 +170,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.addWidget(QLabel(f"App: {settings.app_name}"))
         layout.addWidget(QLabel(f"Environment: {settings.environment}"))
-        layout.addWidget(QLabel(f"API base URL: {settings.api_base_url}"))
+        layout.addWidget(QLabel(f"API base URL: {self.persisted_ui_settings.api_base_url}"))
         layout.addWidget(self.probe_button)
         layout.addLayout(form_layout)
         layout.addLayout(auth_buttons_layout)
@@ -205,6 +210,21 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(layout)
         return widget
+
+    def _save_ui_preferences(self) -> None:
+        self.local_settings_store.save(
+            PersistedUiSettings(
+                api_base_url=self.persisted_ui_settings.api_base_url,
+                identifier=self.identifier_input.text().strip() or "alice",
+                device_name=self.device_name_input.text().strip() or "vault-desktop-dev",
+                platform=self.platform_input.text().strip() or "linux",
+                last_tab_index=self.tabs.currentIndex(),
+            )
+        )
+
+    def closeEvent(self, event) -> None:  # type: ignore[override]
+        self._save_ui_preferences()
+        super().closeEvent(event)
 
     def run_probe(self) -> None:
         result = self.desktop_service.probe()
@@ -257,6 +277,7 @@ class MainWindow(QMainWindow):
             f"Access token preview: {access_preview}"
         )
         self.refresh_session_label()
+        self._save_ui_preferences()
 
     def run_logout(self) -> None:
         self.desktop_service.logout()
@@ -268,8 +289,10 @@ class MainWindow(QMainWindow):
         self.notes_output.clear()
         self.files_output.clear()
         self.refresh_session_label()
+        self._save_ui_preferences()
 
     def run_close(self) -> None:
+        self._save_ui_preferences()
         app = QApplication.instance()
         if app is not None:
             app.quit()
@@ -298,6 +321,7 @@ class MainWindow(QMainWindow):
         self._render_files(files_result)
 
         self.status_label.setText("Dashboard refresh completed.")
+        self._save_ui_preferences()
 
     def load_credential_detail(self) -> None:
         item = self.credentials_list.currentItem()

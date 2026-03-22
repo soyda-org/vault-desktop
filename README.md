@@ -16,6 +16,7 @@ This phase provides:
 - selected object detail fetches
 - desktop-side authenticated service abstraction
 - selection-driven dashboard lists
+- local persistence for non-sensitive UI preferences
 - config layer
 - test scaffold
 
@@ -27,3 +28,4 @@ This phase provides:
 - session state is currently kept in memory only
 - the desktop service layer centralizes session-aware backend access
 - current dashboard fetches use backend dev routes and are not the final authenticated client contract
+- only non-sensitive desktop preferences are persisted locally
