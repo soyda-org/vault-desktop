@@ -317,6 +317,26 @@ class VaultApiClient:
             access_token=access_token,
         )
 
+    def create_file(
+        self,
+        *,
+        device_name: str,
+        encrypted_manifest: dict[str, Any],
+        encryption_header: dict[str, Any],
+        chunks: list[dict[str, Any]],
+        access_token: str | None = None,
+    ) -> ObjectCreateResult:
+        return self._post_object(
+            "/api/v1/vault/files",
+            payload={
+                "device_name": device_name,
+                "encrypted_manifest": encrypted_manifest,
+                "encryption_header": encryption_header,
+                "chunks": chunks,
+            },
+            access_token=access_token,
+        )
+
     def _fetch_list(self, path: str, *, access_token: str | None) -> ObjectListResult:
         try:
             response = httpx.get(

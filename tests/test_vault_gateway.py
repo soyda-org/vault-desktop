@@ -83,6 +83,31 @@ class FakeApiClient:
             status_code=201,
         )
 
+    def create_file(
+        self,
+        *,
+        device_name,
+        encrypted_manifest,
+        encryption_header,
+        chunks,
+        access_token=None,
+    ):
+        self.calls.append(
+            (
+                "create_file",
+                device_name,
+                encrypted_manifest,
+                encryption_header,
+                chunks,
+                access_token,
+            )
+        )
+        return ObjectCreateResult(
+            item={"file_id": "file_001"},
+            error=None,
+            status_code=201,
+        )
+
 
 def make_session() -> DesktopSession:
     return DesktopSession(
@@ -196,5 +221,40 @@ def test_authenticated_gateway_create_note_uses_access_token() -> None:
         {"ciphertext_b64": "YWJj"},
         {"ciphertext_b64": "ZGVm"},
         {"nonce_b64": "bm9uY2U="},
+        "access-token",
+    )
+
+
+def test_authenticated_gateway_create_file_uses_access_token() -> None:
+    api_client = FakeApiClient()
+    gateway = AuthenticatedVaultGateway(api_client)
+
+    result = gateway.create_file(
+        make_session(),
+        device_name="desktop-dev",
+        encrypted_manifest={"ciphertext_b64": "YWJj"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+        chunks=[
+            {
+                "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
+                "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+            }
+        ],
+    )
+
+    assert result.error is None
+    assert result.item is not None
+    assert result.item["file_id"] == "file_001"
+    assert api_client.calls[0] == (
+        "create_file",
+        "desktop-dev",
+        {"ciphertext_b64": "YWJj"},
+        {"nonce_b64": "bm9uY2U="},
+        [
+            {
+                "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
+                "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+            }
+        ],
         "access-token",
     )

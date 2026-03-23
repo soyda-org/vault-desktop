@@ -189,3 +189,59 @@ def test_create_note_posts_authenticated_payload(monkeypatch) -> None:
     assert captured["headers"]["Authorization"] == "Bearer access-token"
     assert captured["json"]["device_name"] == "desktop-dev"
     assert captured["json"]["note_type"] == "note"
+
+
+def test_create_file_posts_authenticated_payload(monkeypatch) -> None:
+    captured = {}
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        captured["url"] = url
+        captured["json"] = json
+        captured["headers"] = headers
+        captured["timeout"] = timeout
+        return FakeResponse(
+            201,
+            {
+                "file_id": "file_001",
+                "user_id": "user_001",
+                "state": "active",
+                "current_version": 1,
+                "encrypted_manifest": {"ciphertext_b64": "YWJj"},
+                "encryption_header": {"nonce_b64": "bm9uY2U="},
+                "created_by_device_id": "device_001",
+                "created_at": "2030-01-01T00:00:00Z",
+                "blobs": [
+                    {
+                        "chunk_index": 0,
+                        "object_key": "files/file_001/v1/chunk_0000.bin",
+                        "ciphertext_size_bytes": 16,
+                        "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+                    }
+                ],
+            },
+        )
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+
+    client = VaultApiClient("http://127.0.0.1:8000")
+    result = client.create_file(
+        device_name="desktop-dev",
+        encrypted_manifest={"ciphertext_b64": "YWJj"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+        chunks=[
+            {
+                "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
+                "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+            }
+        ],
+        access_token="access-token",
+    )
+
+    assert result.error is None
+    assert result.status_code == 201
+    assert result.item is not None
+    assert result.item["file_id"] == "file_001"
+    assert captured["url"] == "http://127.0.0.1:8000/api/v1/vault/files"
+    assert captured["headers"]["Authorization"] == "Bearer access-token"
+    assert captured["json"]["device_name"] == "desktop-dev"
+    assert len(captured["json"]["chunks"]) == 1

@@ -172,6 +172,24 @@ class VaultDesktopService:
             )
         )
 
+    def create_file(
+        self,
+        *,
+        device_name: str,
+        encrypted_manifest: dict,
+        encryption_header: dict,
+        chunks: list[dict],
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.create_file(
+                session,
+                device_name=device_name,
+                encrypted_manifest=encrypted_manifest,
+                encryption_header=encryption_header,
+                chunks=chunks,
+            )
+        )
+
     def _fetch_list_with_refresh(
         self,
         fetcher: Callable[[DesktopSession], ObjectListResult],

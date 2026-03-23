@@ -162,6 +162,35 @@ class FakeVaultGateway:
             status_code=201,
         )
 
+    def create_file(
+        self,
+        session,
+        *,
+        device_name,
+        encrypted_manifest,
+        encryption_header,
+        chunks,
+    ):
+        self.calls.append(("create_file", device_name, len(chunks), session.access_token))
+        return ObjectCreateResult(
+            item={
+                "file_id": "file_001",
+                "device_name": device_name,
+                "encrypted_manifest": encrypted_manifest,
+                "encryption_header": encryption_header,
+                "blobs": [
+                    {
+                        "chunk_index": 0,
+                        "object_key": "files/file_001/v1/chunk_0000.bin",
+                        "ciphertext_size_bytes": 16,
+                        "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+                    }
+                ],
+            },
+            error=None,
+            status_code=201,
+        )
+
 
 class One401ThenSuccessGateway(FakeVaultGateway):
     def __init__(self) -> None:
@@ -243,6 +272,37 @@ class OneCreateNote401ThenSuccessGateway(FakeVaultGateway):
             item={
                 "note_id": "note_001",
                 "note_type": note_type,
+            },
+            error=None,
+            status_code=201,
+        )
+
+
+class OneCreateFile401ThenSuccessGateway(FakeVaultGateway):
+    def __init__(self) -> None:
+        super().__init__()
+        self.first = True
+
+    def create_file(
+        self,
+        session,
+        *,
+        device_name,
+        encrypted_manifest,
+        encryption_header,
+        chunks,
+    ):
+        self.calls.append(("create_file", device_name, len(chunks), session.access_token))
+        if self.first:
+            self.first = False
+            return ObjectCreateResult(
+                item=None,
+                error="Unauthorized",
+                status_code=401,
+            )
+        return ObjectCreateResult(
+            item={
+                "file_id": "file_001",
             },
             error=None,
             status_code=201,
@@ -411,6 +471,60 @@ def test_create_note_uses_gateway_with_current_session() -> None:
     assert gateway.calls[0] == ("create_note", "note", "desktop-dev", "access-token-1")
 
 
+def test_create_file_requires_session() -> None:
+    service = VaultDesktopService(
+        api_client=FakeApiClient(),
+        vault_gateway=FakeVaultGateway(),
+    )
+
+    result = service.create_file(
+        device_name="desktop-dev",
+        encrypted_manifest={"ciphertext_b64": "YWJj"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+        chunks=[
+            {
+                "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
+                "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+            }
+        ],
+    )
+
+    assert result.item is None
+    assert result.error == "No active session."
+    assert result.status_code == 401
+
+
+def test_create_file_uses_gateway_with_current_session() -> None:
+    gateway = FakeVaultGateway()
+    service = VaultDesktopService(
+        api_client=FakeApiClient(),
+        vault_gateway=gateway,
+    )
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    result = service.create_file(
+        device_name="desktop-dev",
+        encrypted_manifest={"ciphertext_b64": "YWJj"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+        chunks=[
+            {
+                "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
+                "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+            }
+        ],
+    )
+
+    assert result.error is None
+    assert result.item is not None
+    assert result.item["file_id"] == "file_001"
+    assert gateway.calls[0] == ("create_file", "desktop-dev", 1, "access-token-1")
+
+
 def test_fetch_credentials_refreshes_and_retries_once_after_401() -> None:
     api_client = FakeApiClient()
     gateway = One401ThenSuccessGateway()
@@ -500,6 +614,44 @@ def test_create_note_refreshes_and_retries_once_after_401() -> None:
     assert gateway.calls == [
         ("create_note", "note", "desktop-dev", "access-token-1"),
         ("create_note", "note", "desktop-dev", "access-token-2"),
+    ]
+    assert service.current_session().access_token == "access-token-2"
+    assert service.current_session().refresh_token == "refresh-token-2"
+
+
+def test_create_file_refreshes_and_retries_once_after_401() -> None:
+    api_client = FakeApiClient()
+    gateway = OneCreateFile401ThenSuccessGateway()
+    service = VaultDesktopService(
+        api_client=api_client,
+        vault_gateway=gateway,
+    )
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    result = service.create_file(
+        device_name="desktop-dev",
+        encrypted_manifest={"ciphertext_b64": "YWJj"},
+        encryption_header={"nonce_b64": "bm9uY2U="},
+        chunks=[
+            {
+                "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
+                "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+            }
+        ],
+    )
+
+    assert result.error is None
+    assert result.item is not None
+    assert result.item["file_id"] == "file_001"
+    assert api_client.refresh_calls == 1
+    assert gateway.calls == [
+        ("create_file", "desktop-dev", 1, "access-token-1"),
+        ("create_file", "desktop-dev", 1, "access-token-2"),
     ]
     assert service.current_session().access_token == "access-token-2"
     assert service.current_session().refresh_token == "refresh-token-2"

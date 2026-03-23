@@ -37,6 +37,15 @@ class VaultGateway(Protocol):
         encrypted_payload: dict,
         encryption_header: dict,
     ) -> ObjectCreateResult: ...
+    def create_file(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        encrypted_manifest: dict,
+        encryption_header: dict,
+        chunks: list[dict],
+    ) -> ObjectCreateResult: ...
 
 
 class AuthenticatedVaultGateway:
@@ -115,6 +124,23 @@ class AuthenticatedVaultGateway:
             encrypted_metadata=encrypted_metadata,
             encrypted_payload=encrypted_payload,
             encryption_header=encryption_header,
+            access_token=session.access_token,
+        )
+
+    def create_file(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        encrypted_manifest: dict,
+        encryption_header: dict,
+        chunks: list[dict],
+    ) -> ObjectCreateResult:
+        return self.api_client.create_file(
+            device_name=device_name,
+            encrypted_manifest=encrypted_manifest,
+            encryption_header=encryption_header,
+            chunks=chunks,
             access_token=session.access_token,
         )
 

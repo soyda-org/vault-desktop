@@ -151,6 +151,12 @@ class MainWindow(QMainWindow):
         self.load_file_detail_button = QPushButton("Load Selected File")
         self.load_file_detail_button.clicked.connect(self.load_file_detail)
 
+        self.create_file_button = QPushButton("Create File")
+        self.create_file_button.clicked.connect(self.run_create_file)
+
+        self.reset_file_payload_button = QPushButton("Reset Payload")
+        self.reset_file_payload_button.clicked.connect(self.reset_file_create_fields)
+
         self.credentials_list = QListWidget()
         self.credentials_list.itemDoubleClicked.connect(lambda _: self.load_credential_detail())
 
@@ -211,20 +217,32 @@ class MainWindow(QMainWindow):
         )
         self.note_header_input.setMaximumHeight(90)
 
+        self.file_manifest_input = QTextEdit()
+        self.file_manifest_input.setPlaceholderText(
+            'Required JSON object, for example {"ciphertext_b64": "..."}'
+        )
+        self.file_manifest_input.setMaximumHeight(90)
+
+        self.file_header_input = QTextEdit()
+        self.file_header_input.setPlaceholderText(
+            'Required JSON object, for example {"nonce_b64": "..."}'
+        )
+        self.file_header_input.setMaximumHeight(90)
+
+        self.file_chunks_input = QTextEdit()
+        self.file_chunks_input.setPlaceholderText(
+            'Required JSON array, for example [{"ciphertext_b64": "...", "ciphertext_sha256_hex": "..."}]'
+        )
+        self.file_chunks_input.setMaximumHeight(130)
+
         self.reset_credential_create_fields()
         self.reset_note_create_fields()
+        self.reset_file_create_fields()
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self._build_credentials_tab(), "Credentials")
         self.tabs.addTab(self._build_notes_tab(), "Notes")
-        self.tabs.addTab(
-            self._build_tab(
-                self.files_list,
-                self.load_file_detail_button,
-                self.files_output,
-            ),
-            "Files",
-        )
+        self.tabs.addTab(self._build_files_tab(), "Files")
         self.tabs.setCurrentIndex(self.persisted_ui_settings.last_tab_index)
 
         self.password_length_input = QSpinBox()
@@ -402,6 +420,44 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(left_widget)
         splitter.addWidget(self.notes_output)
+        splitter.setSizes([520, 680])
+
+        layout = QVBoxLayout()
+        layout.addWidget(splitter)
+
+        widget = QWidget()
+        widget.setLayout(layout)
+        return widget
+
+    def _build_files_tab(self) -> QWidget:
+        create_buttons_layout = QHBoxLayout()
+        create_buttons_layout.addWidget(self.load_file_detail_button)
+        create_buttons_layout.addWidget(self.create_file_button)
+        create_buttons_layout.addWidget(self.reset_file_payload_button)
+
+        create_hint_label = QLabel(
+            "Create uses the current 'Device name' value from the auth form above. "
+            "Until the crypto/UI flow is implemented, enter JSON objects manually, including the chunks array."
+        )
+        create_hint_label.setWordWrap(True)
+
+        create_form_layout = QFormLayout()
+        create_form_layout.addRow("Manifest JSON", self.file_manifest_input)
+        create_form_layout.addRow("Header JSON", self.file_header_input)
+        create_form_layout.addRow("Chunks JSON", self.file_chunks_input)
+
+        left_layout = QVBoxLayout()
+        left_layout.addLayout(create_buttons_layout)
+        left_layout.addWidget(create_hint_label)
+        left_layout.addLayout(create_form_layout)
+        left_layout.addWidget(self.files_list)
+
+        left_widget = QWidget()
+        left_widget.setLayout(left_layout)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(self.files_output)
         splitter.setSizes([520, 680])
 
         layout = QVBoxLayout()
@@ -621,6 +677,46 @@ class MainWindow(QMainWindow):
         )
         self._render_note_create_result(result)
 
+    def run_create_file(self) -> None:
+        device_name = self.device_name_input.text().strip()
+        if not device_name:
+            self.status_label.setText(
+                "File creation failed.\n"
+                "Error: Device name is empty."
+            )
+            return
+
+        try:
+            encrypted_manifest = self._parse_json_object_text(
+                self.file_manifest_input,
+                field_name="Manifest JSON",
+                allow_empty=False,
+            )
+            encryption_header = self._parse_json_object_text(
+                self.file_header_input,
+                field_name="Header JSON",
+                allow_empty=False,
+            )
+            chunks = self._parse_json_array_text(
+                self.file_chunks_input,
+                field_name="Chunks JSON",
+                allow_empty=False,
+            )
+        except ValueError as exc:
+            self.status_label.setText(
+                "File creation failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        result = self.desktop_service.create_file(
+            device_name=device_name,
+            encrypted_manifest=encrypted_manifest,
+            encryption_header=encryption_header,
+            chunks=chunks,
+        )
+        self._render_file_create_result(result)
+
     def reset_credential_create_fields(self) -> None:
         self.credential_metadata_input.setPlainText(
             json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
@@ -642,6 +738,25 @@ class MainWindow(QMainWindow):
         )
         self.note_header_input.setPlainText(
             json.dumps({"nonce_b64": "bm9uY2U="}, indent=2)
+        )
+
+    def reset_file_create_fields(self) -> None:
+        self.file_manifest_input.setPlainText(
+            json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
+        )
+        self.file_header_input.setPlainText(
+            json.dumps({"nonce_b64": "bm9uY2U="}, indent=2)
+        )
+        self.file_chunks_input.setPlainText(
+            json.dumps(
+                [
+                    {
+                        "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
+                        "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+                    }
+                ],
+                indent=2,
+            )
         )
 
     def load_credentials(self) -> None:
@@ -818,6 +933,39 @@ class MainWindow(QMainWindow):
         self.status_label.setText("\n".join(status_lines))
         self._save_ui_preferences()
 
+    def _render_file_create_result(self, result: ObjectCreateResult) -> None:
+        if result.error:
+            self.files_output.setPlainText(
+                f"File create failed.\nError: {result.error}"
+            )
+            self.status_label.setText(
+                "File creation failed.\n"
+                f"Error: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        file_id = str(item.get("file_id", ""))
+
+        list_result = self.desktop_service.fetch_files()
+        self._render_files(list_result)
+
+        if file_id and not list_result.error:
+            self._select_file_item_by_id(file_id)
+
+        self.files_output.setPlainText(format_file_detail(item))
+        self.tabs.setCurrentIndex(2)
+
+        status_lines = [
+            "File created.",
+            f"File ID: {file_id or '<unknown>'}",
+        ]
+        if list_result.error:
+            status_lines.append(f"List refresh warning: {list_result.error}")
+
+        self.status_label.setText("\n".join(status_lines))
+        self._save_ui_preferences()
+
     def _render_credential_detail(self, result: ObjectDetailResult) -> None:
         if result.error:
             self.credentials_output.setPlainText(
@@ -877,6 +1025,39 @@ class MainWindow(QMainWindow):
 
         return parsed
 
+    def _parse_json_array_text(
+        self,
+        widget: QTextEdit,
+        *,
+        field_name: str,
+        allow_empty: bool,
+    ) -> list[dict]:
+        raw = widget.toPlainText().strip()
+        if not raw:
+            if allow_empty:
+                return []
+            raise ValueError(f"{field_name} is empty.")
+
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"{field_name} must be valid JSON. "
+                f"Error: {exc.msg} at line {exc.lineno} column {exc.colno}."
+            ) from exc
+
+        if not isinstance(parsed, list):
+            raise ValueError(f"{field_name} must be a JSON array.")
+
+        if not parsed and not allow_empty:
+            raise ValueError(f"{field_name} must not be empty.")
+
+        for index, item in enumerate(parsed):
+            if not isinstance(item, dict):
+                raise ValueError(f"{field_name} item {index} must be a JSON object.")
+
+        return parsed
+
     def _select_credential_item_by_id(self, credential_id: str) -> None:
         for index in range(self.credentials_list.count()):
             item = self.credentials_list.item(index)
@@ -889,6 +1070,13 @@ class MainWindow(QMainWindow):
             item = self.notes_list.item(index)
             if item.data(Qt.ItemDataRole.UserRole) == note_id:
                 self.notes_list.setCurrentRow(index)
+                return
+
+    def _select_file_item_by_id(self, file_id: str) -> None:
+        for index in range(self.files_list.count()):
+            item = self.files_list.item(index)
+            if item.data(Qt.ItemDataRole.UserRole) == file_id:
+                self.files_list.setCurrentRow(index)
                 return
 
     def refresh_session_label(self) -> None:
