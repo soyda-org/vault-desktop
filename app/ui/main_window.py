@@ -281,8 +281,14 @@ class MainWindow(QMainWindow):
         self.file_master_key_b64_input = QLineEdit()
         self.file_master_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.file_master_key_b64_input.setPlaceholderText(
-            "Dev-only AES-256 master key in base64 (must decode to 32 bytes)."
+            "Enter the vault key once to unlock it in memory for this session."
         )
+
+        self.unlock_session_key_button = QPushButton("Unlock Session Key")
+        self.unlock_session_key_button.clicked.connect(self.run_unlock_session_key)
+
+        self.clear_session_key_button = QPushButton("Clear Session Key")
+        self.clear_session_key_button.clicked.connect(self.run_clear_session_key)
 
         self.file_upload_progress = QProgressBar()
         self.file_upload_progress.setRange(0, 100)
@@ -501,9 +507,16 @@ class MainWindow(QMainWindow):
 
         create_hint_label = QLabel(
             "Pick a local file for encrypted upload, or select a vault file and download/decrypt it locally. "
-            "Both flows use the same dev AES-256 base64 key field."
+            "Unlock the vault key once per session; it stays in memory only and is cleared on logout."
         )
         create_hint_label.setWordWrap(True)
+
+        key_actions_layout = QHBoxLayout()
+        key_actions_layout.addWidget(self.unlock_session_key_button)
+        key_actions_layout.addWidget(self.clear_session_key_button)
+
+        key_actions_widget = QWidget()
+        key_actions_widget.setLayout(key_actions_layout)
 
         create_form_layout = QFormLayout()
         create_form_layout.addRow("Selected file", self.file_path_input)
@@ -511,7 +524,8 @@ class MainWindow(QMainWindow):
         create_form_layout.addRow("Chunk size", self.file_chunk_size_kib_input)
         create_form_layout.addRow("Upload progress", self.file_upload_progress)
         create_form_layout.addRow("Download progress", self.file_download_progress)
-        create_form_layout.addRow("Dev AES-256 key (base64)", self.file_master_key_b64_input)
+        create_form_layout.addRow("Session key input", self.file_master_key_b64_input)
+        create_form_layout.addRow("Session key actions", key_actions_widget)
         create_form_layout.addRow("Manifest JSON", self.file_manifest_input)
         create_form_layout.addRow("Header JSON", self.file_header_input)
         create_form_layout.addRow("Chunks JSON", self.file_chunks_input)
@@ -609,6 +623,7 @@ class MainWindow(QMainWindow):
             f"Token type: {session.token_type}\n"
             f"Access token preview: {access_preview}"
         )
+        self.file_master_key_b64_input.clear()
         self.refresh_session_label()
         self._save_ui_preferences()
 
@@ -627,6 +642,7 @@ class MainWindow(QMainWindow):
         self.credentials_output.clear()
         self.notes_output.clear()
         self.files_output.clear()
+        self.file_master_key_b64_input.clear()
         self.refresh_session_label()
         self._save_ui_preferences()
 
@@ -802,6 +818,62 @@ class MainWindow(QMainWindow):
             f"Planned chunks: {result.chunk_count}"
         )
 
+    def run_unlock_session_key(self) -> None:
+        if not self.desktop_service.is_authenticated():
+            self.status_label.setText(
+                "Session vault key unlock failed.\n"
+                "Error: No active session."
+            )
+            return
+
+        if self._is_file_job_running():
+            self.status_label.setText(
+                "A file job is still running.\n"
+                "Wait for completion before changing the session key."
+            )
+            return
+
+        master_key_b64 = self.file_master_key_b64_input.text().strip()
+        if not master_key_b64:
+            self.status_label.setText(
+                "Session vault key unlock failed.\n"
+                "Error: Session key input is empty."
+            )
+            return
+
+        try:
+            self.desktop_service.set_session_vault_master_key(master_key_b64)
+        except ValueError as exc:
+            self.status_label.setText(
+                "Session vault key unlock failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        self.file_master_key_b64_input.clear()
+        self.status_label.setText(
+            "Session vault key unlocked in memory only.\n"
+            "It will be reused for upload/download and cleared on logout."
+        )
+        self.refresh_session_label()
+
+    def run_clear_session_key(self) -> None:
+        if self._is_file_job_running():
+            self.status_label.setText(
+                "A file job is still running.\n"
+                "Wait for completion before clearing the session key."
+            )
+            return
+
+        if not self.desktop_service.is_authenticated():
+            self.status_label.setText("No active session.")
+            return
+
+        self.desktop_service.clear_session_vault_master_key()
+        self.file_master_key_b64_input.clear()
+        self.status_label.setText("Session vault key cleared from memory.")
+        self.refresh_session_label()
+
     def run_create_file(self) -> None:
         if self._is_file_job_running():
             self.status_label.setText(
@@ -826,11 +898,11 @@ class MainWindow(QMainWindow):
             )
             return
 
-        master_key_b64 = self.file_master_key_b64_input.text().strip()
+        master_key_b64 = self.desktop_service.current_session_vault_master_key()
         if not master_key_b64:
             self.status_label.setText(
                 "File creation failed.\n"
-                "Error: Dev AES-256 key is empty."
+                "Error: Session vault key is not unlocked."
             )
             return
 
@@ -935,11 +1007,11 @@ class MainWindow(QMainWindow):
             )
             return
 
-        master_key_b64 = self.file_master_key_b64_input.text().strip()
+        master_key_b64 = self.desktop_service.current_session_vault_master_key()
         if not master_key_b64:
             self.status_label.setText(
                 "File download failed.\n"
-                "Error: Dev AES-256 key is empty."
+                "Error: Session vault key is not unlocked."
             )
             return
 
@@ -1229,6 +1301,8 @@ class MainWindow(QMainWindow):
             self.load_file_detail_button,
             self.file_chunk_size_kib_input,
             self.file_master_key_b64_input,
+            self.unlock_session_key_button,
+            self.clear_session_key_button,
         ]
         for widget in widgets:
             widget.setEnabled(not (upload_busy or download_busy))
@@ -1528,5 +1602,6 @@ class MainWindow(QMainWindow):
             f"Identifier: {session.identifier}\n"
             f"User ID: {session.user_id}\n"
             f"Device ID: {session.device_id}\n"
-            f"Session ID: {session.session_id}"
+            f"Session ID: {session.session_id}\n"
+            f"Vault key: {'loaded' if self.desktop_service.has_session_vault_master_key() else 'not loaded'}"
         )

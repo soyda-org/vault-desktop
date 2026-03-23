@@ -574,3 +574,92 @@ def test_fetch_credentials_clears_session_when_refresh_fails() -> None:
     assert "Session refresh failed." in (result.error or "")
     assert api_client.refresh_calls == 1
     assert service.current_session() is None
+
+
+VALID_MASTER_KEY_B64 = "S0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0s="
+
+
+def test_set_session_vault_master_key_requires_active_session() -> None:
+    service = VaultDesktopService(api_client=FakeApiClient(), vault_gateway=FakeVaultGateway())
+
+    try:
+        service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert str(exc) == "No active session."
+
+
+def test_set_and_clear_session_vault_master_key() -> None:
+    service = VaultDesktopService(api_client=FakeApiClient(), vault_gateway=FakeVaultGateway())
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    assert service.has_session_vault_master_key() is False
+    assert service.current_session_vault_master_key() is None
+
+    service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+
+    assert service.has_session_vault_master_key() is True
+    assert service.current_session_vault_master_key() == VALID_MASTER_KEY_B64
+
+    service.clear_session_vault_master_key()
+
+    assert service.has_session_vault_master_key() is False
+    assert service.current_session_vault_master_key() is None
+
+
+def test_set_session_vault_master_key_validates_input() -> None:
+    service = VaultDesktopService(api_client=FakeApiClient(), vault_gateway=FakeVaultGateway())
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    try:
+        service.set_session_vault_master_key("not-valid-base64")
+        assert False, "Expected ValueError"
+    except ValueError:
+        pass
+
+    assert service.current_session_vault_master_key() is None
+
+
+def test_refresh_session_preserves_session_vault_master_key() -> None:
+    service = VaultDesktopService(api_client=FakeApiClient(), vault_gateway=FakeVaultGateway())
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+    service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+
+    result = service.refresh_session()
+
+    assert result.error is None
+    assert service.current_session_vault_master_key() == VALID_MASTER_KEY_B64
+    assert service.current_session() is not None
+    assert service.current_session().access_token == "access-token-2"
+
+
+def test_logout_clears_session_and_vault_master_key() -> None:
+    service = VaultDesktopService(api_client=FakeApiClient(), vault_gateway=FakeVaultGateway())
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+    service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+
+    service.logout()
+
+    assert service.current_session() is None
+    assert service.current_session_vault_master_key() is None
+    assert service.has_session_vault_master_key() is False

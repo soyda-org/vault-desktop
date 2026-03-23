@@ -12,6 +12,7 @@ class DesktopSession:
     access_token: str
     refresh_token: str
     token_type: str
+    vault_master_key_b64: str | None = None
 
 
 class SessionStore:
@@ -26,6 +27,23 @@ class SessionStore:
 
     def is_authenticated(self) -> bool:
         return self.current is not None and bool(self.current.access_token)
+
+    def has_vault_master_key(self) -> bool:
+        return self.current is not None and bool(self.current.vault_master_key_b64)
+
+    def set_vault_master_key(self, master_key_b64: str) -> DesktopSession | None:
+        if self.current is None:
+            return None
+
+        self.current = replace(self.current, vault_master_key_b64=master_key_b64)
+        return self.current
+
+    def clear_vault_master_key(self) -> DesktopSession | None:
+        if self.current is None:
+            return None
+
+        self.current = replace(self.current, vault_master_key_b64=None)
+        return self.current
 
     def rotate_tokens(
         self,
