@@ -75,24 +75,18 @@ def build_encrypted_file_finalize_payload(
     if not path.is_file():
         raise ValueError(f"Not a regular file: {path}")
 
+    total_plaintext_size = path.stat().st_size
+    expected_chunk_count = max(1, (total_plaintext_size + chunk_size_bytes - 1) // chunk_size_bytes)
+
     master_key = parse_dev_aes256_key_b64(master_key_b64)
 
     file_id = str(prepared_file["file_id"])
     file_version = int(prepared_file["file_version"])
     prepared_chunks = list(prepared_file.get("chunks", []))
 
-    data = path.read_bytes()
-
-    plaintext_chunks = [
-        data[offset : offset + chunk_size_bytes]
-        for offset in range(0, len(data), chunk_size_bytes)
-    ]
-    if not plaintext_chunks:
-        plaintext_chunks = [b""]
-
-    if len(plaintext_chunks) != len(prepared_chunks):
+    if expected_chunk_count != len(prepared_chunks):
         raise ValueError(
-            f"Prepared chunk count mismatch: expected {len(plaintext_chunks)}, "
+            f"Prepared chunk count mismatch: expected {expected_chunk_count}, "
             f"got {len(prepared_chunks)}"
         )
 
@@ -109,52 +103,58 @@ def build_encrypted_file_finalize_payload(
     finalize_chunks: list[dict] = []
     manifest_chunks: list[FileChunkDescriptor] = []
 
-    for plaintext_chunk, prepared_chunk in zip(plaintext_chunks, prepared_chunks, strict=True):
-        chunk_index = int(prepared_chunk["chunk_index"])
-        object_key = str(prepared_chunk["object_key"])
+    with path.open("rb") as handle:
+        if total_plaintext_size == 0:
+            chunk_iter = [b""]
+        else:
+            chunk_iter = iter(lambda: handle.read(chunk_size_bytes), b"")
 
-        chunk_key = derive_hkdf_subkey(
-            master_key=file_master_key,
-            context=HkdfKeyContext(
-                purpose=KeyPurpose.FILE_CHUNK,
+        for prepared_chunk, plaintext_chunk in zip(prepared_chunks, chunk_iter, strict=True):
+            chunk_index = int(prepared_chunk["chunk_index"])
+            object_key = str(prepared_chunk["object_key"])
+
+            chunk_key = derive_hkdf_subkey(
+                master_key=file_master_key,
+                context=HkdfKeyContext(
+                    purpose=KeyPurpose.FILE_CHUNK,
+                    object_type="file_chunk",
+                    object_id=f"{file_id}:{chunk_index}",
+                    object_version=file_version,
+                ),
+            )
+
+            chunk_envelope = encrypt_payload(
+                key=chunk_key,
                 object_type="file_chunk",
                 object_id=f"{file_id}:{chunk_index}",
                 object_version=file_version,
-            ),
-        )
-
-        chunk_envelope = encrypt_payload(
-            key=chunk_key,
-            object_type="file_chunk",
-            object_id=f"{file_id}:{chunk_index}",
-            object_version=file_version,
-            plaintext=plaintext_chunk,
-        )
-        chunk_envelope_bytes = dumps_canonical_bytes(chunk_envelope.to_dict())
-        chunk_sha256_hex = hashlib.sha256(chunk_envelope_bytes).hexdigest()
-
-        finalize_chunks.append(
-            {
-                "chunk_index": chunk_index,
-                "object_key": object_key,
-                "ciphertext_b64": b64encode_bytes(chunk_envelope_bytes),
-                "ciphertext_sha256_hex": chunk_sha256_hex,
-            }
-        )
-
-        manifest_chunks.append(
-            FileChunkDescriptor(
-                chunk_index=chunk_index,
-                object_key=object_key,
-                ciphertext_size_bytes=len(chunk_envelope_bytes),
-                ciphertext_sha256_hex=chunk_sha256_hex,
+                plaintext=plaintext_chunk,
             )
-        )
+            chunk_envelope_bytes = dumps_canonical_bytes(chunk_envelope.to_dict())
+            chunk_sha256_hex = hashlib.sha256(chunk_envelope_bytes).hexdigest()
+
+            finalize_chunks.append(
+                {
+                    "chunk_index": chunk_index,
+                    "object_key": object_key,
+                    "ciphertext_b64": b64encode_bytes(chunk_envelope_bytes),
+                    "ciphertext_sha256_hex": chunk_sha256_hex,
+                }
+            )
+
+            manifest_chunks.append(
+                FileChunkDescriptor(
+                    chunk_index=chunk_index,
+                    object_key=object_key,
+                    ciphertext_size_bytes=len(chunk_envelope_bytes),
+                    ciphertext_sha256_hex=chunk_sha256_hex,
+                )
+            )
 
     manifest = EncryptedFileManifest(
         file_id=file_id,
         file_version=file_version,
-        total_plaintext_size=len(data),
+        total_plaintext_size=total_plaintext_size,
         chunk_size=chunk_size_bytes,
         chunks=tuple(manifest_chunks),
     )
@@ -172,7 +172,7 @@ def build_encrypted_file_finalize_payload(
         source_path=str(path.resolve()),
         file_id=file_id,
         file_version=file_version,
-        total_plaintext_size=len(data),
+        total_plaintext_size=total_plaintext_size,
         chunk_size_bytes=chunk_size_bytes,
         encrypted_manifest={"ciphertext_b64": manifest_envelope.ciphertext_b64},
         encryption_header=manifest_envelope.header.to_dict(),

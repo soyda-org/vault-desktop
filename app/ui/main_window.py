@@ -33,7 +33,10 @@ from app.services.api_client import (
     VaultApiClient,
 )
 from app.services.desktop_service import VaultDesktopService
-from app.services.file_chunk_builder import build_chunks_from_path
+from app.services.file_crypto_bridge import (
+    build_encrypted_file_finalize_payload,
+    inspect_plaintext_file,
+)
 from app.services.password_generator import (
     PasswordGenerationError,
     PasswordPolicy,
@@ -224,30 +227,39 @@ class MainWindow(QMainWindow):
 
         self.file_manifest_input = QTextEdit()
         self.file_manifest_input.setPlaceholderText(
-            'Required JSON object, for example {"ciphertext_b64": "..."}'
+            'Generated encrypted manifest JSON will appear here.'
         )
         self.file_manifest_input.setMaximumHeight(90)
+        self.file_manifest_input.setReadOnly(True)
 
         self.file_header_input = QTextEdit()
         self.file_header_input.setPlaceholderText(
-            'Required JSON object, for example {"nonce_b64": "..."}'
+            'Generated encryption header JSON will appear here.'
         )
         self.file_header_input.setMaximumHeight(90)
+        self.file_header_input.setReadOnly(True)
 
         self.file_chunks_input = QTextEdit()
         self.file_chunks_input.setPlaceholderText(
-            'Required JSON array, for example [{"ciphertext_b64": "...", "ciphertext_sha256_hex": "..."}]'
+            'Generated encrypted chunks JSON will appear here.'
         )
         self.file_chunks_input.setMaximumHeight(130)
+        self.file_chunks_input.setReadOnly(True)
 
         self.file_path_input = QLineEdit()
         self.file_path_input.setReadOnly(True)
         self.file_path_input.setPlaceholderText("No local file selected.")
 
         self.file_chunk_size_kib_input = QSpinBox()
-        self.file_chunk_size_kib_input.setRange(1, 16384)
-        self.file_chunk_size_kib_input.setValue(256)
+        self.file_chunk_size_kib_input.setRange(1, 102400)
+        self.file_chunk_size_kib_input.setValue(8192)
         self.file_chunk_size_kib_input.setSuffix(" KiB")
+
+        self.file_master_key_b64_input = QLineEdit()
+        self.file_master_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.file_master_key_b64_input.setPlaceholderText(
+            "Dev-only AES-256 master key in base64 (must decode to 32 bytes)."
+        )
 
         self.reset_credential_create_fields()
         self.reset_note_create_fields()
@@ -451,14 +463,15 @@ class MainWindow(QMainWindow):
         create_buttons_layout.addWidget(self.reset_file_payload_button)
 
         create_hint_label = QLabel(
-            "Pick a local file to build the chunks array automatically. "
-            "Manifest and header remain manual placeholders for now."
+            "Pick a local file, then create an encrypted finalize payload locally. "
+            "This UI now calls prepare/finalize and generates manifest/header/chunks automatically."
         )
         create_hint_label.setWordWrap(True)
 
         create_form_layout = QFormLayout()
         create_form_layout.addRow("Selected file", self.file_path_input)
         create_form_layout.addRow("Chunk size", self.file_chunk_size_kib_input)
+        create_form_layout.addRow("Dev AES-256 key (base64)", self.file_master_key_b64_input)
         create_form_layout.addRow("Manifest JSON", self.file_manifest_input)
         create_form_layout.addRow("Header JSON", self.file_header_input)
         create_form_layout.addRow("Chunks JSON", self.file_chunks_input)
@@ -707,22 +720,27 @@ class MainWindow(QMainWindow):
         chunk_size_bytes = self.file_chunk_size_kib_input.value() * 1024
 
         try:
-            result = build_chunks_from_path(file_path, chunk_size_bytes=chunk_size_bytes)
+            result = inspect_plaintext_file(
+                source_path=file_path,
+                chunk_size_bytes=chunk_size_bytes,
+            )
         except Exception as exc:
             self.status_label.setText(
-                "File chunk build failed.\n"
+                "File inspection failed.\n"
                 f"Error: {exc}"
             )
             return
 
         self.file_path_input.setText(result.source_path)
-        self.file_chunks_input.setPlainText(json.dumps(result.chunks, indent=2))
+        self.file_manifest_input.clear()
+        self.file_header_input.clear()
+        self.file_chunks_input.clear()
         self.status_label.setText(
-            "Local file prepared for file-create payload.\n"
+            "Local file selected for encrypted upload.\n"
             f"Path: {result.source_path}\n"
             f"Size: {result.file_size_bytes} bytes\n"
             f"Chunk size: {result.chunk_size_bytes} bytes\n"
-            f"Chunks: {len(result.chunks)}"
+            f"Planned chunks: {result.chunk_count}"
         )
 
     def run_create_file(self) -> None:
@@ -734,34 +752,82 @@ class MainWindow(QMainWindow):
             )
             return
 
+        source_path = self.file_path_input.text().strip()
+        if not source_path:
+            self.status_label.setText(
+                "File creation failed.\n"
+                "Error: No local file selected."
+            )
+            return
+
+        master_key_b64 = self.file_master_key_b64_input.text().strip()
+        if not master_key_b64:
+            self.status_label.setText(
+                "File creation failed.\n"
+                "Error: Dev AES-256 key is empty."
+            )
+            return
+
+        chunk_size_bytes = self.file_chunk_size_kib_input.value() * 1024
+
         try:
-            encrypted_manifest = self._parse_json_object_text(
-                self.file_manifest_input,
-                field_name="Manifest JSON",
-                allow_empty=False,
+            inspection = inspect_plaintext_file(
+                source_path=source_path,
+                chunk_size_bytes=chunk_size_bytes,
             )
-            encryption_header = self._parse_json_object_text(
-                self.file_header_input,
-                field_name="Header JSON",
-                allow_empty=False,
+        except Exception as exc:
+            self.files_output.setPlainText(
+                "File inspection failed.\n"
+                f"Error: {exc}"
             )
-            chunks = self._parse_json_array_text(
-                self.file_chunks_input,
-                field_name="Chunks JSON",
-                allow_empty=False,
-            )
-        except ValueError as exc:
             self.status_label.setText(
                 "File creation failed.\n"
                 f"Error: {exc}"
             )
             return
 
-        result = self.desktop_service.create_file(
+        prepared_result = self.desktop_service.prepare_file(
             device_name=device_name,
-            encrypted_manifest=encrypted_manifest,
-            encryption_header=encryption_header,
-            chunks=chunks,
+            chunk_count=inspection.chunk_count,
+        )
+        if prepared_result.error:
+            self.files_output.setPlainText(
+                "File prepare failed.\n"
+                f"Error: {prepared_result.error}"
+            )
+            self.status_label.setText(
+                "File creation failed.\n"
+                f"Error: {prepared_result.error}"
+            )
+            return
+
+        try:
+            finalize_payload = build_encrypted_file_finalize_payload(
+                source_path=source_path,
+                chunk_size_bytes=chunk_size_bytes,
+                prepared_file=prepared_result.item or {},
+                master_key_b64=master_key_b64,
+            )
+        except Exception as exc:
+            self.files_output.setPlainText(
+                "Local file encryption failed.\n"
+                f"Error: {exc}"
+            )
+            self.status_label.setText(
+                "File creation failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        self._render_generated_file_payload_preview(finalize_payload)
+
+        result = self.desktop_service.finalize_file(
+            device_name=device_name,
+            file_id=finalize_payload.file_id,
+            file_version=finalize_payload.file_version,
+            encrypted_manifest=finalize_payload.encrypted_manifest,
+            encryption_header=finalize_payload.encryption_header,
+            chunks=finalize_payload.chunks,
         )
         self._render_file_create_result(result)
 
@@ -790,24 +856,11 @@ class MainWindow(QMainWindow):
 
     def reset_file_create_fields(self) -> None:
         self.file_path_input.clear()
-        self.file_chunk_size_kib_input.setValue(256)
-        self.file_manifest_input.setPlainText(
-            json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
-        )
-        self.file_header_input.setPlainText(
-            json.dumps({"nonce_b64": "bm9uY2U="}, indent=2)
-        )
-        self.file_chunks_input.setPlainText(
-            json.dumps(
-                [
-                    {
-                        "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
-                        "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
-                    }
-                ],
-                indent=2,
-            )
-        )
+        self.file_chunk_size_kib_input.setValue(8192)
+        self.file_master_key_b64_input.clear()
+        self.file_manifest_input.clear()
+        self.file_header_input.clear()
+        self.file_chunks_input.clear()
 
     def load_credentials(self) -> None:
         result = self.desktop_service.fetch_credentials()
@@ -982,6 +1035,49 @@ class MainWindow(QMainWindow):
 
         self.status_label.setText("\n".join(status_lines))
         self._save_ui_preferences()
+
+    def _render_generated_file_payload_preview(self, finalize_payload) -> None:
+        self.file_manifest_input.setPlainText(
+            json.dumps(finalize_payload.encrypted_manifest, indent=2)
+        )
+        self.file_header_input.setPlainText(
+            json.dumps(finalize_payload.encryption_header, indent=2)
+        )
+
+        chunks = list(finalize_payload.chunks)
+        should_render_full_chunks = (
+            len(chunks) <= 8
+            and all(len(str(chunk.get("ciphertext_b64", ""))) <= 2048 for chunk in chunks)
+        )
+
+        if should_render_full_chunks:
+            self.file_chunks_input.setPlainText(json.dumps(chunks, indent=2))
+            return
+
+        preview_count = min(5, len(chunks))
+        preview = []
+        for chunk in chunks[:preview_count]:
+            preview.append(
+                {
+                    "chunk_index": chunk.get("chunk_index"),
+                    "object_key": chunk.get("object_key"),
+                    "ciphertext_sha256_hex": chunk.get("ciphertext_sha256_hex"),
+                    "ciphertext_b64_length": len(str(chunk.get("ciphertext_b64", ""))),
+                }
+            )
+
+        summary = {
+            "display_mode": "summary_only",
+            "reason": "encrypted chunk payload too large for QTextEdit rendering",
+            "file_id": finalize_payload.file_id,
+            "file_version": finalize_payload.file_version,
+            "total_plaintext_size": finalize_payload.total_plaintext_size,
+            "chunk_size_bytes": finalize_payload.chunk_size_bytes,
+            "chunk_count": len(chunks),
+            "preview_count": preview_count,
+            "preview": preview,
+        }
+        self.file_chunks_input.setPlainText(json.dumps(summary, indent=2))
 
     def _render_file_create_result(self, result: ObjectCreateResult) -> None:
         if result.error:
