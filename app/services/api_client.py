@@ -342,6 +342,29 @@ class VaultApiClient:
             access_token=access_token,
         )
 
+    def update_credential(
+        self,
+        *,
+        credential_id: str,
+        device_name: str,
+        expected_current_version: int,
+        encrypted_metadata: dict[str, Any] | None,
+        encrypted_payload: dict[str, Any],
+        encryption_header: dict[str, Any],
+        access_token: str | None = None,
+    ) -> ObjectCreateResult:
+        return self._post_object(
+            f"/api/v1/vault/credentials/{credential_id}/versions",
+            payload={
+                "device_name": device_name,
+                "expected_current_version": expected_current_version,
+                "encrypted_metadata": encrypted_metadata,
+                "encrypted_payload": encrypted_payload,
+                "encryption_header": encryption_header,
+            },
+            access_token=access_token,
+        )
+
     def create_note(
         self,
         *,
@@ -397,6 +420,29 @@ class VaultApiClient:
                 "device_name": device_name,
                 "note_id": note_id,
                 "note_version": note_version,
+                "encrypted_metadata": encrypted_metadata,
+                "encrypted_payload": encrypted_payload,
+                "encryption_header": encryption_header,
+            },
+            access_token=access_token,
+        )
+
+    def update_note(
+        self,
+        *,
+        note_id: str,
+        device_name: str,
+        expected_current_version: int,
+        encrypted_metadata: dict[str, Any] | None,
+        encrypted_payload: dict[str, Any],
+        encryption_header: dict[str, Any],
+        access_token: str | None = None,
+    ) -> ObjectCreateResult:
+        return self._post_object(
+            f"/api/v1/vault/notes/{note_id}/versions",
+            payload={
+                "device_name": device_name,
+                "expected_current_version": expected_current_version,
                 "encrypted_metadata": encrypted_metadata,
                 "encrypted_payload": encrypted_payload,
                 "encryption_header": encryption_header,

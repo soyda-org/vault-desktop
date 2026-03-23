@@ -49,6 +49,18 @@ class VaultGateway(Protocol):
         encryption_header: dict,
     ) -> ObjectCreateResult: ...
 
+    def update_credential(
+        self,
+        session: DesktopSession,
+        *,
+        credential_id: str,
+        device_name: str,
+        expected_current_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult: ...
+
     def create_note(
         self,
         session: DesktopSession,
@@ -75,6 +87,18 @@ class VaultGateway(Protocol):
         device_name: str,
         note_id: str,
         note_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult: ...
+
+    def update_note(
+        self,
+        session: DesktopSession,
+        *,
+        note_id: str,
+        device_name: str,
+        expected_current_version: int,
         encrypted_metadata: dict | None,
         encrypted_payload: dict,
         encryption_header: dict,
@@ -215,6 +239,27 @@ class AuthenticatedVaultGateway:
             access_token=session.access_token,
         )
 
+    def update_credential(
+        self,
+        session: DesktopSession,
+        *,
+        credential_id: str,
+        device_name: str,
+        expected_current_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self.api_client.update_credential(
+            credential_id=credential_id,
+            device_name=device_name,
+            expected_current_version=expected_current_version,
+            encrypted_metadata=encrypted_metadata,
+            encrypted_payload=encrypted_payload,
+            encryption_header=encryption_header,
+            access_token=session.access_token,
+        )
+
     def create_note(
         self,
         session: DesktopSession,
@@ -262,6 +307,27 @@ class AuthenticatedVaultGateway:
             device_name=device_name,
             note_id=note_id,
             note_version=note_version,
+            encrypted_metadata=encrypted_metadata,
+            encrypted_payload=encrypted_payload,
+            encryption_header=encryption_header,
+            access_token=session.access_token,
+        )
+
+    def update_note(
+        self,
+        session: DesktopSession,
+        *,
+        note_id: str,
+        device_name: str,
+        expected_current_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self.api_client.update_note(
+            note_id=note_id,
+            device_name=device_name,
+            expected_current_version=expected_current_version,
             encrypted_metadata=encrypted_metadata,
             encrypted_payload=encrypted_payload,
             encryption_header=encryption_header,

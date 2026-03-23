@@ -212,6 +212,28 @@ class VaultDesktopService:
             )
         )
 
+    def update_credential(
+        self,
+        *,
+        credential_id: str,
+        device_name: str,
+        expected_current_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.update_credential(
+                session,
+                credential_id=credential_id,
+                device_name=device_name,
+                expected_current_version=expected_current_version,
+                encrypted_metadata=encrypted_metadata,
+                encrypted_payload=encrypted_payload,
+                encryption_header=encryption_header,
+            )
+        )
+
     def create_note(
         self,
         *,
@@ -262,6 +284,28 @@ class VaultDesktopService:
                 device_name=device_name,
                 note_id=note_id,
                 note_version=note_version,
+                encrypted_metadata=encrypted_metadata,
+                encrypted_payload=encrypted_payload,
+                encryption_header=encryption_header,
+            )
+        )
+
+    def update_note(
+        self,
+        *,
+        note_id: str,
+        device_name: str,
+        expected_current_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.update_note(
+                session,
+                note_id=note_id,
+                device_name=device_name,
+                expected_current_version=expected_current_version,
                 encrypted_metadata=encrypted_metadata,
                 encrypted_payload=encrypted_payload,
                 encryption_header=encryption_header,
