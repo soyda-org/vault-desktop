@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -32,6 +33,7 @@ from app.services.api_client import (
     VaultApiClient,
 )
 from app.services.desktop_service import VaultDesktopService
+from app.services.file_chunk_builder import build_chunks_from_path
 from app.services.password_generator import (
     PasswordGenerationError,
     PasswordPolicy,
@@ -151,6 +153,9 @@ class MainWindow(QMainWindow):
         self.load_file_detail_button = QPushButton("Load Selected File")
         self.load_file_detail_button.clicked.connect(self.load_file_detail)
 
+        self.pick_file_button = QPushButton("Pick File")
+        self.pick_file_button.clicked.connect(self.run_pick_file)
+
         self.create_file_button = QPushButton("Create File")
         self.create_file_button.clicked.connect(self.run_create_file)
 
@@ -234,6 +239,15 @@ class MainWindow(QMainWindow):
             'Required JSON array, for example [{"ciphertext_b64": "...", "ciphertext_sha256_hex": "..."}]'
         )
         self.file_chunks_input.setMaximumHeight(130)
+
+        self.file_path_input = QLineEdit()
+        self.file_path_input.setReadOnly(True)
+        self.file_path_input.setPlaceholderText("No local file selected.")
+
+        self.file_chunk_size_kib_input = QSpinBox()
+        self.file_chunk_size_kib_input.setRange(1, 16384)
+        self.file_chunk_size_kib_input.setValue(256)
+        self.file_chunk_size_kib_input.setSuffix(" KiB")
 
         self.reset_credential_create_fields()
         self.reset_note_create_fields()
@@ -432,16 +446,19 @@ class MainWindow(QMainWindow):
     def _build_files_tab(self) -> QWidget:
         create_buttons_layout = QHBoxLayout()
         create_buttons_layout.addWidget(self.load_file_detail_button)
+        create_buttons_layout.addWidget(self.pick_file_button)
         create_buttons_layout.addWidget(self.create_file_button)
         create_buttons_layout.addWidget(self.reset_file_payload_button)
 
         create_hint_label = QLabel(
-            "Create uses the current 'Device name' value from the auth form above. "
-            "Until the crypto/UI flow is implemented, enter JSON objects manually, including the chunks array."
+            "Pick a local file to build the chunks array automatically. "
+            "Manifest and header remain manual placeholders for now."
         )
         create_hint_label.setWordWrap(True)
 
         create_form_layout = QFormLayout()
+        create_form_layout.addRow("Selected file", self.file_path_input)
+        create_form_layout.addRow("Chunk size", self.file_chunk_size_kib_input)
         create_form_layout.addRow("Manifest JSON", self.file_manifest_input)
         create_form_layout.addRow("Header JSON", self.file_header_input)
         create_form_layout.addRow("Chunks JSON", self.file_chunks_input)
@@ -677,6 +694,37 @@ class MainWindow(QMainWindow):
         )
         self._render_note_create_result(result)
 
+    def run_pick_file(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Local File",
+            "",
+            "All files (*)",
+        )
+        if not file_path:
+            return
+
+        chunk_size_bytes = self.file_chunk_size_kib_input.value() * 1024
+
+        try:
+            result = build_chunks_from_path(file_path, chunk_size_bytes=chunk_size_bytes)
+        except Exception as exc:
+            self.status_label.setText(
+                "File chunk build failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        self.file_path_input.setText(result.source_path)
+        self.file_chunks_input.setPlainText(json.dumps(result.chunks, indent=2))
+        self.status_label.setText(
+            "Local file prepared for file-create payload.\n"
+            f"Path: {result.source_path}\n"
+            f"Size: {result.file_size_bytes} bytes\n"
+            f"Chunk size: {result.chunk_size_bytes} bytes\n"
+            f"Chunks: {len(result.chunks)}"
+        )
+
     def run_create_file(self) -> None:
         device_name = self.device_name_input.text().strip()
         if not device_name:
@@ -741,6 +789,8 @@ class MainWindow(QMainWindow):
         )
 
     def reset_file_create_fields(self) -> None:
+        self.file_path_input.clear()
+        self.file_chunk_size_kib_input.setValue(256)
         self.file_manifest_input.setPlainText(
             json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
         )
