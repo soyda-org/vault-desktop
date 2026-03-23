@@ -145,6 +145,9 @@ class MainWindow(QMainWindow):
         self.create_credential_button = QPushButton("Create Credential")
         self.create_credential_button.clicked.connect(self.run_create_credential)
 
+        self.update_credential_button = QPushButton("Update Credential")
+        self.update_credential_button.clicked.connect(self.run_update_credential)
+
         self.reset_credential_payload_button = QPushButton("Reset Payload")
         self.reset_credential_payload_button.clicked.connect(self.reset_credential_create_fields)
 
@@ -153,6 +156,9 @@ class MainWindow(QMainWindow):
 
         self.create_note_button = QPushButton("Create Note")
         self.create_note_button.clicked.connect(self.run_create_note)
+
+        self.update_note_button = QPushButton("Update Note")
+        self.update_note_button.clicked.connect(self.run_update_note)
 
         self.reset_note_payload_button = QPushButton("Reset Payload")
         self.reset_note_payload_button.clicked.connect(self.reset_note_create_fields)
@@ -187,6 +193,11 @@ class MainWindow(QMainWindow):
         self.file_upload_worker: FileUploadWorker | None = None
         self.file_download_thread: QThread | None = None
         self.file_download_worker: FileDownloadWorker | None = None
+
+        self.selected_credential_id: str | None = None
+        self.selected_credential_current_version: int | None = None
+        self.selected_note_id: str | None = None
+        self.selected_note_current_version: int | None = None
 
         self.credentials_list = QListWidget()
         self.credentials_list.itemDoubleClicked.connect(lambda _: self.load_credential_detail())
@@ -427,11 +438,12 @@ class MainWindow(QMainWindow):
         create_buttons_layout = QHBoxLayout()
         create_buttons_layout.addWidget(self.load_credential_detail_button)
         create_buttons_layout.addWidget(self.create_credential_button)
+        create_buttons_layout.addWidget(self.update_credential_button)
         create_buttons_layout.addWidget(self.reset_credential_payload_button)
 
         create_hint_label = QLabel(
-            "Create uses the current 'Device name' value and the unlocked session vault key. "
-            "Enter plaintext JSON; the desktop reserves the credential ID, encrypts locally, and finalizes with ciphertext only."
+            "Create/update uses the current 'Device name' value and the unlocked session vault key. "
+            "Create reserves a new credential ID; load a credential detail to prefill plaintext editors before saving a new encrypted version."
         )
         create_hint_label.setWordWrap(True)
 
@@ -465,11 +477,12 @@ class MainWindow(QMainWindow):
         create_buttons_layout = QHBoxLayout()
         create_buttons_layout.addWidget(self.load_note_detail_button)
         create_buttons_layout.addWidget(self.create_note_button)
+        create_buttons_layout.addWidget(self.update_note_button)
         create_buttons_layout.addWidget(self.reset_note_payload_button)
 
         create_hint_label = QLabel(
-            "Create uses the current 'Device name' value and the unlocked session vault key. "
-            "Enter plaintext JSON; the desktop reserves the note ID, encrypts locally, and finalizes with ciphertext only."
+            "Create/update uses the current 'Device name' value and the unlocked session vault key. "
+            "Create reserves a new note ID; load a note detail to prefill plaintext editors before saving a new encrypted version."
         )
         create_hint_label.setWordWrap(True)
 
@@ -642,12 +655,20 @@ class MainWindow(QMainWindow):
             return
         self.desktop_service.logout()
         self.status_label.setText("Session cleared locally.")
+        self.selected_credential_id = None
+        self.selected_credential_current_version = None
         self.credentials_list.clear()
+        self.selected_note_id = None
+        self.selected_note_current_version = None
         self.notes_list.clear()
         self.files_list.clear()
         self.credentials_output.clear()
         self.notes_output.clear()
         self.files_output.clear()
+        self.selected_credential_id = None
+        self.selected_credential_current_version = None
+        self.selected_note_id = None
+        self.selected_note_current_version = None
         self.file_master_key_b64_input.clear()
         self.refresh_session_label()
         self._save_ui_preferences()
@@ -911,6 +932,180 @@ class MainWindow(QMainWindow):
             )
 
         self._render_note_create_result(result)
+
+    def run_update_credential(self) -> None:
+        device_name = self.device_name_input.text().strip()
+        if not device_name:
+            self.status_label.setText(
+                "Credential update failed.\n"
+                "Error: Device name is empty."
+            )
+            return
+
+        credential_id = self.selected_credential_id
+        current_version = self.selected_credential_current_version
+        if not credential_id or current_version is None:
+            self.status_label.setText(
+                "Credential update failed.\n"
+                "Error: Load a credential detail first."
+            )
+            return
+
+        master_key_b64 = self.desktop_service.current_session_vault_master_key()
+        if not master_key_b64:
+            self.status_label.setText(
+                "Credential update failed.\n"
+                "Error: Session vault key is not unlocked."
+            )
+            return
+
+        try:
+            plaintext_metadata = self._parse_json_object_text(
+                self.credential_metadata_input,
+                field_name="Metadata JSON (plaintext)",
+                allow_empty=True,
+            )
+            plaintext_payload = self._parse_json_object_text(
+                self.credential_payload_input,
+                field_name="Payload JSON (plaintext)",
+                allow_empty=False,
+            )
+        except ValueError as exc:
+            self.status_label.setText(
+                "Credential update failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        next_version = current_version + 1
+
+        try:
+            encrypted = build_encrypted_item_finalize_payload(
+                object_type="credential",
+                object_id=credential_id,
+                object_version=next_version,
+                plaintext_metadata=plaintext_metadata,
+                plaintext_payload=plaintext_payload,
+                master_key_b64=master_key_b64,
+            )
+        except Exception as exc:
+            self.status_label.setText(
+                "Credential update failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        self.credential_header_input.setPlainText(
+            json.dumps(encrypted.encryption_header, indent=2)
+        )
+
+        result = self.desktop_service.update_credential(
+            credential_id=credential_id,
+            device_name=device_name,
+            expected_current_version=current_version,
+            encrypted_metadata=encrypted.encrypted_metadata,
+            encrypted_payload=encrypted.encrypted_payload,
+            encryption_header=encrypted.encryption_header,
+        )
+
+        if result.error is None and result.item is not None:
+            decorated_item = dict(result.item)
+            decorated_item["plaintext_metadata"] = plaintext_metadata
+            decorated_item["plaintext_payload"] = plaintext_payload
+            result = ObjectCreateResult(
+                item=decorated_item,
+                error=None,
+                status_code=result.status_code,
+            )
+
+        self._render_credential_update_result(result)
+
+    def run_update_note(self) -> None:
+        device_name = self.device_name_input.text().strip()
+        if not device_name:
+            self.status_label.setText(
+                "Note update failed.\n"
+                "Error: Device name is empty."
+            )
+            return
+
+        note_id = self.selected_note_id
+        current_version = self.selected_note_current_version
+        if not note_id or current_version is None:
+            self.status_label.setText(
+                "Note update failed.\n"
+                "Error: Load a note detail first."
+            )
+            return
+
+        master_key_b64 = self.desktop_service.current_session_vault_master_key()
+        if not master_key_b64:
+            self.status_label.setText(
+                "Note update failed.\n"
+                "Error: Session vault key is not unlocked."
+            )
+            return
+
+        try:
+            plaintext_metadata = self._parse_json_object_text(
+                self.note_metadata_input,
+                field_name="Metadata JSON (plaintext)",
+                allow_empty=True,
+            )
+            plaintext_payload = self._parse_json_object_text(
+                self.note_payload_input,
+                field_name="Payload JSON (plaintext)",
+                allow_empty=False,
+            )
+        except ValueError as exc:
+            self.status_label.setText(
+                "Note update failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        next_version = current_version + 1
+
+        try:
+            encrypted = build_encrypted_item_finalize_payload(
+                object_type="note",
+                object_id=note_id,
+                object_version=next_version,
+                plaintext_metadata=plaintext_metadata,
+                plaintext_payload=plaintext_payload,
+                master_key_b64=master_key_b64,
+            )
+        except Exception as exc:
+            self.status_label.setText(
+                "Note update failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        self.note_header_input.setPlainText(
+            json.dumps(encrypted.encryption_header, indent=2)
+        )
+
+        result = self.desktop_service.update_note(
+            note_id=note_id,
+            device_name=device_name,
+            expected_current_version=current_version,
+            encrypted_metadata=encrypted.encrypted_metadata,
+            encrypted_payload=encrypted.encrypted_payload,
+            encryption_header=encrypted.encryption_header,
+        )
+
+        if result.error is None and result.item is not None:
+            decorated_item = dict(result.item)
+            decorated_item["plaintext_metadata"] = plaintext_metadata
+            decorated_item["plaintext_payload"] = plaintext_payload
+            result = ObjectCreateResult(
+                item=decorated_item,
+                error=None,
+                status_code=result.status_code,
+            )
+
+        self._render_note_update_result(result)
 
     def run_pick_file(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(
@@ -1356,6 +1551,7 @@ class MainWindow(QMainWindow):
 
         item = result.item or {}
         credential_id = str(item.get("credential_id", ""))
+        display_item = self._decorate_item_detail_for_local_display(item)
 
         list_result = self.desktop_service.fetch_credentials()
         self._render_credentials(list_result)
@@ -1363,7 +1559,8 @@ class MainWindow(QMainWindow):
         if credential_id and not list_result.error:
             self._select_credential_item_by_id(credential_id)
 
-        self.credentials_output.setPlainText(format_credential_detail(item))
+        self._bind_credential_item_to_editors(display_item)
+        self.credentials_output.setPlainText(format_credential_detail(display_item))
         self.tabs.setCurrentIndex(0)
 
         status_lines = [
@@ -1389,6 +1586,7 @@ class MainWindow(QMainWindow):
 
         item = result.item or {}
         note_id = str(item.get("note_id", ""))
+        display_item = self._decorate_item_detail_for_local_display(item)
 
         list_result = self.desktop_service.fetch_notes()
         self._render_notes(list_result)
@@ -1396,12 +1594,85 @@ class MainWindow(QMainWindow):
         if note_id and not list_result.error:
             self._select_note_item_by_id(note_id)
 
-        self.notes_output.setPlainText(format_note_detail(item))
+        self._bind_note_item_to_editors(display_item)
+        self.notes_output.setPlainText(format_note_detail(display_item))
         self.tabs.setCurrentIndex(1)
 
         status_lines = [
             "Note created.",
             f"Note ID: {note_id or '<unknown>'}",
+        ]
+        if list_result.error:
+            status_lines.append(f"List refresh warning: {list_result.error}")
+
+        self.status_label.setText("\n".join(status_lines))
+        self._save_ui_preferences()
+
+    def _render_credential_update_result(self, result: ObjectCreateResult) -> None:
+        if result.error:
+            self.credentials_output.setPlainText(
+                f"Credential update failed.\nError: {result.error}"
+            )
+            self.status_label.setText(
+                "Credential update failed.\n"
+                f"Error: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        credential_id = str(item.get("credential_id", ""))
+        display_item = self._decorate_item_detail_for_local_display(item)
+
+        list_result = self.desktop_service.fetch_credentials()
+        self._render_credentials(list_result)
+
+        if credential_id and not list_result.error:
+            self._select_credential_item_by_id(credential_id)
+
+        self._bind_credential_item_to_editors(display_item)
+        self.credentials_output.setPlainText(format_credential_detail(display_item))
+        self.tabs.setCurrentIndex(0)
+
+        status_lines = [
+            "Credential updated.",
+            f"Credential ID: {credential_id or '<unknown>'}",
+            f"Current version: {display_item.get('current_version', '<unknown>')}",
+        ]
+        if list_result.error:
+            status_lines.append(f"List refresh warning: {list_result.error}")
+
+        self.status_label.setText("\n".join(status_lines))
+        self._save_ui_preferences()
+
+    def _render_note_update_result(self, result: ObjectCreateResult) -> None:
+        if result.error:
+            self.notes_output.setPlainText(
+                f"Note update failed.\nError: {result.error}"
+            )
+            self.status_label.setText(
+                "Note update failed.\n"
+                f"Error: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        note_id = str(item.get("note_id", ""))
+        display_item = self._decorate_item_detail_for_local_display(item)
+
+        list_result = self.desktop_service.fetch_notes()
+        self._render_notes(list_result)
+
+        if note_id and not list_result.error:
+            self._select_note_item_by_id(note_id)
+
+        self._bind_note_item_to_editors(display_item)
+        self.notes_output.setPlainText(format_note_detail(display_item))
+        self.tabs.setCurrentIndex(1)
+
+        status_lines = [
+            "Note updated.",
+            f"Note ID: {note_id or '<unknown>'}",
+            f"Current version: {display_item.get('current_version', '<unknown>')}",
         ]
         if list_result.error:
             status_lines.append(f"List refresh warning: {list_result.error}")
@@ -1617,6 +1888,8 @@ class MainWindow(QMainWindow):
 
     def _render_credential_detail(self, result: ObjectDetailResult) -> None:
         if result.error:
+            self.selected_credential_id = None
+            self.selected_credential_current_version = None
             self.credentials_output.setPlainText(
                 f"Credential detail fetch failed.\nError: {result.error}"
             )
@@ -1624,10 +1897,13 @@ class MainWindow(QMainWindow):
 
         item = result.item or {}
         display_item = self._decorate_item_detail_for_local_display(item)
+        self._bind_credential_item_to_editors(display_item)
         self.credentials_output.setPlainText(format_credential_detail(display_item))
 
     def _render_note_detail(self, result: ObjectDetailResult) -> None:
         if result.error:
+            self.selected_note_id = None
+            self.selected_note_current_version = None
             self.notes_output.setPlainText(
                 f"Note detail fetch failed.\nError: {result.error}"
             )
@@ -1635,6 +1911,7 @@ class MainWindow(QMainWindow):
 
         item = result.item or {}
         display_item = self._decorate_item_detail_for_local_display(item)
+        self._bind_note_item_to_editors(display_item)
         self.notes_output.setPlainText(format_note_detail(display_item))
 
     def _decorate_item_detail_for_local_display(self, item: dict) -> dict:
@@ -1656,6 +1933,75 @@ class MainWindow(QMainWindow):
         display_item["plaintext_metadata"] = decrypted.plaintext_metadata
         display_item["plaintext_payload"] = decrypted.plaintext_payload
         return display_item
+
+    def _bind_credential_item_to_editors(self, item: dict) -> None:
+        credential_id = str(item.get("credential_id", "")).strip()
+        self.selected_credential_id = credential_id or None
+
+        try:
+            current_version = int(item.get("current_version"))
+        except (TypeError, ValueError):
+            current_version = None
+        self.selected_credential_current_version = (
+            current_version if current_version is not None and current_version >= 1 else None
+        )
+
+        plaintext_payload = item.get("plaintext_payload")
+        plaintext_metadata = item.get("plaintext_metadata")
+
+        if not isinstance(plaintext_payload, dict):
+            self.credential_metadata_input.clear()
+            self.credential_payload_input.clear()
+            self.credential_header_input.clear()
+            return
+
+        if isinstance(plaintext_metadata, dict):
+            self.credential_metadata_input.setPlainText(
+                json.dumps(plaintext_metadata, indent=2)
+            )
+        else:
+            self.credential_metadata_input.clear()
+
+        self.credential_payload_input.setPlainText(
+            json.dumps(plaintext_payload, indent=2)
+        )
+        self.credential_header_input.clear()
+
+    def _bind_note_item_to_editors(self, item: dict) -> None:
+        note_id = str(item.get("note_id", "")).strip()
+        self.selected_note_id = note_id or None
+
+        try:
+            current_version = int(item.get("current_version"))
+        except (TypeError, ValueError):
+            current_version = None
+        self.selected_note_current_version = (
+            current_version if current_version is not None and current_version >= 1 else None
+        )
+
+        note_type = str(item.get("note_type", "")).strip() or "note"
+        self.note_type_input.setText(note_type)
+
+        plaintext_payload = item.get("plaintext_payload")
+        plaintext_metadata = item.get("plaintext_metadata")
+
+        if not isinstance(plaintext_payload, dict):
+            self.note_metadata_input.clear()
+            self.note_payload_input.clear()
+            self.note_header_input.clear()
+            return
+
+        if isinstance(plaintext_metadata, dict):
+            self.note_metadata_input.setPlainText(
+                json.dumps(plaintext_metadata, indent=2)
+            )
+        else:
+            self.note_metadata_input.clear()
+
+        self.note_payload_input.setPlainText(
+            json.dumps(plaintext_payload, indent=2)
+        )
+        self.note_header_input.clear()
 
     def _render_file_detail(self, result: ObjectDetailResult) -> None:
         if result.error:
