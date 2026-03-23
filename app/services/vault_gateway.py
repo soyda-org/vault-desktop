@@ -46,6 +46,24 @@ class VaultGateway(Protocol):
         encryption_header: dict,
         chunks: list[dict],
     ) -> ObjectCreateResult: ...
+    def prepare_file(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        chunk_count: int,
+    ) -> ObjectDetailResult: ...
+    def finalize_file(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        file_id: str,
+        file_version: int,
+        encrypted_manifest: dict,
+        encryption_header: dict,
+        chunks: list[dict],
+    ) -> ObjectCreateResult: ...
 
 
 class AuthenticatedVaultGateway:
@@ -138,6 +156,40 @@ class AuthenticatedVaultGateway:
     ) -> ObjectCreateResult:
         return self.api_client.create_file(
             device_name=device_name,
+            encrypted_manifest=encrypted_manifest,
+            encryption_header=encryption_header,
+            chunks=chunks,
+            access_token=session.access_token,
+        )
+
+    def prepare_file(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        chunk_count: int,
+    ) -> ObjectDetailResult:
+        return self.api_client.prepare_file(
+            device_name=device_name,
+            chunk_count=chunk_count,
+            access_token=session.access_token,
+        )
+
+    def finalize_file(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        file_id: str,
+        file_version: int,
+        encrypted_manifest: dict,
+        encryption_header: dict,
+        chunks: list[dict],
+    ) -> ObjectCreateResult:
+        return self.api_client.finalize_file(
+            device_name=device_name,
+            file_id=file_id,
+            file_version=file_version,
             encrypted_manifest=encrypted_manifest,
             encryption_header=encryption_header,
             chunks=chunks,

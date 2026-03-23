@@ -190,6 +190,42 @@ class VaultDesktopService:
             )
         )
 
+    def prepare_file(
+        self,
+        *,
+        device_name: str,
+        chunk_count: int,
+    ) -> ObjectDetailResult:
+        return self._fetch_detail_write_with_refresh(
+            lambda session: self.vault_gateway.prepare_file(
+                session,
+                device_name=device_name,
+                chunk_count=chunk_count,
+            )
+        )
+
+    def finalize_file(
+        self,
+        *,
+        device_name: str,
+        file_id: str,
+        file_version: int,
+        encrypted_manifest: dict,
+        encryption_header: dict,
+        chunks: list[dict],
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.finalize_file(
+                session,
+                device_name=device_name,
+                file_id=file_id,
+                file_version=file_version,
+                encrypted_manifest=encrypted_manifest,
+                encryption_header=encryption_header,
+                chunks=chunks,
+            )
+        )
+
     def _fetch_list_with_refresh(
         self,
         fetcher: Callable[[DesktopSession], ObjectListResult],
@@ -225,6 +261,40 @@ class VaultDesktopService:
         return fetcher(refreshed_session)
 
     def _fetch_detail_with_refresh(
+        self,
+        fetcher: Callable[[DesktopSession], ObjectDetailResult],
+    ) -> ObjectDetailResult:
+        session = self.session_store.current
+        if session is None:
+            return ObjectDetailResult(
+                item=None,
+                error="No active session.",
+                status_code=401,
+            )
+
+        result = fetcher(session)
+        if result.status_code != 401:
+            return result
+
+        refresh_result = self.refresh_session()
+        if refresh_result.error is not None:
+            return ObjectDetailResult(
+                item=None,
+                error=f"Session refresh failed. Error: {refresh_result.error}",
+                status_code=401,
+            )
+
+        refreshed_session = self.session_store.current
+        if refreshed_session is None:
+            return ObjectDetailResult(
+                item=None,
+                error="Session refresh failed.",
+                status_code=401,
+            )
+
+        return fetcher(refreshed_session)
+
+    def _fetch_detail_write_with_refresh(
         self,
         fetcher: Callable[[DesktopSession], ObjectDetailResult],
     ) -> ObjectDetailResult:

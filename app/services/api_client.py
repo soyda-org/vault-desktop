@@ -337,6 +337,46 @@ class VaultApiClient:
             access_token=access_token,
         )
 
+    def prepare_file(
+        self,
+        *,
+        device_name: str,
+        chunk_count: int,
+        access_token: str | None = None,
+    ) -> ObjectDetailResult:
+        return self._post_detail(
+            "/api/v1/vault/files/prepare",
+            payload={
+                "device_name": device_name,
+                "chunk_count": chunk_count,
+            },
+            access_token=access_token,
+        )
+
+    def finalize_file(
+        self,
+        *,
+        device_name: str,
+        file_id: str,
+        file_version: int,
+        encrypted_manifest: dict[str, Any],
+        encryption_header: dict[str, Any],
+        chunks: list[dict[str, Any]],
+        access_token: str | None = None,
+    ) -> ObjectCreateResult:
+        return self._post_object(
+            "/api/v1/vault/files/finalize",
+            payload={
+                "device_name": device_name,
+                "file_id": file_id,
+                "file_version": file_version,
+                "encrypted_manifest": encrypted_manifest,
+                "encryption_header": encryption_header,
+                "chunks": chunks,
+            },
+            access_token=access_token,
+        )
+
     def _fetch_list(self, path: str, *, access_token: str | None) -> ObjectListResult:
         try:
             response = httpx.get(
@@ -369,6 +409,41 @@ class VaultApiClient:
         try:
             response = httpx.get(
                 f"{self.base_url}{path}",
+                headers=self._headers(access_token),
+                timeout=self.timeout_seconds,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            return ObjectDetailResult(
+                item=data,
+                error=None,
+                status_code=response.status_code,
+            )
+        except httpx.HTTPStatusError as exc:
+            return ObjectDetailResult(
+                item=None,
+                error=self._error_text(exc.response),
+                status_code=exc.response.status_code,
+            )
+        except httpx.RequestError as exc:
+            return ObjectDetailResult(
+                item=None,
+                error=str(exc),
+                status_code=None,
+            )
+
+    def _post_detail(
+        self,
+        path: str,
+        *,
+        payload: dict[str, Any],
+        access_token: str | None,
+    ) -> ObjectDetailResult:
+        try:
+            response = httpx.post(
+                f"{self.base_url}{path}",
+                json=payload,
                 headers=self._headers(access_token),
                 timeout=self.timeout_seconds,
             )

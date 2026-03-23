@@ -108,6 +108,60 @@ class FakeApiClient:
             status_code=201,
         )
 
+    def prepare_file(
+        self,
+        *,
+        device_name,
+        chunk_count,
+        access_token=None,
+    ):
+        self.calls.append(
+            (
+                "prepare_file",
+                device_name,
+                chunk_count,
+                access_token,
+            )
+        )
+        return ObjectDetailResult(
+            item={
+                "file_id": "prepared_file_001",
+                "file_version": 1,
+                "chunks": [{"chunk_index": 0, "object_key": "files/prepared_file_001/v1/chunk_0000.bin"}],
+            },
+            error=None,
+            status_code=200,
+        )
+
+    def finalize_file(
+        self,
+        *,
+        device_name,
+        file_id,
+        file_version,
+        encrypted_manifest,
+        encryption_header,
+        chunks,
+        access_token=None,
+    ):
+        self.calls.append(
+            (
+                "finalize_file",
+                device_name,
+                file_id,
+                file_version,
+                encrypted_manifest,
+                encryption_header,
+                chunks,
+                access_token,
+            )
+        )
+        return ObjectCreateResult(
+            item={"file_id": file_id},
+            error=None,
+            status_code=201,
+        )
+
 
 def make_session() -> DesktopSession:
     return DesktopSession(
@@ -225,35 +279,64 @@ def test_authenticated_gateway_create_note_uses_access_token() -> None:
     )
 
 
-def test_authenticated_gateway_create_file_uses_access_token() -> None:
+def test_authenticated_gateway_prepare_file_uses_access_token() -> None:
     api_client = FakeApiClient()
     gateway = AuthenticatedVaultGateway(api_client)
 
-    result = gateway.create_file(
+    result = gateway.prepare_file(
         make_session(),
         device_name="desktop-dev",
+        chunk_count=1,
+    )
+
+    assert result.error is None
+    assert result.item is not None
+    assert result.item["file_id"] == "prepared_file_001"
+    assert api_client.calls[0] == (
+        "prepare_file",
+        "desktop-dev",
+        1,
+        "access-token",
+    )
+
+
+def test_authenticated_gateway_finalize_file_uses_access_token() -> None:
+    api_client = FakeApiClient()
+    gateway = AuthenticatedVaultGateway(api_client)
+
+    result = gateway.finalize_file(
+        make_session(),
+        device_name="desktop-dev",
+        file_id="prepared_file_001",
+        file_version=1,
         encrypted_manifest={"ciphertext_b64": "YWJj"},
         encryption_header={"nonce_b64": "bm9uY2U="},
         chunks=[
             {
-                "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
-                "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+                "chunk_index": 0,
+                "object_key": "files/prepared_file_001/v1/chunk_0000.bin",
+                "ciphertext_b64": "ZmFrZQ==",
+                "ciphertext_sha256_hex": "a" * 64,
             }
         ],
     )
 
     assert result.error is None
     assert result.item is not None
-    assert result.item["file_id"] == "file_001"
+    assert result.item["file_id"] == "prepared_file_001"
     assert api_client.calls[0] == (
-        "create_file",
+        "finalize_file",
         "desktop-dev",
+        "prepared_file_001",
+        1,
         {"ciphertext_b64": "YWJj"},
         {"nonce_b64": "bm9uY2U="},
         [
             {
-                "ciphertext_b64": "ZmlsZV9jaHVua19kdW1teQ==",
-                "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
+                "chunk_index": 0,
+                "object_key": "files/prepared_file_001/v1/chunk_0000.bin",
+                "ciphertext_b64": "ZmFrZQ==",
+                "ciphertext_sha256_hex": "a" * 64,
             }
         ],
         "access-token",
