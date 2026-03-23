@@ -15,7 +15,6 @@ from app.services.api_client import (
     VaultApiClient,
 )
 from app.services.file_crypto_bridge import parse_dev_aes256_key_b64
-from app.services.file_crypto_bridge import parse_dev_aes256_key_b64
 from app.services.vault_gateway import AuthenticatedVaultGateway, VaultGateway
 
 
@@ -94,23 +93,6 @@ class VaultDesktopService:
     def is_authenticated(self) -> bool:
         return self.session_store.is_authenticated()
 
-    def set_session_vault_key(self, *, master_key_b64: str) -> None:
-        if self.session_store.current is None:
-            raise ValueError("No active session.")
-
-        parse_dev_aes256_key_b64(master_key_b64)
-        self.session_store.set_vault_key_context(
-            master_key_b64
-        )
-
-    def clear_session_vault_key(self) -> None:
-        self.session_store.clear_vault_key_context()
-
-    def has_session_vault_key(self) -> bool:
-        return self.session_store.has_vault_key_context()
-
-    def current_session_vault_key_b64(self) -> str | None:
-        return self.session_store.current_vault_key_b64()
 
     def refresh_session(self) -> RefreshResult:
         session = self.session_store.current
