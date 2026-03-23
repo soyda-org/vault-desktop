@@ -93,7 +93,6 @@ class VaultDesktopService:
     def is_authenticated(self) -> bool:
         return self.session_store.is_authenticated()
 
-
     def refresh_session(self) -> RefreshResult:
         session = self.session_store.current
         if session is None:
@@ -179,6 +178,40 @@ class VaultDesktopService:
             )
         )
 
+    def prepare_credential(
+        self,
+        *,
+        device_name: str,
+    ) -> ObjectDetailResult:
+        return self._fetch_detail_write_with_refresh(
+            lambda session: self.vault_gateway.prepare_credential(
+                session,
+                device_name=device_name,
+            )
+        )
+
+    def finalize_credential(
+        self,
+        *,
+        device_name: str,
+        credential_id: str,
+        credential_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.finalize_credential(
+                session,
+                device_name=device_name,
+                credential_id=credential_id,
+                credential_version=credential_version,
+                encrypted_metadata=encrypted_metadata,
+                encrypted_payload=encrypted_payload,
+                encryption_header=encryption_header,
+            )
+        )
+
     def create_note(
         self,
         *,
@@ -193,6 +226,42 @@ class VaultDesktopService:
                 session,
                 device_name=device_name,
                 note_type=note_type,
+                encrypted_metadata=encrypted_metadata,
+                encrypted_payload=encrypted_payload,
+                encryption_header=encryption_header,
+            )
+        )
+
+    def prepare_note(
+        self,
+        *,
+        device_name: str,
+        note_type: str,
+    ) -> ObjectDetailResult:
+        return self._fetch_detail_write_with_refresh(
+            lambda session: self.vault_gateway.prepare_note(
+                session,
+                device_name=device_name,
+                note_type=note_type,
+            )
+        )
+
+    def finalize_note(
+        self,
+        *,
+        device_name: str,
+        note_id: str,
+        note_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.finalize_note(
+                session,
+                device_name=device_name,
+                note_id=note_id,
+                note_version=note_version,
                 encrypted_metadata=encrypted_metadata,
                 encrypted_payload=encrypted_payload,
                 encryption_header=encryption_header,

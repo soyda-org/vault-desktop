@@ -19,6 +19,7 @@ class VaultGateway(Protocol):
     def fetch_note_detail(self, session: DesktopSession, note_id: str) -> ObjectDetailResult: ...
     def fetch_file_detail(self, session: DesktopSession, file_id: str) -> ObjectDetailResult: ...
     def fetch_file_chunk(self, session: DesktopSession, file_id: str, chunk_index: int) -> ObjectDetailResult: ...
+
     def create_credential(
         self,
         session: DesktopSession,
@@ -28,6 +29,26 @@ class VaultGateway(Protocol):
         encrypted_payload: dict,
         encryption_header: dict,
     ) -> ObjectCreateResult: ...
+
+    def prepare_credential(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+    ) -> ObjectDetailResult: ...
+
+    def finalize_credential(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        credential_id: str,
+        credential_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult: ...
+
     def create_note(
         self,
         session: DesktopSession,
@@ -38,6 +59,27 @@ class VaultGateway(Protocol):
         encrypted_payload: dict,
         encryption_header: dict,
     ) -> ObjectCreateResult: ...
+
+    def prepare_note(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        note_type: str,
+    ) -> ObjectDetailResult: ...
+
+    def finalize_note(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        note_id: str,
+        note_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult: ...
+
     def create_file(
         self,
         session: DesktopSession,
@@ -47,6 +89,7 @@ class VaultGateway(Protocol):
         encryption_header: dict,
         chunks: list[dict],
     ) -> ObjectCreateResult: ...
+
     def prepare_file(
         self,
         session: DesktopSession,
@@ -54,6 +97,7 @@ class VaultGateway(Protocol):
         device_name: str,
         chunk_count: int,
     ) -> ObjectDetailResult: ...
+
     def finalize_file(
         self,
         session: DesktopSession,
@@ -139,6 +183,38 @@ class AuthenticatedVaultGateway:
             access_token=session.access_token,
         )
 
+    def prepare_credential(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+    ) -> ObjectDetailResult:
+        return self.api_client.prepare_credential(
+            device_name=device_name,
+            access_token=session.access_token,
+        )
+
+    def finalize_credential(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        credential_id: str,
+        credential_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self.api_client.finalize_credential(
+            device_name=device_name,
+            credential_id=credential_id,
+            credential_version=credential_version,
+            encrypted_metadata=encrypted_metadata,
+            encrypted_payload=encrypted_payload,
+            encryption_header=encryption_header,
+            access_token=session.access_token,
+        )
+
     def create_note(
         self,
         session: DesktopSession,
@@ -152,6 +228,40 @@ class AuthenticatedVaultGateway:
         return self.api_client.create_note(
             device_name=device_name,
             note_type=note_type,
+            encrypted_metadata=encrypted_metadata,
+            encrypted_payload=encrypted_payload,
+            encryption_header=encryption_header,
+            access_token=session.access_token,
+        )
+
+    def prepare_note(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        note_type: str,
+    ) -> ObjectDetailResult:
+        return self.api_client.prepare_note(
+            device_name=device_name,
+            note_type=note_type,
+            access_token=session.access_token,
+        )
+
+    def finalize_note(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        note_id: str,
+        note_version: int,
+        encrypted_metadata: dict | None,
+        encrypted_payload: dict,
+        encryption_header: dict,
+    ) -> ObjectCreateResult:
+        return self.api_client.finalize_note(
+            device_name=device_name,
+            note_id=note_id,
+            note_version=note_version,
             encrypted_metadata=encrypted_metadata,
             encrypted_payload=encrypted_payload,
             encryption_header=encryption_header,
