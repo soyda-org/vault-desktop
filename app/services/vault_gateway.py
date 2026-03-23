@@ -18,6 +18,7 @@ class VaultGateway(Protocol):
     def fetch_credential_detail(self, session: DesktopSession, credential_id: str) -> ObjectDetailResult: ...
     def fetch_note_detail(self, session: DesktopSession, note_id: str) -> ObjectDetailResult: ...
     def fetch_file_detail(self, session: DesktopSession, file_id: str) -> ObjectDetailResult: ...
+    def fetch_file_chunk(self, session: DesktopSession, file_id: str, chunk_index: int) -> ObjectDetailResult: ...
     def create_credential(
         self,
         session: DesktopSession,
@@ -106,6 +107,18 @@ class AuthenticatedVaultGateway:
     ) -> ObjectDetailResult:
         return self.api_client.fetch_file_detail(
             file_id,
+            access_token=session.access_token,
+        )
+
+    def fetch_file_chunk(
+        self,
+        session: DesktopSession,
+        file_id: str,
+        chunk_index: int,
+    ) -> ObjectDetailResult:
+        return self.api_client.fetch_file_chunk(
+            file_id,
+            chunk_index,
             access_token=session.access_token,
         )
 

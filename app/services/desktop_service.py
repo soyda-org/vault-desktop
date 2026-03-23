@@ -134,6 +134,11 @@ class VaultDesktopService:
             lambda session: self.vault_gateway.fetch_file_detail(session, file_id)
         )
 
+    def fetch_file_chunk(self, file_id: str, chunk_index: int) -> ObjectDetailResult:
+        return self._fetch_detail_with_refresh(
+            lambda session: self.vault_gateway.fetch_file_chunk(session, file_id, chunk_index)
+        )
+
     def create_credential(
         self,
         *,

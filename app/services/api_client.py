@@ -275,6 +275,17 @@ class VaultApiClient:
             access_token=access_token,
         )
 
+    def fetch_file_chunk(
+        self,
+        file_id: str,
+        chunk_index: int,
+        access_token: str | None = None,
+    ) -> ObjectDetailResult:
+        return self._fetch_detail(
+            f"/api/v1/vault/files/{file_id}/chunks/{chunk_index}",
+            access_token=access_token,
+        )
+
     def create_credential(
         self,
         *,
