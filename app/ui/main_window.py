@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QThread, Qt
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMainWindow,
     QPushButton,
+    QProgressBar,
     QScrollArea,
     QSpinBox,
     QSplitter,
@@ -33,16 +34,14 @@ from app.services.api_client import (
     VaultApiClient,
 )
 from app.services.desktop_service import VaultDesktopService
-from app.services.file_crypto_bridge import (
-    build_encrypted_file_finalize_payload,
-    inspect_plaintext_file,
-)
+from app.services.file_crypto_bridge import inspect_plaintext_file
 from app.services.password_generator import (
     PasswordGenerationError,
     PasswordPolicy,
     generate_password,
 )
 from app.services.vault_gateway import AuthenticatedVaultGateway
+from app.ui.file_upload_worker import FileUploadWorker
 from app.ui.dashboard_formatters import (
     credential_list_label,
     file_list_label,
@@ -165,6 +164,9 @@ class MainWindow(QMainWindow):
         self.reset_file_payload_button = QPushButton("Reset Payload")
         self.reset_file_payload_button.clicked.connect(self.reset_file_create_fields)
 
+        self.file_upload_thread: QThread | None = None
+        self.file_upload_worker: FileUploadWorker | None = None
+
         self.credentials_list = QListWidget()
         self.credentials_list.itemDoubleClicked.connect(lambda _: self.load_credential_detail())
 
@@ -260,6 +262,11 @@ class MainWindow(QMainWindow):
         self.file_master_key_b64_input.setPlaceholderText(
             "Dev-only AES-256 master key in base64 (must decode to 32 bytes)."
         )
+
+        self.file_upload_progress = QProgressBar()
+        self.file_upload_progress.setRange(0, 100)
+        self.file_upload_progress.setValue(0)
+        self.file_upload_progress.setFormat("%p%")
 
         self.reset_credential_create_fields()
         self.reset_note_create_fields()
@@ -471,6 +478,7 @@ class MainWindow(QMainWindow):
         create_form_layout = QFormLayout()
         create_form_layout.addRow("Selected file", self.file_path_input)
         create_form_layout.addRow("Chunk size", self.file_chunk_size_kib_input)
+        create_form_layout.addRow("Upload progress", self.file_upload_progress)
         create_form_layout.addRow("Dev AES-256 key (base64)", self.file_master_key_b64_input)
         create_form_layout.addRow("Manifest JSON", self.file_manifest_input)
         create_form_layout.addRow("Header JSON", self.file_header_input)
@@ -509,6 +517,13 @@ class MainWindow(QMainWindow):
         )
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
+        if self._is_file_upload_running():
+            self.status_label.setText(
+                "Encrypted file upload is still running.\n"
+                "Wait for completion before closing the app."
+            )
+            event.ignore()
+            return
         self._save_ui_preferences()
         super().closeEvent(event)
 
@@ -566,6 +581,12 @@ class MainWindow(QMainWindow):
         self._save_ui_preferences()
 
     def run_logout(self) -> None:
+        if self._is_file_upload_running():
+            self.status_label.setText(
+                "Encrypted file upload is still running.\n"
+                "Wait for completion before logging out."
+            )
+            return
         self.desktop_service.logout()
         self.status_label.setText("Session cleared locally.")
         self.credentials_list.clear()
@@ -578,6 +599,12 @@ class MainWindow(QMainWindow):
         self._save_ui_preferences()
 
     def run_close(self) -> None:
+        if self._is_file_upload_running():
+            self.status_label.setText(
+                "Encrypted file upload is still running.\n"
+                "Wait for completion before closing the app."
+            )
+            return
         self._save_ui_preferences()
         app = QApplication.instance()
         if app is not None:
@@ -744,6 +771,13 @@ class MainWindow(QMainWindow):
         )
 
     def run_create_file(self) -> None:
+        if self._is_file_upload_running():
+            self.status_label.setText(
+                "Encrypted file upload is already running.\n"
+                "Wait for completion before starting another one."
+            )
+            return
+
         device_name = self.device_name_input.text().strip()
         if not device_name:
             self.status_label.setText(
@@ -770,66 +804,37 @@ class MainWindow(QMainWindow):
 
         chunk_size_bytes = self.file_chunk_size_kib_input.value() * 1024
 
-        try:
-            inspection = inspect_plaintext_file(
-                source_path=source_path,
-                chunk_size_bytes=chunk_size_bytes,
-            )
-        except Exception as exc:
-            self.files_output.setPlainText(
-                "File inspection failed.\n"
-                f"Error: {exc}"
-            )
-            self.status_label.setText(
-                "File creation failed.\n"
-                f"Error: {exc}"
-            )
-            return
-
-        prepared_result = self.desktop_service.prepare_file(
+        thread = QThread(self)
+        worker = FileUploadWorker(
+            desktop_service=self.desktop_service,
             device_name=device_name,
-            chunk_count=inspection.chunk_count,
+            source_path=source_path,
+            chunk_size_bytes=chunk_size_bytes,
+            master_key_b64=master_key_b64,
         )
-        if prepared_result.error:
-            self.files_output.setPlainText(
-                "File prepare failed.\n"
-                f"Error: {prepared_result.error}"
-            )
-            self.status_label.setText(
-                "File creation failed.\n"
-                f"Error: {prepared_result.error}"
-            )
-            return
+        worker.moveToThread(thread)
 
-        try:
-            finalize_payload = build_encrypted_file_finalize_payload(
-                source_path=source_path,
-                chunk_size_bytes=chunk_size_bytes,
-                prepared_file=prepared_result.item or {},
-                master_key_b64=master_key_b64,
-            )
-        except Exception as exc:
-            self.files_output.setPlainText(
-                "Local file encryption failed.\n"
-                f"Error: {exc}"
-            )
-            self.status_label.setText(
-                "File creation failed.\n"
-                f"Error: {exc}"
-            )
-            return
+        thread.started.connect(worker.run)
+        worker.progress_text.connect(self._on_file_upload_progress_text)
+        worker.progress_value.connect(self._on_file_upload_progress_value)
+        worker.payload_preview_ready.connect(self._on_file_upload_payload_preview)
+        worker.succeeded.connect(self._on_file_upload_success)
+        worker.failed.connect(self._on_file_upload_failure)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(self._on_file_upload_thread_finished)
 
-        self._render_generated_file_payload_preview(finalize_payload)
-
-        result = self.desktop_service.finalize_file(
-            device_name=device_name,
-            file_id=finalize_payload.file_id,
-            file_version=finalize_payload.file_version,
-            encrypted_manifest=finalize_payload.encrypted_manifest,
-            encryption_header=finalize_payload.encryption_header,
-            chunks=finalize_payload.chunks,
+        self.file_upload_thread = thread
+        self.file_upload_worker = worker
+        self.file_upload_progress.setValue(0)
+        self._set_file_upload_busy(True)
+        self.files_output.setPlainText(
+            "Encrypted upload started in background.\n"
+            "The window should remain responsive while the worker runs."
         )
-        self._render_file_create_result(result)
+        self.status_label.setText("Starting encrypted file upload...")
+        thread.start()
 
     def reset_credential_create_fields(self) -> None:
         self.credential_metadata_input.setPlainText(
@@ -861,6 +866,7 @@ class MainWindow(QMainWindow):
         self.file_manifest_input.clear()
         self.file_header_input.clear()
         self.file_chunks_input.clear()
+        self.file_upload_progress.setValue(0)
 
     def load_credentials(self) -> None:
         result = self.desktop_service.fetch_credentials()
@@ -1036,48 +1042,98 @@ class MainWindow(QMainWindow):
         self.status_label.setText("\n".join(status_lines))
         self._save_ui_preferences()
 
-    def _render_generated_file_payload_preview(self, finalize_payload) -> None:
+    def _is_file_upload_running(self) -> bool:
+        return self.file_upload_thread is not None and self.file_upload_thread.isRunning()
+
+    def _set_file_upload_busy(self, is_busy: bool) -> None:
+        widgets = [
+            self.probe_button,
+            self.login_button,
+            self.logout_button,
+            self.close_button,
+            self.load_credentials_button,
+            self.load_notes_button,
+            self.load_files_button,
+            self.load_all_button,
+            self.identifier_input,
+            self.password_input,
+            self.device_name_input,
+            self.platform_input,
+            self.pick_file_button,
+            self.create_file_button,
+            self.reset_file_payload_button,
+            self.load_file_detail_button,
+            self.file_chunk_size_kib_input,
+            self.file_master_key_b64_input,
+        ]
+        for widget in widgets:
+            widget.setEnabled(not is_busy)
+
+        self.tabs.setTabEnabled(0, not is_busy)
+        self.tabs.setTabEnabled(1, not is_busy)
+        self.tabs.setTabEnabled(2, True)
+
+    def _on_file_upload_progress_text(self, message: str) -> None:
+        self.status_label.setText(message)
+
+    def _on_file_upload_progress_value(self, value: int) -> None:
+        self.file_upload_progress.setValue(max(0, min(100, value)))
+
+    def _on_file_upload_payload_preview(
+        self,
+        encrypted_manifest: object,
+        encryption_header: object,
+        chunk_preview: object,
+    ) -> None:
+        self._render_generated_file_payload_preview(
+            encrypted_manifest=encrypted_manifest,
+            encryption_header=encryption_header,
+            chunk_preview=chunk_preview,
+        )
+
+    def _on_file_upload_success(self, item: object) -> None:
+        result_item = item if isinstance(item, dict) else {}
+        self.file_upload_progress.setValue(100)
+        self._render_file_create_result(
+            ObjectCreateResult(
+                item=result_item,
+                error=None,
+                status_code=201,
+            )
+        )
+
+    def _on_file_upload_failure(self, error: str) -> None:
+        self.files_output.setPlainText(
+            f"File create failed.\nError: {error}"
+        )
+        self.status_label.setText(
+            "File creation failed.\n"
+            f"Error: {error}"
+        )
+
+    def _on_file_upload_thread_finished(self) -> None:
+        self._set_file_upload_busy(False)
+        self.file_upload_worker = None
+        self.file_upload_thread = None
+        if self.file_upload_progress.value() < 100:
+            self.file_upload_progress.setValue(0)
+
+    def _render_generated_file_payload_preview(
+        self,
+        *,
+        encrypted_manifest: object,
+        encryption_header: object,
+        chunk_preview: object,
+    ) -> None:
         self.file_manifest_input.setPlainText(
-            json.dumps(finalize_payload.encrypted_manifest, indent=2)
+            json.dumps(encrypted_manifest, indent=2)
         )
         self.file_header_input.setPlainText(
-            json.dumps(finalize_payload.encryption_header, indent=2)
+            json.dumps(encryption_header, indent=2)
         )
-
-        chunks = list(finalize_payload.chunks)
-        should_render_full_chunks = (
-            len(chunks) <= 8
-            and all(len(str(chunk.get("ciphertext_b64", ""))) <= 2048 for chunk in chunks)
+        self.file_chunks_input.setPlainText(
+            json.dumps(chunk_preview, indent=2)
         )
-
-        if should_render_full_chunks:
-            self.file_chunks_input.setPlainText(json.dumps(chunks, indent=2))
-            return
-
-        preview_count = min(5, len(chunks))
-        preview = []
-        for chunk in chunks[:preview_count]:
-            preview.append(
-                {
-                    "chunk_index": chunk.get("chunk_index"),
-                    "object_key": chunk.get("object_key"),
-                    "ciphertext_sha256_hex": chunk.get("ciphertext_sha256_hex"),
-                    "ciphertext_b64_length": len(str(chunk.get("ciphertext_b64", ""))),
-                }
-            )
-
-        summary = {
-            "display_mode": "summary_only",
-            "reason": "encrypted chunk payload too large for QTextEdit rendering",
-            "file_id": finalize_payload.file_id,
-            "file_version": finalize_payload.file_version,
-            "total_plaintext_size": finalize_payload.total_plaintext_size,
-            "chunk_size_bytes": finalize_payload.chunk_size_bytes,
-            "chunk_count": len(chunks),
-            "preview_count": preview_count,
-            "preview": preview,
-        }
-        self.file_chunks_input.setPlainText(json.dumps(summary, indent=2))
 
     def _render_file_create_result(self, result: ObjectCreateResult) -> None:
         if result.error:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -67,6 +68,7 @@ def build_encrypted_file_finalize_payload(
     chunk_size_bytes: int,
     prepared_file: dict,
     master_key_b64: str,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> EncryptedFileFinalizePayload:
     if chunk_size_bytes <= 0:
         raise ValueError("chunk_size_bytes must be greater than 0")
@@ -102,6 +104,7 @@ def build_encrypted_file_finalize_payload(
 
     finalize_chunks: list[dict] = []
     manifest_chunks: list[FileChunkDescriptor] = []
+    total_chunks = len(prepared_chunks)
 
     with path.open("rb") as handle:
         if total_plaintext_size == 0:
@@ -150,6 +153,9 @@ def build_encrypted_file_finalize_payload(
                     ciphertext_sha256_hex=chunk_sha256_hex,
                 )
             )
+
+            if progress_callback is not None:
+                progress_callback(chunk_index + 1, total_chunks)
 
     manifest = EncryptedFileManifest(
         file_id=file_id,
