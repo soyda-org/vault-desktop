@@ -161,6 +161,10 @@ class MainWindow(QMainWindow):
         self.create_file_button = QPushButton("Create File")
         self.create_file_button.clicked.connect(self.run_create_file)
 
+        self.cancel_file_upload_button = QPushButton("Cancel Upload")
+        self.cancel_file_upload_button.clicked.connect(self.run_cancel_file_upload)
+        self.cancel_file_upload_button.setEnabled(False)
+
         self.reset_file_payload_button = QPushButton("Reset Payload")
         self.reset_file_payload_button.clicked.connect(self.reset_file_create_fields)
 
@@ -467,6 +471,7 @@ class MainWindow(QMainWindow):
         create_buttons_layout.addWidget(self.load_file_detail_button)
         create_buttons_layout.addWidget(self.pick_file_button)
         create_buttons_layout.addWidget(self.create_file_button)
+        create_buttons_layout.addWidget(self.cancel_file_upload_button)
         create_buttons_layout.addWidget(self.reset_file_payload_button)
 
         create_hint_label = QLabel(
@@ -819,6 +824,7 @@ class MainWindow(QMainWindow):
         worker.progress_value.connect(self._on_file_upload_progress_value)
         worker.payload_preview_ready.connect(self._on_file_upload_payload_preview)
         worker.succeeded.connect(self._on_file_upload_success)
+        worker.canceled.connect(self._on_file_upload_canceled)
         worker.failed.connect(self._on_file_upload_failure)
         worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
@@ -835,6 +841,22 @@ class MainWindow(QMainWindow):
         )
         self.status_label.setText("Starting encrypted file upload...")
         thread.start()
+
+    def run_cancel_file_upload(self) -> None:
+        if not self._is_file_upload_running() or self.file_upload_worker is None:
+            self.status_label.setText("No encrypted upload is running.")
+            return
+
+        self.cancel_file_upload_button.setEnabled(False)
+        self.status_label.setText(
+            "Cancellation requested.\n"
+            "The upload will stop at the next safe checkpoint."
+        )
+        self.files_output.setPlainText(
+            "Cancellation requested.\n"
+            "Waiting for inspect/encrypt/finalize boundary."
+        )
+        self.file_upload_worker.request_cancel()
 
     def reset_credential_create_fields(self) -> None:
         self.credential_metadata_input.setPlainText(
@@ -1069,6 +1091,8 @@ class MainWindow(QMainWindow):
         for widget in widgets:
             widget.setEnabled(not is_busy)
 
+        self.cancel_file_upload_button.setEnabled(is_busy)
+
         self.tabs.setTabEnabled(0, not is_busy)
         self.tabs.setTabEnabled(1, not is_busy)
         self.tabs.setTabEnabled(2, True)
@@ -1109,6 +1133,15 @@ class MainWindow(QMainWindow):
         self.status_label.setText(
             "File creation failed.\n"
             f"Error: {error}"
+        )
+
+    def _on_file_upload_canceled(self, message: str) -> None:
+        self.files_output.setPlainText(
+            f"File upload canceled.\nReason: {message}"
+        )
+        self.status_label.setText(
+            "File upload canceled.\n"
+            f"Reason: {message}"
         )
 
     def _on_file_upload_thread_finished(self) -> None:

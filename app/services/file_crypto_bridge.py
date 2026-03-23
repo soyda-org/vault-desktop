@@ -12,6 +12,10 @@ from vault_crypto.keys import HkdfKeyContext, KeyPurpose, derive_hkdf_subkey
 from vault_crypto.serialization import dumps_canonical_bytes
 
 
+class UploadCancelledError(RuntimeError):
+    pass
+
+
 @dataclass(frozen=True)
 class PlaintextFileInspection:
     source_path: str
@@ -69,6 +73,7 @@ def build_encrypted_file_finalize_payload(
     prepared_file: dict,
     master_key_b64: str,
     progress_callback: Callable[[int, int], None] | None = None,
+    should_cancel: Callable[[], bool] | None = None,
 ) -> EncryptedFileFinalizePayload:
     if chunk_size_bytes <= 0:
         raise ValueError("chunk_size_bytes must be greater than 0")
@@ -92,6 +97,12 @@ def build_encrypted_file_finalize_payload(
             f"got {len(prepared_chunks)}"
         )
 
+    def raise_if_cancelled() -> None:
+        if should_cancel is not None and should_cancel():
+            raise UploadCancelledError("Upload canceled by user.")
+
+    raise_if_cancelled()
+
     file_master_key = derive_hkdf_subkey(
         master_key=master_key,
         context=HkdfKeyContext(
@@ -113,6 +124,8 @@ def build_encrypted_file_finalize_payload(
             chunk_iter = iter(lambda: handle.read(chunk_size_bytes), b"")
 
         for prepared_chunk, plaintext_chunk in zip(prepared_chunks, chunk_iter, strict=True):
+            raise_if_cancelled()
+
             chunk_index = int(prepared_chunk["chunk_index"])
             object_key = str(prepared_chunk["object_key"])
 
@@ -157,6 +170,8 @@ def build_encrypted_file_finalize_payload(
             if progress_callback is not None:
                 progress_callback(chunk_index + 1, total_chunks)
 
+    raise_if_cancelled()
+
     manifest = EncryptedFileManifest(
         file_id=file_id,
         file_version=file_version,
@@ -166,6 +181,8 @@ def build_encrypted_file_finalize_payload(
     )
     manifest_plaintext = dumps_canonical_bytes(manifest.to_dict())
 
+    raise_if_cancelled()
+
     manifest_envelope = encrypt_payload(
         key=file_master_key,
         object_type="file_manifest",
@@ -173,6 +190,8 @@ def build_encrypted_file_finalize_payload(
         object_version=file_version,
         plaintext=manifest_plaintext,
     )
+
+    raise_if_cancelled()
 
     return EncryptedFileFinalizePayload(
         source_path=str(path.resolve()),

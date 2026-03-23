@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from threading import Event
+
 from PySide6.QtCore import QObject, Signal, Slot
 
 from app.services.desktop_service import VaultDesktopService
 from app.services.file_crypto_bridge import (
+    UploadCancelledError,
     build_encrypted_file_finalize_payload,
     inspect_plaintext_file,
 )
@@ -14,6 +17,7 @@ class FileUploadWorker(QObject):
     progress_value = Signal(int)
     payload_preview_ready = Signal(object, object, object)
     succeeded = Signal(object)
+    canceled = Signal(str)
     failed = Signal(str)
     finished = Signal()
 
@@ -33,12 +37,24 @@ class FileUploadWorker(QObject):
         self.source_path = source_path
         self.chunk_size_bytes = chunk_size_bytes
         self.master_key_b64 = master_key_b64
+        self._cancel_requested = Event()
+
+    def request_cancel(self) -> None:
+        self._cancel_requested.set()
+
+    def _is_cancel_requested(self) -> bool:
+        return self._cancel_requested.is_set()
+
+    def _raise_if_cancelled(self) -> None:
+        if self._is_cancel_requested():
+            raise UploadCancelledError("Upload canceled by user.")
 
     @Slot()
     def run(self) -> None:
         try:
             self.progress_value.emit(0)
             self.progress_text.emit("Inspecting local file...")
+            self._raise_if_cancelled()
 
             inspection = inspect_plaintext_file(
                 source_path=self.source_path,
@@ -52,6 +68,7 @@ class FileUploadWorker(QObject):
                 f"Size: {inspection.file_size_bytes} bytes\n"
                 f"Chunk count: {inspection.chunk_count}"
             )
+            self._raise_if_cancelled()
 
             prepared_result = self.desktop_service.prepare_file(
                 device_name=self.device_name,
@@ -68,6 +85,7 @@ class FileUploadWorker(QObject):
                 f"Prepared file ID: {prepared_file.get('file_id', '<unknown>')}\n"
                 f"Chunk count: {inspection.chunk_count}"
             )
+            self._raise_if_cancelled()
 
             last_progress = -1
 
@@ -97,6 +115,7 @@ class FileUploadWorker(QObject):
                 prepared_file=prepared_file,
                 master_key_b64=self.master_key_b64,
                 progress_callback=on_chunk_encrypted,
+                should_cancel=self._is_cancel_requested,
             )
 
             self.payload_preview_ready.emit(
@@ -104,6 +123,8 @@ class FileUploadWorker(QObject):
                 finalize_payload.encryption_header,
                 self._build_chunk_preview(finalize_payload),
             )
+
+            self._raise_if_cancelled()
 
             self.progress_value.emit(90)
             self.progress_text.emit(
@@ -130,6 +151,9 @@ class FileUploadWorker(QObject):
                 f"File ID: {item.get('file_id', finalize_payload.file_id)}"
             )
             self.succeeded.emit(item)
+        except UploadCancelledError as exc:
+            self.progress_text.emit(str(exc))
+            self.canceled.emit(str(exc))
         except Exception as exc:
             self.failed.emit(str(exc))
         finally:

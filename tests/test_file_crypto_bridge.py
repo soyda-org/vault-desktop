@@ -3,6 +3,7 @@ import base64
 from vault_crypto.serialization import loads_json
 
 from app.services.file_crypto_bridge import (
+    UploadCancelledError,
     build_encrypted_file_finalize_payload,
     inspect_plaintext_file,
     parse_dev_aes256_key_b64,
@@ -126,3 +127,64 @@ def test_build_encrypted_file_finalize_payload_reports_progress_per_chunk(tmp_pa
     )
 
     assert progress_calls == [(1, 3), (2, 3), (3, 3)]
+
+
+def test_build_encrypted_file_finalize_payload_can_cancel_before_first_chunk(tmp_path) -> None:
+    path = tmp_path / "sample.bin"
+    path.write_bytes(b"abcdefghij")
+
+    master_key_b64 = base64.b64encode(b"K" * 32).decode("ascii")
+    prepared = {
+        "file_id": "file_001",
+        "file_version": 1,
+        "chunks": [
+            {"chunk_index": 0, "object_key": "files/file_001/v1/chunk_0000.bin"},
+            {"chunk_index": 1, "object_key": "files/file_001/v1/chunk_0001.bin"},
+            {"chunk_index": 2, "object_key": "files/file_001/v1/chunk_0002.bin"},
+        ],
+    }
+
+    try:
+        build_encrypted_file_finalize_payload(
+            source_path=path,
+            chunk_size_bytes=4,
+            prepared_file=prepared,
+            master_key_b64=master_key_b64,
+            should_cancel=lambda: True,
+        )
+        assert False, "Expected UploadCancelledError"
+    except UploadCancelledError as exc:
+        assert str(exc) == "Upload canceled by user."
+
+
+def test_build_encrypted_file_finalize_payload_can_cancel_between_chunks(tmp_path) -> None:
+    path = tmp_path / "sample.bin"
+    path.write_bytes(b"abcdefghij")
+
+    master_key_b64 = base64.b64encode(b"K" * 32).decode("ascii")
+    prepared = {
+        "file_id": "file_001",
+        "file_version": 1,
+        "chunks": [
+            {"chunk_index": 0, "object_key": "files/file_001/v1/chunk_0000.bin"},
+            {"chunk_index": 1, "object_key": "files/file_001/v1/chunk_0001.bin"},
+            {"chunk_index": 2, "object_key": "files/file_001/v1/chunk_0002.bin"},
+        ],
+    }
+
+    progress_calls: list[tuple[int, int]] = []
+
+    try:
+        build_encrypted_file_finalize_payload(
+            source_path=path,
+            chunk_size_bytes=4,
+            prepared_file=prepared,
+            master_key_b64=master_key_b64,
+            progress_callback=lambda current, total: progress_calls.append((current, total)),
+            should_cancel=lambda: len(progress_calls) >= 1,
+        )
+        assert False, "Expected UploadCancelledError"
+    except UploadCancelledError as exc:
+        assert str(exc) == "Upload canceled by user."
+
+    assert progress_calls == [(1, 3)]
