@@ -41,6 +41,7 @@ from app.services.password_generator import (
     generate_password,
 )
 from app.services.vault_gateway import AuthenticatedVaultGateway
+from app.ui.file_download_worker import FileDownloadWorker
 from app.ui.file_upload_worker import FileUploadWorker
 from app.ui.dashboard_formatters import (
     credential_list_label,
@@ -165,11 +166,23 @@ class MainWindow(QMainWindow):
         self.cancel_file_upload_button.clicked.connect(self.run_cancel_file_upload)
         self.cancel_file_upload_button.setEnabled(False)
 
+        self.pick_download_target_button = QPushButton("Pick Save Path")
+        self.pick_download_target_button.clicked.connect(self.run_pick_download_target)
+
+        self.download_file_button = QPushButton("Download File")
+        self.download_file_button.clicked.connect(self.run_download_file)
+
+        self.cancel_file_download_button = QPushButton("Cancel Download")
+        self.cancel_file_download_button.clicked.connect(self.run_cancel_file_download)
+        self.cancel_file_download_button.setEnabled(False)
+
         self.reset_file_payload_button = QPushButton("Reset Payload")
         self.reset_file_payload_button.clicked.connect(self.reset_file_create_fields)
 
         self.file_upload_thread: QThread | None = None
         self.file_upload_worker: FileUploadWorker | None = None
+        self.file_download_thread: QThread | None = None
+        self.file_download_worker: FileDownloadWorker | None = None
 
         self.credentials_list = QListWidget()
         self.credentials_list.itemDoubleClicked.connect(lambda _: self.load_credential_detail())
@@ -256,6 +269,10 @@ class MainWindow(QMainWindow):
         self.file_path_input.setReadOnly(True)
         self.file_path_input.setPlaceholderText("No local file selected.")
 
+        self.file_download_target_input = QLineEdit()
+        self.file_download_target_input.setReadOnly(True)
+        self.file_download_target_input.setPlaceholderText("No local download target selected.")
+
         self.file_chunk_size_kib_input = QSpinBox()
         self.file_chunk_size_kib_input.setRange(1, 102400)
         self.file_chunk_size_kib_input.setValue(8192)
@@ -271,6 +288,11 @@ class MainWindow(QMainWindow):
         self.file_upload_progress.setRange(0, 100)
         self.file_upload_progress.setValue(0)
         self.file_upload_progress.setFormat("%p%")
+
+        self.file_download_progress = QProgressBar()
+        self.file_download_progress.setRange(0, 100)
+        self.file_download_progress.setValue(0)
+        self.file_download_progress.setFormat("%p%")
 
         self.reset_credential_create_fields()
         self.reset_note_create_fields()
@@ -472,18 +494,23 @@ class MainWindow(QMainWindow):
         create_buttons_layout.addWidget(self.pick_file_button)
         create_buttons_layout.addWidget(self.create_file_button)
         create_buttons_layout.addWidget(self.cancel_file_upload_button)
+        create_buttons_layout.addWidget(self.pick_download_target_button)
+        create_buttons_layout.addWidget(self.download_file_button)
+        create_buttons_layout.addWidget(self.cancel_file_download_button)
         create_buttons_layout.addWidget(self.reset_file_payload_button)
 
         create_hint_label = QLabel(
-            "Pick a local file, then create an encrypted finalize payload locally. "
-            "This UI now calls prepare/finalize and generates manifest/header/chunks automatically."
+            "Pick a local file for encrypted upload, or select a vault file and download/decrypt it locally. "
+            "Both flows use the same dev AES-256 base64 key field."
         )
         create_hint_label.setWordWrap(True)
 
         create_form_layout = QFormLayout()
         create_form_layout.addRow("Selected file", self.file_path_input)
+        create_form_layout.addRow("Download target", self.file_download_target_input)
         create_form_layout.addRow("Chunk size", self.file_chunk_size_kib_input)
         create_form_layout.addRow("Upload progress", self.file_upload_progress)
+        create_form_layout.addRow("Download progress", self.file_download_progress)
         create_form_layout.addRow("Dev AES-256 key (base64)", self.file_master_key_b64_input)
         create_form_layout.addRow("Manifest JSON", self.file_manifest_input)
         create_form_layout.addRow("Header JSON", self.file_header_input)
@@ -522,9 +549,9 @@ class MainWindow(QMainWindow):
         )
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
-        if self._is_file_upload_running():
+        if self._is_file_job_running():
             self.status_label.setText(
-                "Encrypted file upload is still running.\n"
+                "A file job is still running.\n"
                 "Wait for completion before closing the app."
             )
             event.ignore()
@@ -586,9 +613,9 @@ class MainWindow(QMainWindow):
         self._save_ui_preferences()
 
     def run_logout(self) -> None:
-        if self._is_file_upload_running():
+        if self._is_file_job_running():
             self.status_label.setText(
-                "Encrypted file upload is still running.\n"
+                "A file job is still running.\n"
                 "Wait for completion before logging out."
             )
             return
@@ -604,9 +631,9 @@ class MainWindow(QMainWindow):
         self._save_ui_preferences()
 
     def run_close(self) -> None:
-        if self._is_file_upload_running():
+        if self._is_file_job_running():
             self.status_label.setText(
-                "Encrypted file upload is still running.\n"
+                "A file job is still running.\n"
                 "Wait for completion before closing the app."
             )
             return
@@ -776,9 +803,9 @@ class MainWindow(QMainWindow):
         )
 
     def run_create_file(self) -> None:
-        if self._is_file_upload_running():
+        if self._is_file_job_running():
             self.status_label.setText(
-                "Encrypted file upload is already running.\n"
+                "A file job is already running.\n"
                 "Wait for completion before starting another one."
             )
             return
@@ -858,6 +885,111 @@ class MainWindow(QMainWindow):
         )
         self.file_upload_worker.request_cancel()
 
+    def run_pick_download_target(self) -> None:
+        current_target = self.file_download_target_input.text().strip()
+        selected_item = self.files_list.currentItem()
+        default_name = current_target
+        if not default_name and selected_item is not None:
+            selected_file_id = str(selected_item.data(Qt.ItemDataRole.UserRole) or "").strip()
+            if selected_file_id:
+                default_name = f"{selected_file_id}.bin"
+
+        target_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Select Download Destination",
+            default_name,
+            "All files (*)",
+        )
+        if not target_path:
+            return
+
+        self.file_download_target_input.setText(target_path)
+        self.status_label.setText(
+            "Download target selected.\n"
+            f"Path: {target_path}"
+        )
+
+    def run_download_file(self) -> None:
+        if self._is_file_job_running():
+            self.status_label.setText(
+                "A file job is already running.\n"
+                "Wait for completion before starting another one."
+            )
+            return
+
+        item = self.files_list.currentItem()
+        if item is None:
+            self.status_label.setText("Select a file first.")
+            return
+
+        file_id = str(item.data(Qt.ItemDataRole.UserRole) or "").strip()
+        if not file_id:
+            self.status_label.setText("Selected file item has no file ID.")
+            return
+
+        target_path = self.file_download_target_input.text().strip()
+        if not target_path:
+            self.status_label.setText(
+                "File download failed.\n"
+                "Error: No local download target selected."
+            )
+            return
+
+        master_key_b64 = self.file_master_key_b64_input.text().strip()
+        if not master_key_b64:
+            self.status_label.setText(
+                "File download failed.\n"
+                "Error: Dev AES-256 key is empty."
+            )
+            return
+
+        thread = QThread(self)
+        worker = FileDownloadWorker(
+            desktop_service=self.desktop_service,
+            file_id=file_id,
+            target_path=target_path,
+            master_key_b64=master_key_b64,
+        )
+        worker.moveToThread(thread)
+
+        thread.started.connect(worker.run)
+        worker.progress_text.connect(self._on_file_download_progress_text)
+        worker.progress_value.connect(self._on_file_download_progress_value)
+        worker.succeeded.connect(self._on_file_download_success)
+        worker.canceled.connect(self._on_file_download_canceled)
+        worker.failed.connect(self._on_file_download_failure)
+        worker.finished.connect(thread.quit)
+        worker.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(self._on_file_download_thread_finished)
+
+        self.file_download_thread = thread
+        self.file_download_worker = worker
+        self.file_download_progress.setValue(0)
+        self._set_file_download_busy(True)
+        self.files_output.setPlainText(
+            "Encrypted file download started in background.\n"
+            "The window should remain responsive while the worker runs."
+        )
+        self.status_label.setText("Starting encrypted file download...")
+        thread.start()
+
+    def run_cancel_file_download(self) -> None:
+        if not self._is_file_download_running() or self.file_download_worker is None:
+            self.status_label.setText("No encrypted download is running.")
+            return
+
+        self.cancel_file_download_button.setEnabled(False)
+        self.status_label.setText(
+            "Cancellation requested.\n"
+            "The download will stop at the next safe checkpoint."
+        )
+        self.files_output.setPlainText(
+            "Cancellation requested.\n"
+            "Waiting for chunk/decrypt/write boundary."
+        )
+        self.file_download_worker.request_cancel()
+
     def reset_credential_create_fields(self) -> None:
         self.credential_metadata_input.setPlainText(
             json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
@@ -883,12 +1015,14 @@ class MainWindow(QMainWindow):
 
     def reset_file_create_fields(self) -> None:
         self.file_path_input.clear()
+        self.file_download_target_input.clear()
         self.file_chunk_size_kib_input.setValue(8192)
         self.file_master_key_b64_input.clear()
         self.file_manifest_input.clear()
         self.file_header_input.clear()
         self.file_chunks_input.clear()
         self.file_upload_progress.setValue(0)
+        self.file_download_progress.setValue(0)
 
     def load_credentials(self) -> None:
         result = self.desktop_service.fetch_credentials()
@@ -1067,7 +1201,13 @@ class MainWindow(QMainWindow):
     def _is_file_upload_running(self) -> bool:
         return self.file_upload_thread is not None and self.file_upload_thread.isRunning()
 
-    def _set_file_upload_busy(self, is_busy: bool) -> None:
+    def _is_file_download_running(self) -> bool:
+        return self.file_download_thread is not None and self.file_download_thread.isRunning()
+
+    def _is_file_job_running(self) -> bool:
+        return self._is_file_upload_running() or self._is_file_download_running()
+
+    def _set_file_job_busy(self, *, upload_busy: bool, download_busy: bool) -> None:
         widgets = [
             self.probe_button,
             self.login_button,
@@ -1083,19 +1223,28 @@ class MainWindow(QMainWindow):
             self.platform_input,
             self.pick_file_button,
             self.create_file_button,
+            self.pick_download_target_button,
+            self.download_file_button,
             self.reset_file_payload_button,
             self.load_file_detail_button,
             self.file_chunk_size_kib_input,
             self.file_master_key_b64_input,
         ]
         for widget in widgets:
-            widget.setEnabled(not is_busy)
+            widget.setEnabled(not (upload_busy or download_busy))
 
-        self.cancel_file_upload_button.setEnabled(is_busy)
+        self.cancel_file_upload_button.setEnabled(upload_busy)
+        self.cancel_file_download_button.setEnabled(download_busy)
 
-        self.tabs.setTabEnabled(0, not is_busy)
-        self.tabs.setTabEnabled(1, not is_busy)
+        self.tabs.setTabEnabled(0, not (upload_busy or download_busy))
+        self.tabs.setTabEnabled(1, not (upload_busy or download_busy))
         self.tabs.setTabEnabled(2, True)
+
+    def _set_file_upload_busy(self, is_busy: bool) -> None:
+        self._set_file_job_busy(upload_busy=is_busy, download_busy=False)
+
+    def _set_file_download_busy(self, is_busy: bool) -> None:
+        self._set_file_job_busy(upload_busy=False, download_busy=is_busy)
 
     def _on_file_upload_progress_text(self, message: str) -> None:
         self.status_label.setText(message)
@@ -1150,6 +1299,58 @@ class MainWindow(QMainWindow):
         self.file_upload_thread = None
         if self.file_upload_progress.value() < 100:
             self.file_upload_progress.setValue(0)
+
+    def _on_file_download_progress_text(self, message: str) -> None:
+        self.status_label.setText(message)
+
+    def _on_file_download_progress_value(self, value: int) -> None:
+        self.file_download_progress.setValue(max(0, min(100, value)))
+
+    def _on_file_download_success(self, item: object) -> None:
+        result_item = item if isinstance(item, dict) else {}
+        self.file_download_progress.setValue(100)
+        self.files_output.setPlainText(
+            "\n".join(
+                [
+                    "File downloaded.",
+                    f"File ID: {result_item.get('file_id', '<unknown>')}",
+                    f"Saved to: {result_item.get('target_path', '<unknown>')}",
+                    f"Bytes written: {result_item.get('bytes_written', '<unknown>')}",
+                    f"Chunk count: {result_item.get('chunk_count', '<unknown>')}",
+                ]
+            )
+        )
+        self.status_label.setText(
+            "File download completed.\n"
+            f"Saved to: {result_item.get('target_path', '<unknown>')}"
+        )
+        self.tabs.setCurrentIndex(2)
+        self._save_ui_preferences()
+
+    def _on_file_download_failure(self, error: str) -> None:
+        self.files_output.setPlainText(
+            f"File download failed.\nError: {error}"
+        )
+        self.status_label.setText(
+            "File download failed.\n"
+            f"Error: {error}"
+        )
+
+    def _on_file_download_canceled(self, message: str) -> None:
+        self.files_output.setPlainText(
+            f"File download canceled.\nReason: {message}"
+        )
+        self.status_label.setText(
+            "File download canceled.\n"
+            f"Reason: {message}"
+        )
+
+    def _on_file_download_thread_finished(self) -> None:
+        self._set_file_download_busy(False)
+        self.file_download_worker = None
+        self.file_download_thread = None
+        if self.file_download_progress.value() < 100:
+            self.file_download_progress.setValue(0)
 
     def _render_generated_file_payload_preview(
         self,
