@@ -3,6 +3,38 @@ from __future__ import annotations
 import json
 
 
+def _json_text(value) -> str:
+    return json.dumps(value, indent=2)
+
+
+def _append_local_decrypt_sections(lines: list[str], item: dict) -> None:
+    has_plaintext = "plaintext_metadata" in item or "plaintext_payload" in item
+    has_error = bool(item.get("decryption_error"))
+
+    if not has_plaintext and not has_error:
+        return
+
+    lines.extend(
+        [
+            "Local decrypt status:",
+            f"{'Unavailable: ' + str(item.get('decryption_error')) if has_error else 'Available'}",
+            "",
+        ]
+    )
+
+    if has_plaintext:
+        lines.extend(
+            [
+                "Plaintext metadata:",
+                _json_text(item.get("plaintext_metadata")),
+                "",
+                "Plaintext payload:",
+                _json_text(item.get("plaintext_payload")),
+                "",
+            ]
+        )
+
+
 def credential_list_label(item: dict) -> str:
     return (
         f"{item.get('credential_id', '-')}"
@@ -105,40 +137,64 @@ def format_files_items(items: list[dict]) -> str:
 
 
 def format_credential_detail(item: dict) -> str:
-    return (
-        "Credential detail loaded successfully.\n\n"
-        f"ID: {item.get('credential_id', '-')}\n"
-        f"User ID: {item.get('user_id', '-')}\n"
-        f"State: {item.get('state', '-')}\n"
-        f"Current version: {item.get('current_version', '-')}\n"
-        f"Created by device ID: {item.get('created_by_device_id', '-')}\n"
-        f"Created at: {item.get('created_at', '-')}\n\n"
-        "Encrypted metadata:\n"
-        f"{json.dumps(item.get('encrypted_metadata'), indent=2)}\n\n"
-        "Encrypted payload:\n"
-        f"{json.dumps(item.get('encrypted_payload'), indent=2)}\n\n"
-        "Encryption header:\n"
-        f"{json.dumps(item.get('encryption_header'), indent=2)}"
+    lines = [
+        "Credential detail loaded successfully.",
+        "",
+        f"ID: {item.get('credential_id', '-')}",
+        f"User ID: {item.get('user_id', '-')}",
+        f"State: {item.get('state', '-')}",
+        f"Current version: {item.get('current_version', '-')}",
+        f"Created by device ID: {item.get('created_by_device_id', '-')}",
+        f"Created at: {item.get('created_at', '-')}",
+        "",
+    ]
+
+    _append_local_decrypt_sections(lines, item)
+
+    lines.extend(
+        [
+            "Encrypted metadata:",
+            _json_text(item.get("encrypted_metadata")),
+            "",
+            "Encrypted payload:",
+            _json_text(item.get("encrypted_payload")),
+            "",
+            "Encryption header:",
+            _json_text(item.get("encryption_header")),
+        ]
     )
+    return "\n".join(lines)
 
 
 def format_note_detail(item: dict) -> str:
-    return (
-        "Note detail loaded successfully.\n\n"
-        f"ID: {item.get('note_id', '-')}\n"
-        f"User ID: {item.get('user_id', '-')}\n"
-        f"Type: {item.get('note_type', '-')}\n"
-        f"State: {item.get('state', '-')}\n"
-        f"Current version: {item.get('current_version', '-')}\n"
-        f"Created by device ID: {item.get('created_by_device_id', '-')}\n"
-        f"Created at: {item.get('created_at', '-')}\n\n"
-        "Encrypted metadata:\n"
-        f"{json.dumps(item.get('encrypted_metadata'), indent=2)}\n\n"
-        "Encrypted payload:\n"
-        f"{json.dumps(item.get('encrypted_payload'), indent=2)}\n\n"
-        "Encryption header:\n"
-        f"{json.dumps(item.get('encryption_header'), indent=2)}"
+    lines = [
+        "Note detail loaded successfully.",
+        "",
+        f"ID: {item.get('note_id', '-')}",
+        f"User ID: {item.get('user_id', '-')}",
+        f"Type: {item.get('note_type', '-')}",
+        f"State: {item.get('state', '-')}",
+        f"Current version: {item.get('current_version', '-')}",
+        f"Created by device ID: {item.get('created_by_device_id', '-')}",
+        f"Created at: {item.get('created_at', '-')}",
+        "",
+    ]
+
+    _append_local_decrypt_sections(lines, item)
+
+    lines.extend(
+        [
+            "Encrypted metadata:",
+            _json_text(item.get("encrypted_metadata")),
+            "",
+            "Encrypted payload:",
+            _json_text(item.get("encrypted_payload")),
+            "",
+            "Encryption header:",
+            _json_text(item.get("encryption_header")),
+        ]
     )
+    return "\n".join(lines)
 
 
 def format_file_detail(item: dict) -> str:

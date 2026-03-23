@@ -35,6 +35,10 @@ from app.services.api_client import (
 )
 from app.services.desktop_service import VaultDesktopService
 from app.services.file_crypto_bridge import inspect_plaintext_file
+from app.services.item_crypto_bridge import (
+    build_encrypted_item_finalize_payload,
+    decrypt_item_detail,
+)
 from app.services.password_generator import (
     PasswordGenerationError,
     PasswordPolicy,
@@ -207,42 +211,44 @@ class MainWindow(QMainWindow):
 
         self.credential_metadata_input = QTextEdit()
         self.credential_metadata_input.setPlaceholderText(
-            'Optional JSON object, for example {"ciphertext_b64": "..."}'
+            'Optional plaintext JSON object, for example {"label": "Personal"}'
         )
         self.credential_metadata_input.setMaximumHeight(90)
 
         self.credential_payload_input = QTextEdit()
         self.credential_payload_input.setPlaceholderText(
-            'Required JSON object, for example {"ciphertext_b64": "..."}'
+            'Required plaintext JSON object, for example {"username": "alice", "secret": "s3cr3t"}'
         )
         self.credential_payload_input.setMaximumHeight(90)
 
         self.credential_header_input = QTextEdit()
         self.credential_header_input.setPlaceholderText(
-            'Required JSON object, for example {"nonce_b64": "..."}'
+            "Generated encryption header JSON will appear here after local encryption."
         )
         self.credential_header_input.setMaximumHeight(90)
+        self.credential_header_input.setReadOnly(True)
 
         self.note_type_input = QLineEdit()
         self.note_type_input.setText("note")
 
         self.note_metadata_input = QTextEdit()
         self.note_metadata_input.setPlaceholderText(
-            'Optional JSON object, for example {"ciphertext_b64": "..."}'
+            'Optional plaintext JSON object, for example {"tags": ["todo"]}'
         )
         self.note_metadata_input.setMaximumHeight(90)
 
         self.note_payload_input = QTextEdit()
         self.note_payload_input.setPlaceholderText(
-            'Required JSON object, for example {"ciphertext_b64": "..."}'
+            'Required plaintext JSON object, for example {"title": "todo", "content": "buy milk"}'
         )
         self.note_payload_input.setMaximumHeight(90)
 
         self.note_header_input = QTextEdit()
         self.note_header_input.setPlaceholderText(
-            'Required JSON object, for example {"nonce_b64": "..."}'
+            "Generated encryption header JSON will appear here after local encryption."
         )
         self.note_header_input.setMaximumHeight(90)
+        self.note_header_input.setReadOnly(True)
 
         self.file_manifest_input = QTextEdit()
         self.file_manifest_input.setPlaceholderText(
@@ -424,15 +430,15 @@ class MainWindow(QMainWindow):
         create_buttons_layout.addWidget(self.reset_credential_payload_button)
 
         create_hint_label = QLabel(
-            "Create uses the current 'Device name' value from the auth form above. "
-            "Until the crypto/UI flow is implemented, enter JSON objects manually."
+            "Create uses the current 'Device name' value and the unlocked session vault key. "
+            "Enter plaintext JSON; the desktop reserves the credential ID, encrypts locally, and finalizes with ciphertext only."
         )
         create_hint_label.setWordWrap(True)
 
         create_form_layout = QFormLayout()
-        create_form_layout.addRow("Metadata JSON", self.credential_metadata_input)
-        create_form_layout.addRow("Payload JSON", self.credential_payload_input)
-        create_form_layout.addRow("Header JSON", self.credential_header_input)
+        create_form_layout.addRow("Metadata JSON (plaintext)", self.credential_metadata_input)
+        create_form_layout.addRow("Payload JSON (plaintext)", self.credential_payload_input)
+        create_form_layout.addRow("Generated header JSON", self.credential_header_input)
 
         left_layout = QVBoxLayout()
         left_layout.addLayout(create_buttons_layout)
@@ -462,16 +468,16 @@ class MainWindow(QMainWindow):
         create_buttons_layout.addWidget(self.reset_note_payload_button)
 
         create_hint_label = QLabel(
-            "Create uses the current 'Device name' value from the auth form above. "
-            "Until the crypto/UI flow is implemented, enter JSON objects manually."
+            "Create uses the current 'Device name' value and the unlocked session vault key. "
+            "Enter plaintext JSON; the desktop reserves the note ID, encrypts locally, and finalizes with ciphertext only."
         )
         create_hint_label.setWordWrap(True)
 
         create_form_layout = QFormLayout()
         create_form_layout.addRow("Note type", self.note_type_input)
-        create_form_layout.addRow("Metadata JSON", self.note_metadata_input)
-        create_form_layout.addRow("Payload JSON", self.note_payload_input)
-        create_form_layout.addRow("Header JSON", self.note_header_input)
+        create_form_layout.addRow("Metadata JSON (plaintext)", self.note_metadata_input)
+        create_form_layout.addRow("Payload JSON (plaintext)", self.note_payload_input)
+        create_form_layout.addRow("Generated header JSON", self.note_header_input)
 
         left_layout = QVBoxLayout()
         left_layout.addLayout(create_buttons_layout)
@@ -708,20 +714,23 @@ class MainWindow(QMainWindow):
             )
             return
 
+        master_key_b64 = self.desktop_service.current_session_vault_master_key()
+        if not master_key_b64:
+            self.status_label.setText(
+                "Credential creation failed.\n"
+                "Error: Session vault key is not unlocked."
+            )
+            return
+
         try:
-            encrypted_metadata = self._parse_json_object_text(
+            plaintext_metadata = self._parse_json_object_text(
                 self.credential_metadata_input,
-                field_name="Metadata JSON",
+                field_name="Metadata JSON (plaintext)",
                 allow_empty=True,
             )
-            encrypted_payload = self._parse_json_object_text(
+            plaintext_payload = self._parse_json_object_text(
                 self.credential_payload_input,
-                field_name="Payload JSON",
-                allow_empty=False,
-            )
-            encryption_header = self._parse_json_object_text(
-                self.credential_header_input,
-                field_name="Header JSON",
+                field_name="Payload JSON (plaintext)",
                 allow_empty=False,
             )
         except ValueError as exc:
@@ -731,12 +740,70 @@ class MainWindow(QMainWindow):
             )
             return
 
-        result = self.desktop_service.create_credential(
-            device_name=device_name,
-            encrypted_metadata=encrypted_metadata,
-            encrypted_payload=encrypted_payload,
-            encryption_header=encryption_header,
+        prepare_result = self.desktop_service.prepare_credential(device_name=device_name)
+        if prepare_result.error:
+            self.credentials_output.setPlainText(
+                f"Credential prepare failed.\nError: {prepare_result.error}"
+            )
+            self.status_label.setText(
+                "Credential creation failed.\n"
+                f"Error: {prepare_result.error}"
+            )
+            return
+
+        prepared_item = prepare_result.item or {}
+        credential_id = str(prepared_item.get("credential_id", "")).strip()
+        try:
+            credential_version = int(prepared_item.get("credential_version"))
+        except (TypeError, ValueError):
+            credential_version = 0
+
+        if not credential_id or credential_version < 1:
+            self.status_label.setText(
+                "Credential creation failed.\n"
+                "Error: Invalid prepare response."
+            )
+            return
+
+        try:
+            encrypted = build_encrypted_item_finalize_payload(
+                object_type="credential",
+                object_id=credential_id,
+                object_version=credential_version,
+                plaintext_metadata=plaintext_metadata,
+                plaintext_payload=plaintext_payload,
+                master_key_b64=master_key_b64,
+            )
+        except Exception as exc:
+            self.status_label.setText(
+                "Credential creation failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        self.credential_header_input.setPlainText(
+            json.dumps(encrypted.encryption_header, indent=2)
         )
+
+        result = self.desktop_service.finalize_credential(
+            device_name=device_name,
+            credential_id=credential_id,
+            credential_version=credential_version,
+            encrypted_metadata=encrypted.encrypted_metadata,
+            encrypted_payload=encrypted.encrypted_payload,
+            encryption_header=encrypted.encryption_header,
+        )
+
+        if result.error is None and result.item is not None:
+            decorated_item = dict(result.item)
+            decorated_item["plaintext_metadata"] = plaintext_metadata
+            decorated_item["plaintext_payload"] = plaintext_payload
+            result = ObjectCreateResult(
+                item=decorated_item,
+                error=None,
+                status_code=result.status_code,
+            )
+
         self._render_credential_create_result(result)
 
     def run_create_note(self) -> None:
@@ -748,22 +815,25 @@ class MainWindow(QMainWindow):
             )
             return
 
+        master_key_b64 = self.desktop_service.current_session_vault_master_key()
+        if not master_key_b64:
+            self.status_label.setText(
+                "Note creation failed.\n"
+                "Error: Session vault key is not unlocked."
+            )
+            return
+
         note_type = self.note_type_input.text().strip() or "note"
 
         try:
-            encrypted_metadata = self._parse_json_object_text(
+            plaintext_metadata = self._parse_json_object_text(
                 self.note_metadata_input,
-                field_name="Metadata JSON",
+                field_name="Metadata JSON (plaintext)",
                 allow_empty=True,
             )
-            encrypted_payload = self._parse_json_object_text(
+            plaintext_payload = self._parse_json_object_text(
                 self.note_payload_input,
-                field_name="Payload JSON",
-                allow_empty=False,
-            )
-            encryption_header = self._parse_json_object_text(
-                self.note_header_input,
-                field_name="Header JSON",
+                field_name="Payload JSON (plaintext)",
                 allow_empty=False,
             )
         except ValueError as exc:
@@ -773,13 +843,73 @@ class MainWindow(QMainWindow):
             )
             return
 
-        result = self.desktop_service.create_note(
+        prepare_result = self.desktop_service.prepare_note(
             device_name=device_name,
             note_type=note_type,
-            encrypted_metadata=encrypted_metadata,
-            encrypted_payload=encrypted_payload,
-            encryption_header=encryption_header,
         )
+        if prepare_result.error:
+            self.notes_output.setPlainText(
+                f"Note prepare failed.\nError: {prepare_result.error}"
+            )
+            self.status_label.setText(
+                "Note creation failed.\n"
+                f"Error: {prepare_result.error}"
+            )
+            return
+
+        prepared_item = prepare_result.item or {}
+        note_id = str(prepared_item.get("note_id", "")).strip()
+        try:
+            note_version = int(prepared_item.get("note_version"))
+        except (TypeError, ValueError):
+            note_version = 0
+
+        if not note_id or note_version < 1:
+            self.status_label.setText(
+                "Note creation failed.\n"
+                "Error: Invalid prepare response."
+            )
+            return
+
+        try:
+            encrypted = build_encrypted_item_finalize_payload(
+                object_type="note",
+                object_id=note_id,
+                object_version=note_version,
+                plaintext_metadata=plaintext_metadata,
+                plaintext_payload=plaintext_payload,
+                master_key_b64=master_key_b64,
+            )
+        except Exception as exc:
+            self.status_label.setText(
+                "Note creation failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        self.note_header_input.setPlainText(
+            json.dumps(encrypted.encryption_header, indent=2)
+        )
+
+        result = self.desktop_service.finalize_note(
+            device_name=device_name,
+            note_id=note_id,
+            note_version=note_version,
+            encrypted_metadata=encrypted.encrypted_metadata,
+            encrypted_payload=encrypted.encrypted_payload,
+            encryption_header=encrypted.encryption_header,
+        )
+
+        if result.error is None and result.item is not None:
+            decorated_item = dict(result.item)
+            decorated_item["plaintext_metadata"] = plaintext_metadata
+            decorated_item["plaintext_payload"] = plaintext_payload
+            result = ObjectCreateResult(
+                item=decorated_item,
+                error=None,
+                status_code=result.status_code,
+            )
+
         self._render_note_create_result(result)
 
     def run_pick_file(self) -> None:
@@ -1064,26 +1194,35 @@ class MainWindow(QMainWindow):
 
     def reset_credential_create_fields(self) -> None:
         self.credential_metadata_input.setPlainText(
-            json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
+            json.dumps({"label": "Personal"}, indent=2)
         )
         self.credential_payload_input.setPlainText(
-            json.dumps({"ciphertext_b64": "ZGVm"}, indent=2)
+            json.dumps(
+                {
+                    "username": "alice",
+                    "secret": "s3cr3t",
+                    "url": "https://example.com",
+                },
+                indent=2,
+            )
         )
-        self.credential_header_input.setPlainText(
-            json.dumps({"nonce_b64": "bm9uY2U="}, indent=2)
-        )
+        self.credential_header_input.clear()
 
     def reset_note_create_fields(self) -> None:
         self.note_type_input.setText("note")
         self.note_metadata_input.setPlainText(
-            json.dumps({"ciphertext_b64": "YWJj"}, indent=2)
+            json.dumps({"tags": ["todo"]}, indent=2)
         )
         self.note_payload_input.setPlainText(
-            json.dumps({"ciphertext_b64": "ZGVm"}, indent=2)
+            json.dumps(
+                {
+                    "title": "todo",
+                    "content": "buy milk",
+                },
+                indent=2,
+            )
         )
-        self.note_header_input.setPlainText(
-            json.dumps({"nonce_b64": "bm9uY2U="}, indent=2)
-        )
+        self.note_header_input.clear()
 
     def reset_file_create_fields(self) -> None:
         self.file_path_input.clear()
@@ -1484,7 +1623,8 @@ class MainWindow(QMainWindow):
             return
 
         item = result.item or {}
-        self.credentials_output.setPlainText(format_credential_detail(item))
+        display_item = self._decorate_item_detail_for_local_display(item)
+        self.credentials_output.setPlainText(format_credential_detail(display_item))
 
     def _render_note_detail(self, result: ObjectDetailResult) -> None:
         if result.error:
@@ -1494,7 +1634,28 @@ class MainWindow(QMainWindow):
             return
 
         item = result.item or {}
-        self.notes_output.setPlainText(format_note_detail(item))
+        display_item = self._decorate_item_detail_for_local_display(item)
+        self.notes_output.setPlainText(format_note_detail(display_item))
+
+    def _decorate_item_detail_for_local_display(self, item: dict) -> dict:
+        display_item = dict(item)
+        if not item:
+            return display_item
+
+        master_key_b64 = self.desktop_service.current_session_vault_master_key()
+        if not master_key_b64:
+            display_item["decryption_error"] = "Session vault key is not unlocked."
+            return display_item
+
+        try:
+            decrypted = decrypt_item_detail(item=item, master_key_b64=master_key_b64)
+        except Exception as exc:
+            display_item["decryption_error"] = str(exc)
+            return display_item
+
+        display_item["plaintext_metadata"] = decrypted.plaintext_metadata
+        display_item["plaintext_payload"] = decrypted.plaintext_payload
+        return display_item
 
     def _render_file_detail(self, result: ObjectDetailResult) -> None:
         if result.error:

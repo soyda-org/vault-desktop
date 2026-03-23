@@ -156,3 +156,40 @@ def test_format_file_detail() -> None:
     assert "File detail loaded successfully." in text
     assert "file_001" in text
     assert "object_key" in text
+
+
+def test_format_credential_detail_includes_plaintext_sections_when_available() -> None:
+    text = format_credential_detail(
+        {
+            "credential_id": "cred_001",
+            "state": "active",
+            "current_version": 1,
+            "encrypted_payload": {"ciphertext_b64": "abc"},
+            "encryption_header": {"nonce_b64": "xyz"},
+            "plaintext_metadata": {"label": "Personal"},
+            "plaintext_payload": {"username": "alice"},
+        }
+    )
+
+    assert "Local decrypt status:" in text
+    assert "Available" in text
+    assert "Plaintext metadata:" in text
+    assert '"label": "Personal"' in text
+    assert "Plaintext payload:" in text
+    assert '"username": "alice"' in text
+
+
+def test_format_note_detail_includes_decryption_error_when_unavailable() -> None:
+    text = format_note_detail(
+        {
+            "note_id": "note_001",
+            "note_type": "note",
+            "state": "active",
+            "encrypted_payload": {"ciphertext_b64": "abc"},
+            "encryption_header": {"nonce_b64": "xyz"},
+            "decryption_error": "Session vault key is not unlocked.",
+        }
+    )
+
+    assert "Local decrypt status:" in text
+    assert "Unavailable: Session vault key is not unlocked." in text
