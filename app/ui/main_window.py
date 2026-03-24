@@ -791,23 +791,25 @@ class MainWindow(QMainWindow):
             )
             return
         self.desktop_service.logout()
-        self.status_label.setText("Session cleared locally.")
-        self.selected_credential_id = None
-        self.selected_credential_current_version = None
+        self.reset_credential_create_fields()
+        self.reset_note_create_fields()
+        self.file_manifest_input.clear()
+        self.file_header_input.clear()
+        self.file_chunks_input.clear()
         self.credentials_list.clear()
-        self.selected_note_id = None
-        self.selected_note_current_version = None
         self.notes_list.clear()
         self.files_list.clear()
         self.credentials_output.clear()
         self.notes_output.clear()
         self.files_output.clear()
+        self.file_master_key_b64_input.clear()
         self.selected_credential_id = None
         self.selected_credential_current_version = None
         self.selected_note_id = None
         self.selected_note_current_version = None
-        self.file_master_key_b64_input.clear()
         self.refresh_session_label()
+        self._refresh_action_states()
+        self.status_label.setText("Session cleared locally.")
         self._save_ui_preferences()
 
     def run_close(self) -> None:
@@ -1338,10 +1340,11 @@ class MainWindow(QMainWindow):
 
         self.file_master_key_b64_input.clear()
         self.status_label.setText(
-            "Session vault key unlocked in memory only.\n"
-            "It will be reused for upload/download and cleared on logout."
+            "Vault unlocked in memory only.\n"
+            "Credentials, notes, and files can now use the shared session vault state."
         )
         self.refresh_session_label()
+        self._refresh_after_vault_unlock()
 
     def run_clear_session_key(self) -> None:
         if self._is_file_job_running():
@@ -1357,7 +1360,11 @@ class MainWindow(QMainWindow):
 
         self.desktop_service.clear_session_vault_master_key()
         self.file_master_key_b64_input.clear()
-        self.status_label.setText("Session vault key cleared from memory.")
+        self._clear_sensitive_views_for_locked_vault()
+        self.status_label.setText(
+            "Vault locked.\n"
+            "The in-memory vault key was cleared and sensitive editors were wiped."
+        )
         self.refresh_session_label()
 
     def run_create_file(self) -> None:
@@ -1604,14 +1611,17 @@ class MainWindow(QMainWindow):
         self._render_files(result)
 
     def _refresh_action_states(self) -> None:
+        vault_unlocked = self._is_vault_unlocked()
+
         credential_item_selected = self.credentials_list.currentItem() is not None
         credential_detail_loaded = (
             self.selected_credential_id is not None
             and self.selected_credential_current_version is not None
         )
         self.load_credential_detail_button.setEnabled(credential_item_selected)
-        self.update_credential_button.setEnabled(credential_detail_loaded)
-        self.delete_credential_button.setEnabled(credential_detail_loaded)
+        self.create_credential_button.setEnabled(vault_unlocked)
+        self.update_credential_button.setEnabled(vault_unlocked and credential_detail_loaded)
+        self.delete_credential_button.setEnabled(vault_unlocked and credential_detail_loaded)
 
         note_item_selected = self.notes_list.currentItem() is not None
         note_detail_loaded = (
@@ -1619,8 +1629,9 @@ class MainWindow(QMainWindow):
             and self.selected_note_current_version is not None
         )
         self.load_note_detail_button.setEnabled(note_item_selected)
-        self.update_note_button.setEnabled(note_detail_loaded)
-        self.delete_note_button.setEnabled(note_detail_loaded)
+        self.create_note_button.setEnabled(vault_unlocked)
+        self.update_note_button.setEnabled(vault_unlocked and note_detail_loaded)
+        self.delete_note_button.setEnabled(vault_unlocked and note_detail_loaded)
 
         file_jobs_idle = not self._is_file_job_running()
         file_item_selected = self.files_list.currentItem() is not None
@@ -1628,10 +1639,66 @@ class MainWindow(QMainWindow):
         file_target_ready = bool(self.file_download_target_input.text().strip())
 
         self.load_file_detail_button.setEnabled(file_jobs_idle and file_item_selected)
-        self.create_file_button.setEnabled(file_jobs_idle and file_source_ready)
+        self.create_file_button.setEnabled(file_jobs_idle and vault_unlocked and file_source_ready)
         self.download_file_button.setEnabled(
-            file_jobs_idle and file_item_selected and file_target_ready
+            file_jobs_idle and vault_unlocked and file_item_selected and file_target_ready
         )
+
+    def _is_vault_unlocked(self) -> bool:
+        return self.desktop_service.has_session_vault_master_key()
+
+    def _locked_detail_text(self, kind: str, item: dict) -> str:
+        object_id = item.get("credential_id") or item.get("note_id") or item.get("file_id") or "-"
+        lines = [
+            f"{kind} detail is locked.",
+            "Unlock Vault to view decrypted content.",
+            "",
+            f"ID: {object_id}",
+            f"State: {item.get('state', '-')}",
+            f"Current version: {item.get('current_version', '-')}",
+        ]
+        note_type = item.get("note_type")
+        if note_type:
+            lines.append(f"Type: {note_type}")
+        return "\n".join(lines)
+
+    def _clear_sensitive_views_for_locked_vault(self) -> None:
+        self.reset_credential_create_fields()
+        self.reset_note_create_fields()
+        self.file_manifest_input.clear()
+        self.file_header_input.clear()
+        self.file_chunks_input.clear()
+
+        if self.selected_credential_id:
+            self.credentials_output.setPlainText(
+                self._locked_detail_text(
+                    "Credential",
+                    {
+                        "credential_id": self.selected_credential_id,
+                        "current_version": self.selected_credential_current_version or "-",
+                    },
+                )
+            )
+
+        if self.selected_note_id:
+            self.notes_output.setPlainText(
+                self._locked_detail_text(
+                    "Note",
+                    {
+                        "note_id": self.selected_note_id,
+                        "current_version": self.selected_note_current_version or "-",
+                    },
+                )
+            )
+
+        self._refresh_action_states()
+
+    def _refresh_after_vault_unlock(self) -> None:
+        self._refresh_action_states()
+        if self.selected_credential_id:
+            self.load_credential_detail()
+        if self.selected_note_id:
+            self.load_note_detail()
 
     def load_all(self) -> None:
         credentials_result = self.desktop_service.fetch_credentials()
@@ -2168,10 +2235,23 @@ class MainWindow(QMainWindow):
             return
 
         item = result.item or {}
+        if not self._is_vault_unlocked():
+            self._bind_credential_item_to_editors({})
+            self.selected_credential_id = str(item.get("credential_id", "")).strip() or None
+            try:
+                current_version = int(item.get("current_version"))
+            except (TypeError, ValueError):
+                current_version = None
+            self.selected_credential_current_version = (
+                current_version if current_version is not None and current_version >= 1 else None
+            )
+            self.credentials_output.setPlainText(self._locked_detail_text("Credential", item))
+            self._refresh_action_states()
+            return
+
         display_item = self._decorate_item_detail_for_local_display(item)
         self._bind_credential_item_to_editors(display_item)
         self.credentials_output.setPlainText(format_credential_detail(display_item))
-
         self._refresh_action_states()
 
     def _render_note_detail(self, result: ObjectDetailResult) -> None:
@@ -2185,10 +2265,23 @@ class MainWindow(QMainWindow):
             return
 
         item = result.item or {}
+        if not self._is_vault_unlocked():
+            self._bind_note_item_to_editors({})
+            self.selected_note_id = str(item.get("note_id", "")).strip() or None
+            try:
+                current_version = int(item.get("current_version"))
+            except (TypeError, ValueError):
+                current_version = None
+            self.selected_note_current_version = (
+                current_version if current_version is not None and current_version >= 1 else None
+            )
+            self.notes_output.setPlainText(self._locked_detail_text("Note", item))
+            self._refresh_action_states()
+            return
+
         display_item = self._decorate_item_detail_for_local_display(item)
         self._bind_note_item_to_editors(display_item)
         self.notes_output.setPlainText(format_note_detail(display_item))
-
         self._refresh_action_states()
 
     def _decorate_item_detail_for_local_display(self, item: dict) -> dict:
