@@ -430,6 +430,14 @@ class MainWindow(QMainWindow):
         self.vault_unlock_source_label = QLabel()
         self.vault_unlock_source_label.setWordWrap(True)
 
+        self.pin_confirmation_input = QLineEdit()
+        self.pin_confirmation_input.setPlaceholderText(
+            'Type CONFIRM before changing or removing the device PIN.'
+        )
+
+        self.pin_confirmation_label = QLabel()
+        self.pin_confirmation_label.setWordWrap(True)
+
         advanced_recovery_row = QHBoxLayout()
         advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
         advanced_recovery_row.setSpacing(4)
@@ -501,6 +509,8 @@ class MainWindow(QMainWindow):
         layout.addLayout(vault_row)
         layout.addWidget(self.pin_bootstrap_status_label)
         layout.addWidget(self.vault_unlock_source_label)
+        layout.addWidget(self.pin_confirmation_input)
+        layout.addWidget(self.pin_confirmation_label)
         layout.addWidget(self.advanced_recovery_widget)
         layout.addWidget(vault_hint_label)
         layout.addWidget(self.status_label)
@@ -519,6 +529,7 @@ class MainWindow(QMainWindow):
         self.file_path_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.file_download_target_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
+        self.pin_confirmation_input.textChanged.connect(lambda *_: self._refresh_action_states())
 
         self.vault_auto_lock_timeout_ms = self._read_timeout_ms(
             "VAULT_DESKTOP_AUTO_LOCK_SECONDS",
@@ -1424,6 +1435,13 @@ class MainWindow(QMainWindow):
             return
 
         prior_status = self.desktop_service.local_pin_bootstrap_status()
+        if prior_status in {"current_account", "other_account"} and self.pin_confirmation_input.text().strip() != "CONFIRM":
+            self.status_label.setText(
+                "PIN enrollment failed.\n"
+                "Error: Type CONFIRM before changing or replacing the device PIN."
+            )
+            self._refresh_action_states()
+            return
 
         try:
             self.desktop_service.enroll_local_pin_bootstrap(pin=pin_value)
@@ -1435,6 +1453,7 @@ class MainWindow(QMainWindow):
             return
 
         self.vault_pin_input.clear()
+        self.pin_confirmation_input.clear()
         if prior_status == "current_account":
             self.status_label.setText(
                 "PIN changed for this device.\n"
@@ -1471,8 +1490,17 @@ class MainWindow(QMainWindow):
             self._refresh_action_states()
             return
 
+        if self.pin_confirmation_input.text().strip() != "CONFIRM":
+            self.status_label.setText(
+                "Remove PIN failed.\n"
+                "Error: Type CONFIRM before removing the device PIN."
+            )
+            self._refresh_action_states()
+            return
+
         self.desktop_service.clear_local_pin_bootstrap()
         self.vault_pin_input.clear()
+        self.pin_confirmation_input.clear()
         if prior_status == "other_account" and identifier_hint:
             self.status_label.setText(
                 "Local PIN removed from this device.\n"
@@ -1809,6 +1837,7 @@ class MainWindow(QMainWindow):
         pin_bootstrap_status = self.desktop_service.local_pin_bootstrap_status()
         pin_bootstrap_available = pin_bootstrap_status in {"current_account", "present", "other_account"}
         pin_text_present = bool(self.vault_pin_input.text().strip())
+        confirmation_ready = self.pin_confirmation_input.text().strip() == "CONFIRM"
         identifier_hint = self.desktop_service.local_pin_bootstrap_identifier_hint()
 
         if not authenticated:
@@ -1859,18 +1888,36 @@ class MainWindow(QMainWindow):
                 "Vault unlock source: session vault key is present."
             )
 
+        if not authenticated:
+            self.pin_confirmation_label.setText(
+                "Confirmation is only required when changing, replacing, or removing a device PIN."
+            )
+        elif pin_bootstrap_status == "current_account":
+            self.pin_confirmation_label.setText(
+                "To change or remove the local PIN on this device, type CONFIRM in the confirmation field."
+            )
+        elif pin_bootstrap_status == "other_account":
+            self.pin_confirmation_label.setText(
+                "To replace or remove another account's device PIN on this desktop, type CONFIRM in the confirmation field."
+            )
+        else:
+            self.pin_confirmation_label.setText(
+                "No confirmation is required for first-time PIN enrollment on this device."
+            )
+
         self.vault_pin_input.setEnabled(authenticated)
+        self.pin_confirmation_input.setEnabled(authenticated and pin_bootstrap_status in {"current_account", "other_account"})
         self.unlock_vault_pin_button.setEnabled(
             authenticated
             and not vault_unlocked
             and pin_bootstrap_status == "current_account"
             and pin_text_present
         )
-        self.enroll_vault_pin_button.setEnabled(
-            authenticated
-            and vault_unlocked
-            and pin_text_present
-        )
+        if pin_bootstrap_status in {"current_account", "other_account"}:
+            enroll_allowed = authenticated and vault_unlocked and pin_text_present and confirmation_ready
+        else:
+            enroll_allowed = authenticated and vault_unlocked and pin_text_present
+        self.enroll_vault_pin_button.setEnabled(enroll_allowed)
         if pin_bootstrap_status == "current_account":
             self.enroll_vault_pin_button.setText("Change PIN on This Device")
         elif pin_bootstrap_status == "other_account":
@@ -1878,7 +1925,9 @@ class MainWindow(QMainWindow):
         else:
             self.enroll_vault_pin_button.setText("Enroll PIN on This Device")
 
-        self.remove_vault_pin_button.setEnabled(authenticated and pin_bootstrap_available)
+        self.remove_vault_pin_button.setEnabled(
+            authenticated and pin_bootstrap_available and confirmation_ready
+        )
         self.lock_now_button.setEnabled(authenticated and vault_unlocked)
         self.toggle_advanced_recovery_button.setEnabled(authenticated)
         self.file_master_key_b64_input.setEnabled(
