@@ -74,11 +74,12 @@ class MainWindow(QMainWindow):
         )
 
         self.setWindowTitle(settings.app_name)
-        self.resize(1120, 860)
+        self.resize(1180, 780)
+        self.setMinimumSize(960, 640)
         self.setStyleSheet(
             """
             QWidget {
-                font-size: 11px;
+                font-size: 10px;
             }
             QPushButton,
             QLineEdit,
@@ -88,10 +89,13 @@ class MainWindow(QMainWindow):
             QLabel,
             QCheckBox,
             QTabBar::tab {
-                font-size: 11px;
+                font-size: 10px;
             }
             QPushButton {
-                padding: 2px 6px;
+                padding: 1px 5px;
+            }
+            QTabBar::tab {
+                padding: 3px 8px;
             }
             """
         )
@@ -360,23 +364,32 @@ class MainWindow(QMainWindow):
         self.copy_generated_password_button.clicked.connect(self.run_copy_generated_password)
 
         form_layout = QFormLayout()
+        form_layout.setContentsMargins(0, 0, 0, 0)
+        form_layout.setHorizontalSpacing(6)
+        form_layout.setVerticalSpacing(4)
         form_layout.addRow("Identifier", self.identifier_input)
         form_layout.addRow("Password", self.password_input)
         form_layout.addRow("Device name", self.device_name_input)
         form_layout.addRow("Platform", self.platform_input)
 
         auth_buttons_layout = QHBoxLayout()
+        auth_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        auth_buttons_layout.setSpacing(4)
         auth_buttons_layout.addWidget(self.login_button)
         auth_buttons_layout.addWidget(self.logout_button)
         auth_buttons_layout.addWidget(self.close_button)
 
         dashboard_buttons_layout = QHBoxLayout()
+        dashboard_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        dashboard_buttons_layout.setSpacing(4)
         dashboard_buttons_layout.addWidget(self.load_credentials_button)
         dashboard_buttons_layout.addWidget(self.load_notes_button)
         dashboard_buttons_layout.addWidget(self.load_files_button)
         dashboard_buttons_layout.addWidget(self.load_all_button)
 
         password_policy_layout = QHBoxLayout()
+        password_policy_layout.setContentsMargins(0, 0, 0, 0)
+        password_policy_layout.setSpacing(4)
         password_policy_layout.addWidget(QLabel("Length"))
         password_policy_layout.addWidget(self.password_length_input)
         password_policy_layout.addWidget(self.use_uppercase_checkbox)
@@ -384,34 +397,47 @@ class MainWindow(QMainWindow):
         password_policy_layout.addWidget(self.use_digits_checkbox)
         password_policy_layout.addWidget(self.use_symbols_checkbox)
 
-        password_actions_layout = QHBoxLayout()
-        password_actions_layout.addWidget(self.generate_password_button)
-        password_actions_layout.addWidget(self.copy_generated_password_button)
+        header_label = QLabel(
+            f"App: {settings.app_name} | Environment: {settings.environment} | API: {self.persisted_ui_settings.api_base_url}"
+        )
+        header_label.setWordWrap(True)
+
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(4)
+        header_layout.addWidget(header_label, 1)
+        header_layout.addWidget(self.probe_button)
+
+        dashboard_row = QHBoxLayout()
+        dashboard_row.setContentsMargins(0, 0, 0, 0)
+        dashboard_row.setSpacing(4)
+        dashboard_row.addWidget(QLabel("Dashboard"))
+        dashboard_row.addLayout(dashboard_buttons_layout, 1)
+
+        password_row = QHBoxLayout()
+        password_row.setContentsMargins(0, 0, 0, 0)
+        password_row.setSpacing(4)
+        password_row.addWidget(QLabel("Password Tools"))
+        password_row.addLayout(password_policy_layout)
+        password_row.addWidget(self.generated_password_output, 1)
+        password_row.addWidget(self.generate_password_button)
+        password_row.addWidget(self.copy_generated_password_button)
 
         layout = QVBoxLayout()
-        layout.addWidget(QLabel(f"App: {settings.app_name}"))
-        layout.addWidget(QLabel(f"Environment: {settings.environment}"))
-        layout.addWidget(QLabel(f"API base URL: {self.persisted_ui_settings.api_base_url}"))
-        layout.addWidget(self.probe_button)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(4)
+        layout.addLayout(header_layout)
         layout.addLayout(form_layout)
         layout.addLayout(auth_buttons_layout)
         layout.addWidget(self.status_label)
         layout.addWidget(self.session_label)
-        layout.addWidget(QLabel("Dashboard"))
-        layout.addLayout(dashboard_buttons_layout)
-        layout.addWidget(self.tabs)
-        layout.addWidget(QLabel("Password Tools"))
-        layout.addLayout(password_policy_layout)
-        layout.addWidget(self.generated_password_output)
-        layout.addLayout(password_actions_layout)
+        layout.addLayout(dashboard_row)
+        layout.addWidget(self.tabs, 1)
+        layout.addLayout(password_row)
 
         container = QWidget()
         container.setLayout(layout)
-
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setWidget(container)
-        self.setCentralWidget(scroll_area)
+        self.setCentralWidget(container)
 
         self.refresh_session_label()
 
@@ -422,6 +448,8 @@ class MainWindow(QMainWindow):
         output: QTextEdit,
     ) -> QWidget:
         left_layout = QVBoxLayout()
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(4)
         left_layout.addWidget(detail_button)
         left_layout.addWidget(object_list)
 
@@ -429,11 +457,16 @@ class MainWindow(QMainWindow):
         left_widget.setLayout(left_layout)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
         splitter.addWidget(left_widget)
         splitter.addWidget(output)
+        splitter.setStretchFactor(0, 2)
+        splitter.setStretchFactor(1, 3)
         splitter.setSizes([360, 700])
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
         layout.addWidget(splitter)
 
         widget = QWidget()
@@ -460,6 +493,8 @@ class MainWindow(QMainWindow):
         create_form_layout.addRow("Generated header JSON", self.credential_header_input)
 
         left_layout = QVBoxLayout()
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(4)
         left_layout.addLayout(create_buttons_layout)
         left_layout.addWidget(create_hint_label)
         left_layout.addLayout(create_form_layout)
@@ -469,11 +504,16 @@ class MainWindow(QMainWindow):
         left_widget.setLayout(left_layout)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
         splitter.addWidget(left_widget)
         splitter.addWidget(self.credentials_output)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 4)
         splitter.setSizes([520, 680])
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
         layout.addWidget(splitter)
 
         widget = QWidget()
@@ -501,6 +541,8 @@ class MainWindow(QMainWindow):
         create_form_layout.addRow("Generated header JSON", self.note_header_input)
 
         left_layout = QVBoxLayout()
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(4)
         left_layout.addLayout(create_buttons_layout)
         left_layout.addWidget(create_hint_label)
         left_layout.addLayout(create_form_layout)
@@ -510,11 +552,16 @@ class MainWindow(QMainWindow):
         left_widget.setLayout(left_layout)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
         splitter.addWidget(left_widget)
         splitter.addWidget(self.notes_output)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 4)
         splitter.setSizes([520, 680])
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
         layout.addWidget(splitter)
 
         widget = QWidget()
@@ -558,6 +605,8 @@ class MainWindow(QMainWindow):
         create_form_layout.addRow("Chunks JSON", self.file_chunks_input)
 
         left_layout = QVBoxLayout()
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(4)
         left_layout.addLayout(create_buttons_layout)
         left_layout.addWidget(create_hint_label)
         left_layout.addLayout(create_form_layout)
@@ -567,16 +616,25 @@ class MainWindow(QMainWindow):
         left_widget.setLayout(left_layout)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
         splitter.addWidget(left_widget)
         splitter.addWidget(self.files_output)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 4)
         splitter.setSizes([520, 680])
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
         layout.addWidget(splitter)
 
         widget = QWidget()
         widget.setLayout(layout)
-        return widget
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(widget)
+        return scroll_area
 
     def _save_ui_preferences(self) -> None:
         self.local_settings_store.save(
