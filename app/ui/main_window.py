@@ -275,21 +275,21 @@ class MainWindow(QMainWindow):
         self.file_manifest_input.setPlaceholderText(
             'Generated encrypted manifest JSON will appear here.'
         )
-        self.file_manifest_input.setMaximumHeight(90)
+        self.file_manifest_input.setMaximumHeight(72)
         self.file_manifest_input.setReadOnly(True)
 
         self.file_header_input = QTextEdit()
         self.file_header_input.setPlaceholderText(
             'Generated encryption header JSON will appear here.'
         )
-        self.file_header_input.setMaximumHeight(90)
+        self.file_header_input.setMaximumHeight(72)
         self.file_header_input.setReadOnly(True)
 
         self.file_chunks_input = QTextEdit()
         self.file_chunks_input.setPlaceholderText(
             'Generated encrypted chunks JSON will appear here.'
         )
-        self.file_chunks_input.setMaximumHeight(130)
+        self.file_chunks_input.setMaximumHeight(96)
         self.file_chunks_input.setReadOnly(True)
 
         self.file_path_input = QLineEdit()
@@ -570,6 +570,8 @@ class MainWindow(QMainWindow):
 
     def _build_files_tab(self) -> QWidget:
         create_buttons_layout = QHBoxLayout()
+        create_buttons_layout.setContentsMargins(0, 0, 0, 0)
+        create_buttons_layout.setSpacing(4)
         create_buttons_layout.addWidget(self.load_file_detail_button)
         create_buttons_layout.addWidget(self.pick_file_button)
         create_buttons_layout.addWidget(self.create_file_button)
@@ -585,31 +587,76 @@ class MainWindow(QMainWindow):
         )
         create_hint_label.setWordWrap(True)
 
+        path_row = QHBoxLayout()
+        path_row.setContentsMargins(0, 0, 0, 0)
+        path_row.setSpacing(4)
+        path_row.addWidget(QLabel("Selected file"))
+        path_row.addWidget(self.file_path_input, 1)
+
+        target_row = QHBoxLayout()
+        target_row.setContentsMargins(0, 0, 0, 0)
+        target_row.setSpacing(4)
+        target_row.addWidget(QLabel("Download target"))
+        target_row.addWidget(self.file_download_target_input, 1)
+
+        runtime_row = QHBoxLayout()
+        runtime_row.setContentsMargins(0, 0, 0, 0)
+        runtime_row.setSpacing(4)
+        runtime_row.addWidget(QLabel("Chunk size"))
+        runtime_row.addWidget(self.file_chunk_size_kib_input)
+        runtime_row.addWidget(QLabel("Session key"))
+        runtime_row.addWidget(self.file_master_key_b64_input, 1)
+
+        progress_row = QHBoxLayout()
+        progress_row.setContentsMargins(0, 0, 0, 0)
+        progress_row.setSpacing(4)
+        progress_row.addWidget(QLabel("Upload"))
+        progress_row.addWidget(self.file_upload_progress, 1)
+        progress_row.addWidget(QLabel("Download"))
+        progress_row.addWidget(self.file_download_progress, 1)
+
         key_actions_layout = QHBoxLayout()
+        key_actions_layout.setContentsMargins(0, 0, 0, 0)
+        key_actions_layout.setSpacing(4)
         key_actions_layout.addWidget(self.unlock_session_key_button)
         key_actions_layout.addWidget(self.clear_session_key_button)
 
-        key_actions_widget = QWidget()
-        key_actions_widget.setLayout(key_actions_layout)
+        manifest_layout = QVBoxLayout()
+        manifest_layout.setContentsMargins(0, 0, 0, 0)
+        manifest_layout.setSpacing(2)
+        manifest_layout.addWidget(QLabel("Manifest JSON"))
+        manifest_layout.addWidget(self.file_manifest_input)
 
-        create_form_layout = QFormLayout()
-        create_form_layout.addRow("Selected file", self.file_path_input)
-        create_form_layout.addRow("Download target", self.file_download_target_input)
-        create_form_layout.addRow("Chunk size", self.file_chunk_size_kib_input)
-        create_form_layout.addRow("Upload progress", self.file_upload_progress)
-        create_form_layout.addRow("Download progress", self.file_download_progress)
-        create_form_layout.addRow("Session key input", self.file_master_key_b64_input)
-        create_form_layout.addRow("Session key actions", key_actions_widget)
-        create_form_layout.addRow("Manifest JSON", self.file_manifest_input)
-        create_form_layout.addRow("Header JSON", self.file_header_input)
-        create_form_layout.addRow("Chunks JSON", self.file_chunks_input)
+        header_layout = QVBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(2)
+        header_layout.addWidget(QLabel("Header JSON"))
+        header_layout.addWidget(self.file_header_input)
+
+        chunks_layout = QVBoxLayout()
+        chunks_layout.setContentsMargins(0, 0, 0, 0)
+        chunks_layout.setSpacing(2)
+        chunks_layout.addWidget(QLabel("Chunks JSON"))
+        chunks_layout.addWidget(self.file_chunks_input)
+
+        previews_row = QHBoxLayout()
+        previews_row.setContentsMargins(0, 0, 0, 0)
+        previews_row.setSpacing(4)
+        previews_row.addLayout(manifest_layout, 1)
+        previews_row.addLayout(header_layout, 1)
+        previews_row.addLayout(chunks_layout, 1)
 
         left_layout = QVBoxLayout()
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(4)
         left_layout.addLayout(create_buttons_layout)
         left_layout.addWidget(create_hint_label)
-        left_layout.addLayout(create_form_layout)
+        left_layout.addLayout(path_row)
+        left_layout.addLayout(target_row)
+        left_layout.addLayout(runtime_row)
+        left_layout.addLayout(progress_row)
+        left_layout.addLayout(key_actions_layout)
+        left_layout.addLayout(previews_row)
         left_layout.addWidget(self.files_list)
 
         left_widget = QWidget()
@@ -621,7 +668,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self.files_output)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 4)
-        splitter.setSizes([520, 680])
+        splitter.setSizes([560, 640])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
