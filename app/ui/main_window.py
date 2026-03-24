@@ -317,13 +317,13 @@ class MainWindow(QMainWindow):
         self.file_master_key_b64_input = QLineEdit()
         self.file_master_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.file_master_key_b64_input.setPlaceholderText(
-            "Enter the vault key once to unlock it in memory for this session."
+            "Temporary recovery/dev path: enter the vault key to unlock this session."
         )
 
-        self.unlock_session_key_button = QPushButton("Unlock Session Key")
+        self.unlock_session_key_button = QPushButton("Unlock Vault")
         self.unlock_session_key_button.clicked.connect(self.run_unlock_session_key)
 
-        self.clear_session_key_button = QPushButton("Clear Session Key")
+        self.clear_session_key_button = QPushButton("Clear Vault Key")
         self.clear_session_key_button.clicked.connect(self.run_clear_session_key)
 
         self.file_upload_progress = QProgressBar()
@@ -388,6 +388,20 @@ class MainWindow(QMainWindow):
         auth_buttons_layout.addWidget(self.logout_button)
         auth_buttons_layout.addWidget(self.close_button)
 
+        vault_row = QHBoxLayout()
+        vault_row.setContentsMargins(0, 0, 0, 0)
+        vault_row.setSpacing(4)
+        vault_row.addWidget(QLabel("Vault key"))
+        vault_row.addWidget(self.file_master_key_b64_input, 1)
+        vault_row.addWidget(self.unlock_session_key_button)
+        vault_row.addWidget(self.clear_session_key_button)
+
+        vault_hint_label = QLabel(
+            "Vault controls are global for this session. Credentials, notes, and files all use the same in-memory vault state. "
+            "The raw key field below is temporary and intended for recovery/dev use until PIN unlock is implemented."
+        )
+        vault_hint_label.setWordWrap(True)
+
         dashboard_buttons_layout = QHBoxLayout()
         dashboard_buttons_layout.setContentsMargins(0, 0, 0, 0)
         dashboard_buttons_layout.setSpacing(4)
@@ -438,6 +452,8 @@ class MainWindow(QMainWindow):
         layout.addLayout(header_layout)
         layout.addLayout(form_layout)
         layout.addLayout(auth_buttons_layout)
+        layout.addLayout(vault_row)
+        layout.addWidget(vault_hint_label)
         layout.addWidget(self.status_label)
         layout.addWidget(self.session_label)
         layout.addLayout(dashboard_row)
@@ -599,7 +615,7 @@ class MainWindow(QMainWindow):
 
         create_hint_label = QLabel(
             "Pick a local file for encrypted upload, or select a vault file and download/decrypt it locally. "
-            "Unlock the vault key once per session; it stays in memory only and is cleared on logout."
+            "Use the global Vault controls above to unlock once per session; that same unlock state applies to credentials, notes, and files."
         )
         create_hint_label.setWordWrap(True)
 
@@ -620,8 +636,7 @@ class MainWindow(QMainWindow):
         runtime_row.setSpacing(4)
         runtime_row.addWidget(QLabel("Chunk size"))
         runtime_row.addWidget(self.file_chunk_size_kib_input)
-        runtime_row.addWidget(QLabel("Session key"))
-        runtime_row.addWidget(self.file_master_key_b64_input, 1)
+        runtime_row.addStretch(1)
 
         progress_row = QHBoxLayout()
         progress_row.setContentsMargins(0, 0, 0, 0)
@@ -630,12 +645,6 @@ class MainWindow(QMainWindow):
         progress_row.addWidget(self.file_upload_progress, 1)
         progress_row.addWidget(QLabel("Download"))
         progress_row.addWidget(self.file_download_progress, 1)
-
-        key_actions_layout = QHBoxLayout()
-        key_actions_layout.setContentsMargins(0, 0, 0, 0)
-        key_actions_layout.setSpacing(4)
-        key_actions_layout.addWidget(self.unlock_session_key_button)
-        key_actions_layout.addWidget(self.clear_session_key_button)
 
         manifest_layout = QVBoxLayout()
         manifest_layout.setContentsMargins(0, 0, 0, 0)
@@ -671,7 +680,6 @@ class MainWindow(QMainWindow):
         left_layout.addLayout(target_row)
         left_layout.addLayout(runtime_row)
         left_layout.addLayout(progress_row)
-        left_layout.addLayout(key_actions_layout)
         left_layout.addLayout(previews_row)
         left_layout.addWidget(self.files_list)
 
