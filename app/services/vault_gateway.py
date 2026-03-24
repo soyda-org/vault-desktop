@@ -61,6 +61,13 @@ class VaultGateway(Protocol):
         encryption_header: dict,
     ) -> ObjectCreateResult: ...
 
+    def delete_credential(
+        self,
+        session: DesktopSession,
+        *,
+        credential_id: str,
+    ) -> ObjectCreateResult: ...
+
     def create_note(
         self,
         session: DesktopSession,
@@ -102,6 +109,13 @@ class VaultGateway(Protocol):
         encrypted_metadata: dict | None,
         encrypted_payload: dict,
         encryption_header: dict,
+    ) -> ObjectCreateResult: ...
+
+    def delete_note(
+        self,
+        session: DesktopSession,
+        *,
+        note_id: str,
     ) -> ObjectCreateResult: ...
 
     def create_file(
@@ -260,6 +274,17 @@ class AuthenticatedVaultGateway:
             access_token=session.access_token,
         )
 
+    def delete_credential(
+        self,
+        session: DesktopSession,
+        *,
+        credential_id: str,
+    ) -> ObjectCreateResult:
+        return self.api_client.delete_credential(
+            credential_id=credential_id,
+            access_token=session.access_token,
+        )
+
     def create_note(
         self,
         session: DesktopSession,
@@ -331,6 +356,17 @@ class AuthenticatedVaultGateway:
             encrypted_metadata=encrypted_metadata,
             encrypted_payload=encrypted_payload,
             encryption_header=encryption_header,
+            access_token=session.access_token,
+        )
+
+    def delete_note(
+        self,
+        session: DesktopSession,
+        *,
+        note_id: str,
+    ) -> ObjectCreateResult:
+        return self.api_client.delete_note(
+            note_id=note_id,
             access_token=session.access_token,
         )
 

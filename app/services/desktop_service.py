@@ -234,6 +234,18 @@ class VaultDesktopService:
             )
         )
 
+    def delete_credential(
+        self,
+        *,
+        credential_id: str,
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.delete_credential(
+                session,
+                credential_id=credential_id,
+            )
+        )
+
     def create_note(
         self,
         *,
@@ -309,6 +321,18 @@ class VaultDesktopService:
                 encrypted_metadata=encrypted_metadata,
                 encrypted_payload=encrypted_payload,
                 encryption_header=encryption_header,
+            )
+        )
+
+    def delete_note(
+        self,
+        *,
+        note_id: str,
+    ) -> ObjectCreateResult:
+        return self._execute_create_with_refresh(
+            lambda session: self.vault_gateway.delete_note(
+                session,
+                note_id=note_id,
             )
         )
 

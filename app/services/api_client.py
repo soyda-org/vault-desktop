@@ -365,6 +365,18 @@ class VaultApiClient:
             access_token=access_token,
         )
 
+    def delete_credential(
+        self,
+        *,
+        credential_id: str,
+        access_token: str | None = None,
+    ) -> ObjectCreateResult:
+        return self._post_object(
+            f"/api/v1/vault/credentials/{credential_id}/delete",
+            payload={},
+            access_token=access_token,
+        )
+
     def create_note(
         self,
         *,
@@ -447,6 +459,18 @@ class VaultApiClient:
                 "encrypted_payload": encrypted_payload,
                 "encryption_header": encryption_header,
             },
+            access_token=access_token,
+        )
+
+    def delete_note(
+        self,
+        *,
+        note_id: str,
+        access_token: str | None = None,
+    ) -> ObjectCreateResult:
+        return self._post_object(
+            f"/api/v1/vault/notes/{note_id}/delete",
+            payload={},
             access_token=access_token,
         )
 
