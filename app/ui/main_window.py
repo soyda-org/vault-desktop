@@ -432,11 +432,14 @@ class MainWindow(QMainWindow):
 
         self.pin_confirmation_input = QLineEdit()
         self.pin_confirmation_input.setPlaceholderText(
-            'Type CONFIRM before changing or removing the device PIN.'
+            'Type CONFIRM before changing, replacing, or removing the device PIN.'
         )
 
         self.pin_confirmation_label = QLabel()
         self.pin_confirmation_label.setWordWrap(True)
+
+        self.device_pin_scope_label = QLabel()
+        self.device_pin_scope_label.setWordWrap(True)
 
         advanced_recovery_row = QHBoxLayout()
         advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
@@ -509,6 +512,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(vault_row)
         layout.addWidget(self.pin_bootstrap_status_label)
         layout.addWidget(self.vault_unlock_source_label)
+        layout.addWidget(self.device_pin_scope_label)
         layout.addWidget(self.pin_confirmation_input)
         layout.addWidget(self.pin_confirmation_label)
         layout.addWidget(self.advanced_recovery_widget)
@@ -1457,17 +1461,17 @@ class MainWindow(QMainWindow):
         if prior_status == "current_account":
             self.status_label.setText(
                 "PIN changed for this device.\n"
-                "Future vault unlocks will use the updated PIN."
+                "Future vault unlocks on this desktop will use the updated PIN."
             )
         elif prior_status == "other_account":
             self.status_label.setText(
                 "Device PIN replaced for the current account.\n"
-                "Future vault unlocks on this desktop now belong to this account."
+                "This changed local desktop trust only; remote vault data was not modified."
             )
         else:
             self.status_label.setText(
                 "PIN saved for this device.\n"
-                "Future vault unlocks can use PIN on this desktop."
+                "This PIN is local to this desktop and is not synced elsewhere."
             )
         self._refresh_action_states()
 
@@ -1504,12 +1508,13 @@ class MainWindow(QMainWindow):
         if prior_status == "other_account" and identifier_hint:
             self.status_label.setText(
                 "Local PIN removed from this device.\n"
-                f"The removed enrollment previously belonged to: {identifier_hint}"
+                f"The removed enrollment previously belonged to: {identifier_hint}. "
+                "Only local desktop trust was changed."
             )
         else:
             self.status_label.setText(
                 "Local PIN removed from this device.\n"
-                "Advanced Recovery remains available for fallback unlock."
+                "Only this desktop was affected; Advanced Recovery remains available for fallback unlock."
             )
         self._refresh_action_states()
 
@@ -1888,17 +1893,35 @@ class MainWindow(QMainWindow):
                 "Vault unlock source: session vault key is present."
             )
 
+        if pin_bootstrap_status == "other_account" and identifier_hint:
+            self.device_pin_scope_label.setText(
+                "Device PIN scope: local to this desktop only, not synced to other devices, "
+                f"and currently associated with another account hint: {identifier_hint}."
+            )
+        elif pin_bootstrap_status == "current_account":
+            self.device_pin_scope_label.setText(
+                "Device PIN scope: local to this desktop only, not synced, and currently enrolled for this account. "
+                "Advanced Recovery remains available as fallback."
+            )
+        else:
+            self.device_pin_scope_label.setText(
+                "Device PIN scope: local to this desktop only and not synced. "
+                "Advanced Recovery remains the fallback path if no device PIN is available."
+            )
+
         if not authenticated:
             self.pin_confirmation_label.setText(
                 "Confirmation is only required when changing, replacing, or removing a device PIN."
             )
         elif pin_bootstrap_status == "current_account":
             self.pin_confirmation_label.setText(
-                "To change or remove the local PIN on this device, type CONFIRM in the confirmation field."
+                "To change or remove the local PIN on this device, type CONFIRM in the confirmation field. "
+                "This affects only this desktop."
             )
         elif pin_bootstrap_status == "other_account":
             self.pin_confirmation_label.setText(
-                "To replace or remove another account's device PIN on this desktop, type CONFIRM in the confirmation field."
+                "To replace or remove another account device PIN on this desktop, type CONFIRM in the confirmation field. "
+                "This will only change local desktop trust, not remote vault data."
             )
         else:
             self.pin_confirmation_label.setText(
@@ -1906,7 +1929,9 @@ class MainWindow(QMainWindow):
             )
 
         self.vault_pin_input.setEnabled(authenticated)
-        self.pin_confirmation_input.setEnabled(authenticated and pin_bootstrap_status in {"current_account", "other_account"})
+        self.pin_confirmation_input.setEnabled(
+            authenticated and pin_bootstrap_status in {"current_account", "other_account"}
+        )
         self.unlock_vault_pin_button.setEnabled(
             authenticated
             and not vault_unlocked
