@@ -145,42 +145,50 @@ class MainWindow(QMainWindow):
 
         self.load_credential_detail_button = QPushButton("Load Selected Credential")
         self.load_credential_detail_button.clicked.connect(self.load_credential_detail)
+        self.load_credential_detail_button.setEnabled(False)
 
         self.create_credential_button = QPushButton("Create Credential")
         self.create_credential_button.clicked.connect(self.run_create_credential)
 
         self.update_credential_button = QPushButton("Update Credential")
         self.update_credential_button.clicked.connect(self.run_update_credential)
+        self.update_credential_button.setEnabled(False)
 
         self.delete_credential_button = QPushButton("Delete Credential")
         self.delete_credential_button.clicked.connect(self.run_delete_credential)
+        self.delete_credential_button.setEnabled(False)
 
         self.reset_credential_payload_button = QPushButton("Reset Payload")
         self.reset_credential_payload_button.clicked.connect(self.reset_credential_create_fields)
 
         self.load_note_detail_button = QPushButton("Load Selected Note")
         self.load_note_detail_button.clicked.connect(self.load_note_detail)
+        self.load_note_detail_button.setEnabled(False)
 
         self.create_note_button = QPushButton("Create Note")
         self.create_note_button.clicked.connect(self.run_create_note)
 
         self.update_note_button = QPushButton("Update Note")
         self.update_note_button.clicked.connect(self.run_update_note)
+        self.update_note_button.setEnabled(False)
 
         self.delete_note_button = QPushButton("Delete Note")
         self.delete_note_button.clicked.connect(self.run_delete_note)
+        self.delete_note_button.setEnabled(False)
 
         self.reset_note_payload_button = QPushButton("Reset Payload")
         self.reset_note_payload_button.clicked.connect(self.reset_note_create_fields)
 
         self.load_file_detail_button = QPushButton("Load Selected File")
         self.load_file_detail_button.clicked.connect(self.load_file_detail)
+        self.load_file_detail_button.setEnabled(False)
 
         self.pick_file_button = QPushButton("Pick File")
         self.pick_file_button.clicked.connect(self.run_pick_file)
 
         self.create_file_button = QPushButton("Create File")
         self.create_file_button.clicked.connect(self.run_create_file)
+        self.create_file_button.setEnabled(False)
 
         self.cancel_file_upload_button = QPushButton("Cancel Upload")
         self.cancel_file_upload_button.clicked.connect(self.run_cancel_file_upload)
@@ -191,6 +199,7 @@ class MainWindow(QMainWindow):
 
         self.download_file_button = QPushButton("Download File")
         self.download_file_button.clicked.connect(self.run_download_file)
+        self.download_file_button.setEnabled(False)
 
         self.cancel_file_download_button = QPushButton("Cancel Download")
         self.cancel_file_download_button.clicked.connect(self.run_cancel_file_download)
@@ -439,7 +448,14 @@ class MainWindow(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
+        self.credentials_list.currentItemChanged.connect(lambda *_: self._refresh_action_states())
+        self.notes_list.currentItemChanged.connect(lambda *_: self._refresh_action_states())
+        self.files_list.currentItemChanged.connect(lambda *_: self._refresh_action_states())
+        self.file_path_input.textChanged.connect(lambda *_: self._refresh_action_states())
+        self.file_download_target_input.textChanged.connect(lambda *_: self._refresh_action_states())
+
         self.refresh_session_label()
+        self._refresh_action_states()
 
     def _build_tab(
         self,
@@ -1579,6 +1595,36 @@ class MainWindow(QMainWindow):
         result = self.desktop_service.fetch_files()
         self._render_files(result)
 
+    def _refresh_action_states(self) -> None:
+        credential_item_selected = self.credentials_list.currentItem() is not None
+        credential_detail_loaded = (
+            self.selected_credential_id is not None
+            and self.selected_credential_current_version is not None
+        )
+        self.load_credential_detail_button.setEnabled(credential_item_selected)
+        self.update_credential_button.setEnabled(credential_detail_loaded)
+        self.delete_credential_button.setEnabled(credential_detail_loaded)
+
+        note_item_selected = self.notes_list.currentItem() is not None
+        note_detail_loaded = (
+            self.selected_note_id is not None
+            and self.selected_note_current_version is not None
+        )
+        self.load_note_detail_button.setEnabled(note_item_selected)
+        self.update_note_button.setEnabled(note_detail_loaded)
+        self.delete_note_button.setEnabled(note_detail_loaded)
+
+        file_jobs_idle = not self._is_file_job_running()
+        file_item_selected = self.files_list.currentItem() is not None
+        file_source_ready = bool(self.file_path_input.text().strip())
+        file_target_ready = bool(self.file_download_target_input.text().strip())
+
+        self.load_file_detail_button.setEnabled(file_jobs_idle and file_item_selected)
+        self.create_file_button.setEnabled(file_jobs_idle and file_source_ready)
+        self.download_file_button.setEnabled(
+            file_jobs_idle and file_item_selected and file_target_ready
+        )
+
     def load_all(self) -> None:
         credentials_result = self.desktop_service.fetch_credentials()
         notes_result = self.desktop_service.fetch_notes()
@@ -1626,6 +1672,7 @@ class MainWindow(QMainWindow):
             self.credentials_output.setPlainText(
                 f"Credentials fetch failed.\nError: {result.error}"
             )
+            self._refresh_action_states()
             return
 
         self.credentials_list.clear()
@@ -1639,11 +1686,14 @@ class MainWindow(QMainWindow):
         if self.credentials_list.count() > 0:
             self.credentials_list.setCurrentRow(0)
 
+        self._refresh_action_states()
+
     def _render_notes(self, result: ObjectListResult) -> None:
         if result.error:
             self.notes_output.setPlainText(
                 f"Notes fetch failed.\nError: {result.error}"
             )
+            self._refresh_action_states()
             return
 
         self.notes_list.clear()
@@ -1657,11 +1707,14 @@ class MainWindow(QMainWindow):
         if self.notes_list.count() > 0:
             self.notes_list.setCurrentRow(0)
 
+        self._refresh_action_states()
+
     def _render_files(self, result: ObjectListResult) -> None:
         if result.error:
             self.files_output.setPlainText(
                 f"Files fetch failed.\nError: {result.error}"
             )
+            self._refresh_action_states()
             return
 
         self.files_list.clear()
@@ -1674,6 +1727,8 @@ class MainWindow(QMainWindow):
 
         if self.files_list.count() > 0:
             self.files_list.setCurrentRow(0)
+
+        self._refresh_action_states()
 
     def _render_credential_create_result(self, result: ObjectCreateResult) -> None:
         if result.error:
@@ -1708,6 +1763,7 @@ class MainWindow(QMainWindow):
             status_lines.append(f"List refresh warning: {list_result.error}")
 
         self.status_label.setText("\n".join(status_lines))
+        self._refresh_action_states()
         self._save_ui_preferences()
 
     def _render_note_create_result(self, result: ObjectCreateResult) -> None:
@@ -1743,6 +1799,7 @@ class MainWindow(QMainWindow):
             status_lines.append(f"List refresh warning: {list_result.error}")
 
         self.status_label.setText("\n".join(status_lines))
+        self._refresh_action_states()
         self._save_ui_preferences()
 
     def _render_credential_delete_result(self, result: ObjectCreateResult) -> None:
@@ -1775,6 +1832,7 @@ class MainWindow(QMainWindow):
             status_lines.append(f"List refresh warning: {list_result.error}")
 
         self.status_label.setText("\n".join(status_lines))
+        self._refresh_action_states()
         self._save_ui_preferences()
 
     def _render_note_delete_result(self, result: ObjectCreateResult) -> None:
@@ -1807,6 +1865,7 @@ class MainWindow(QMainWindow):
             status_lines.append(f"List refresh warning: {list_result.error}")
 
         self.status_label.setText("\n".join(status_lines))
+        self._refresh_action_states()
         self._save_ui_preferences()
 
     def _render_credential_update_result(self, result: ObjectCreateResult) -> None:
@@ -1843,6 +1902,7 @@ class MainWindow(QMainWindow):
             status_lines.append(f"List refresh warning: {list_result.error}")
 
         self.status_label.setText("\n".join(status_lines))
+        self._refresh_action_states()
         self._save_ui_preferences()
 
     def _render_note_update_result(self, result: ObjectCreateResult) -> None:
@@ -1879,6 +1939,7 @@ class MainWindow(QMainWindow):
             status_lines.append(f"List refresh warning: {list_result.error}")
 
         self.status_label.setText("\n".join(status_lines))
+        self._refresh_action_states()
         self._save_ui_preferences()
 
     def _is_file_upload_running(self) -> bool:
@@ -1924,6 +1985,7 @@ class MainWindow(QMainWindow):
         self.tabs.setTabEnabled(0, not (upload_busy or download_busy))
         self.tabs.setTabEnabled(1, not (upload_busy or download_busy))
         self.tabs.setTabEnabled(2, True)
+        self._refresh_action_states()
 
     def _set_file_upload_busy(self, is_busy: bool) -> None:
         self._set_file_job_busy(upload_busy=is_busy, download_busy=False)
@@ -2094,12 +2156,15 @@ class MainWindow(QMainWindow):
             self.credentials_output.setPlainText(
                 f"Credential detail fetch failed.\nError: {result.error}"
             )
+            self._refresh_action_states()
             return
 
         item = result.item or {}
         display_item = self._decorate_item_detail_for_local_display(item)
         self._bind_credential_item_to_editors(display_item)
         self.credentials_output.setPlainText(format_credential_detail(display_item))
+
+        self._refresh_action_states()
 
     def _render_note_detail(self, result: ObjectDetailResult) -> None:
         if result.error:
@@ -2108,12 +2173,15 @@ class MainWindow(QMainWindow):
             self.notes_output.setPlainText(
                 f"Note detail fetch failed.\nError: {result.error}"
             )
+            self._refresh_action_states()
             return
 
         item = result.item or {}
         display_item = self._decorate_item_detail_for_local_display(item)
         self._bind_note_item_to_editors(display_item)
         self.notes_output.setPlainText(format_note_detail(display_item))
+
+        self._refresh_action_states()
 
     def _decorate_item_detail_for_local_display(self, item: dict) -> dict:
         display_item = dict(item)
