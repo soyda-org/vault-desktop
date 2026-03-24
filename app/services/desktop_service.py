@@ -36,6 +36,7 @@ class VaultDesktopService:
         self.local_pin_bootstrap_store = (
             local_pin_bootstrap_store or LocalPinBootstrapStore()
         )
+        self._last_vault_unlock_method: str | None = None
         self.vault_gateway = vault_gateway or AuthenticatedVaultGateway(api_client)
 
     def probe(self) -> ApiProbeResult:
@@ -43,6 +44,33 @@ class VaultDesktopService:
 
     def has_local_pin_bootstrap(self) -> bool:
         return self.local_pin_bootstrap_store.load() is not None
+
+    def local_pin_bootstrap_status(self) -> str:
+        bootstrap = self.local_pin_bootstrap_store.load()
+        if bootstrap is None:
+            return "none"
+        session = self.session_store.current
+        if session is None:
+            return "present"
+        if bootstrap.user_id == session.user_id:
+            return "current_account"
+        return "other_account"
+
+    def local_pin_bootstrap_identifier_hint(self) -> str | None:
+        bootstrap = self.local_pin_bootstrap_store.load()
+        if bootstrap is None:
+            return None
+        return bootstrap.identifier_hint or None
+
+    def current_vault_unlock_method(self) -> str | None:
+        return self._last_vault_unlock_method
+
+    def clear_vault_unlock_method(self) -> None:
+        self._last_vault_unlock_method = None
+
+    def unlock_session_vault_with_recovery_key(self, master_key_b64: str) -> None:
+        self.set_session_vault_master_key(master_key_b64)
+        self._last_vault_unlock_method = "recovery_key"
 
     def enroll_local_pin_bootstrap(self, *, pin: str) -> None:
         session = self.session_store.current
@@ -82,6 +110,7 @@ class VaultDesktopService:
             pin=pin,
         )
         self.set_session_vault_master_key(master_key_b64)
+        self._last_vault_unlock_method = "pin"
 
     def login(
         self,
@@ -128,6 +157,7 @@ class VaultDesktopService:
 
     def clear_session_vault_master_key(self) -> None:
         self.session_store.clear_vault_master_key()
+        self._last_vault_unlock_method = None
 
     def current_session_vault_master_key(self) -> str | None:
         session = self.session_store.current

@@ -427,6 +427,9 @@ class MainWindow(QMainWindow):
         self.pin_bootstrap_status_label = QLabel()
         self.pin_bootstrap_status_label.setWordWrap(True)
 
+        self.vault_unlock_source_label = QLabel()
+        self.vault_unlock_source_label.setWordWrap(True)
+
         advanced_recovery_row = QHBoxLayout()
         advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
         advanced_recovery_row.setSpacing(4)
@@ -497,6 +500,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(auth_buttons_layout)
         layout.addLayout(vault_row)
         layout.addWidget(self.pin_bootstrap_status_label)
+        layout.addWidget(self.vault_unlock_source_label)
         layout.addWidget(self.advanced_recovery_widget)
         layout.addWidget(vault_hint_label)
         layout.addWidget(self.status_label)
@@ -1419,6 +1423,8 @@ class MainWindow(QMainWindow):
             )
             return
 
+        prior_status = self.desktop_service.local_pin_bootstrap_status()
+
         try:
             self.desktop_service.enroll_local_pin_bootstrap(pin=pin_value)
         except ValueError as exc:
@@ -1429,10 +1435,21 @@ class MainWindow(QMainWindow):
             return
 
         self.vault_pin_input.clear()
-        self.status_label.setText(
-            "PIN saved for this device.\n"
-            "Future vault unlocks can use PIN on this desktop."
-        )
+        if prior_status == "current_account":
+            self.status_label.setText(
+                "PIN changed for this device.\n"
+                "Future vault unlocks will use the updated PIN."
+            )
+        elif prior_status == "other_account":
+            self.status_label.setText(
+                "Device PIN replaced for the current account.\n"
+                "Future vault unlocks on this desktop now belong to this account."
+            )
+        else:
+            self.status_label.setText(
+                "PIN saved for this device.\n"
+                "Future vault unlocks can use PIN on this desktop."
+            )
         self._refresh_action_states()
 
     def run_remove_vault_pin(self) -> None:
@@ -1443,7 +1460,10 @@ class MainWindow(QMainWindow):
             )
             return
 
-        if not self.desktop_service.has_local_pin_bootstrap():
+        prior_status = self.desktop_service.local_pin_bootstrap_status()
+        identifier_hint = self.desktop_service.local_pin_bootstrap_identifier_hint()
+
+        if prior_status == "none":
             self.status_label.setText(
                 "Remove PIN failed.\n"
                 "Error: No local PIN is enrolled for this device."
@@ -1453,10 +1473,16 @@ class MainWindow(QMainWindow):
 
         self.desktop_service.clear_local_pin_bootstrap()
         self.vault_pin_input.clear()
-        self.status_label.setText(
-            "Local PIN removed from this device.\n"
-            "Advanced Recovery remains available for fallback unlock."
-        )
+        if prior_status == "other_account" and identifier_hint:
+            self.status_label.setText(
+                "Local PIN removed from this device.\n"
+                f"The removed enrollment previously belonged to: {identifier_hint}"
+            )
+        else:
+            self.status_label.setText(
+                "Local PIN removed from this device.\n"
+                "Advanced Recovery remains available for fallback unlock."
+            )
         self._refresh_action_states()
 
     def run_lock_vault_now(self) -> None:
@@ -1494,7 +1520,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            self.desktop_service.set_session_vault_master_key(master_key_b64)
+            self.desktop_service.unlock_session_vault_with_recovery_key(master_key_b64)
         except ValueError as exc:
             self.status_label.setText(
                 "Session vault key unlock failed.\n"
@@ -1505,7 +1531,7 @@ class MainWindow(QMainWindow):
         self.file_master_key_b64_input.clear()
         self.status_label.setText(
             "Vault unlocked with recovery key.\n"
-            "You can now enroll a PIN on this device for everyday unlocks."
+            "You can now enroll or replace a PIN on this device for everyday unlocks."
         )
         self.refresh_session_label()
         self._refresh_after_vault_unlock()
@@ -1780,17 +1806,30 @@ class MainWindow(QMainWindow):
         authenticated = self.desktop_service.is_authenticated()
         vault_unlocked = self._is_vault_unlocked()
         recovery_visible = self.advanced_recovery_widget.isVisible()
-        pin_bootstrap_available = self.desktop_service.has_local_pin_bootstrap()
+        pin_bootstrap_status = self.desktop_service.local_pin_bootstrap_status()
+        pin_bootstrap_available = pin_bootstrap_status in {"current_account", "present", "other_account"}
         pin_text_present = bool(self.vault_pin_input.text().strip())
+        identifier_hint = self.desktop_service.local_pin_bootstrap_identifier_hint()
 
         if not authenticated:
             self.pin_bootstrap_status_label.setText(
                 "PIN unlock is available after login. No local PIN can be used while logged out."
             )
-        elif pin_bootstrap_available:
+        elif pin_bootstrap_status == "current_account":
             self.pin_bootstrap_status_label.setText(
                 "This device already has a local PIN enrollment for the current account. "
                 "You can unlock with PIN, change it while unlocked, or remove it from this device."
+            )
+        elif pin_bootstrap_status == "other_account":
+            hint_text = f" (hint: {identifier_hint})" if identifier_hint else ""
+            self.pin_bootstrap_status_label.setText(
+                "This device currently stores a local PIN enrollment for another account"
+                f"{hint_text}. Unlock with Advanced Recovery to replace it for the current account, "
+                "or remove the device PIN."
+            )
+        elif pin_bootstrap_status == "present":
+            self.pin_bootstrap_status_label.setText(
+                "A local PIN exists on this device, but no account is currently active."
             )
         else:
             self.pin_bootstrap_status_label.setText(
@@ -1798,11 +1837,33 @@ class MainWindow(QMainWindow):
                 "Unlock once with Advanced Recovery, then enroll a PIN for everyday use."
             )
 
+        unlock_method = self.desktop_service.current_vault_unlock_method()
+        if not authenticated:
+            self.vault_unlock_source_label.setText(
+                "Vault unlock source: none (logged out)."
+            )
+        elif not vault_unlocked:
+            self.vault_unlock_source_label.setText(
+                "Vault unlock source: vault is currently locked."
+            )
+        elif unlock_method == "pin":
+            self.vault_unlock_source_label.setText(
+                "Vault unlock source: PIN on this device."
+            )
+        elif unlock_method == "recovery_key":
+            self.vault_unlock_source_label.setText(
+                "Vault unlock source: Advanced Recovery key."
+            )
+        else:
+            self.vault_unlock_source_label.setText(
+                "Vault unlock source: session vault key is present."
+            )
+
         self.vault_pin_input.setEnabled(authenticated)
         self.unlock_vault_pin_button.setEnabled(
             authenticated
             and not vault_unlocked
-            and pin_bootstrap_available
+            and pin_bootstrap_status == "current_account"
             and pin_text_present
         )
         self.enroll_vault_pin_button.setEnabled(
@@ -1810,9 +1871,13 @@ class MainWindow(QMainWindow):
             and vault_unlocked
             and pin_text_present
         )
-        self.enroll_vault_pin_button.setText(
-            "Change PIN on This Device" if pin_bootstrap_available else "Enroll PIN on This Device"
-        )
+        if pin_bootstrap_status == "current_account":
+            self.enroll_vault_pin_button.setText("Change PIN on This Device")
+        elif pin_bootstrap_status == "other_account":
+            self.enroll_vault_pin_button.setText("Replace PIN for Current Account")
+        else:
+            self.enroll_vault_pin_button.setText("Enroll PIN on This Device")
+
         self.remove_vault_pin_button.setEnabled(authenticated and pin_bootstrap_available)
         self.lock_now_button.setEnabled(authenticated and vault_unlocked)
         self.toggle_advanced_recovery_button.setEnabled(authenticated)
