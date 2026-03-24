@@ -148,6 +148,9 @@ class MainWindow(QMainWindow):
         self.update_credential_button = QPushButton("Update Credential")
         self.update_credential_button.clicked.connect(self.run_update_credential)
 
+        self.delete_credential_button = QPushButton("Delete Credential")
+        self.delete_credential_button.clicked.connect(self.run_delete_credential)
+
         self.reset_credential_payload_button = QPushButton("Reset Payload")
         self.reset_credential_payload_button.clicked.connect(self.reset_credential_create_fields)
 
@@ -159,6 +162,9 @@ class MainWindow(QMainWindow):
 
         self.update_note_button = QPushButton("Update Note")
         self.update_note_button.clicked.connect(self.run_update_note)
+
+        self.delete_note_button = QPushButton("Delete Note")
+        self.delete_note_button.clicked.connect(self.run_delete_note)
 
         self.reset_note_payload_button = QPushButton("Reset Payload")
         self.reset_note_payload_button.clicked.connect(self.reset_note_create_fields)
@@ -439,6 +445,7 @@ class MainWindow(QMainWindow):
         create_buttons_layout.addWidget(self.load_credential_detail_button)
         create_buttons_layout.addWidget(self.create_credential_button)
         create_buttons_layout.addWidget(self.update_credential_button)
+        create_buttons_layout.addWidget(self.delete_credential_button)
         create_buttons_layout.addWidget(self.reset_credential_payload_button)
 
         create_hint_label = QLabel(
@@ -478,6 +485,7 @@ class MainWindow(QMainWindow):
         create_buttons_layout.addWidget(self.load_note_detail_button)
         create_buttons_layout.addWidget(self.create_note_button)
         create_buttons_layout.addWidget(self.update_note_button)
+        create_buttons_layout.addWidget(self.delete_note_button)
         create_buttons_layout.addWidget(self.reset_note_payload_button)
 
         create_hint_label = QLabel(
@@ -1107,6 +1115,30 @@ class MainWindow(QMainWindow):
 
         self._render_note_update_result(result)
 
+    def run_delete_credential(self) -> None:
+        credential_id = self.selected_credential_id
+        if not credential_id:
+            self.status_label.setText(
+                "Credential delete failed.\n"
+                "Error: Load a credential detail first."
+            )
+            return
+
+        result = self.desktop_service.delete_credential(credential_id=credential_id)
+        self._render_credential_delete_result(result)
+
+    def run_delete_note(self) -> None:
+        note_id = self.selected_note_id
+        if not note_id:
+            self.status_label.setText(
+                "Note delete failed.\n"
+                "Error: Load a note detail first."
+            )
+            return
+
+        result = self.desktop_service.delete_note(note_id=note_id)
+        self._render_note_delete_result(result)
+
     def run_pick_file(self) -> None:
         file_path, _ = QFileDialog.getOpenFileName(
             self,
@@ -1600,6 +1632,70 @@ class MainWindow(QMainWindow):
 
         status_lines = [
             "Note created.",
+            f"Note ID: {note_id or '<unknown>'}",
+        ]
+        if list_result.error:
+            status_lines.append(f"List refresh warning: {list_result.error}")
+
+        self.status_label.setText("\n".join(status_lines))
+        self._save_ui_preferences()
+
+    def _render_credential_delete_result(self, result: ObjectCreateResult) -> None:
+        if result.error:
+            self.credentials_output.setPlainText(
+                f"Credential delete failed.\nError: {result.error}"
+            )
+            self.status_label.setText(
+                "Credential delete failed.\n"
+                f"Error: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        credential_id = str(item.get("credential_id", ""))
+
+        list_result = self.desktop_service.fetch_credentials()
+        self._render_credentials(list_result)
+
+        self.selected_credential_id = None
+        self.selected_credential_current_version = None
+        self.reset_credential_create_fields()
+        self.tabs.setCurrentIndex(0)
+
+        status_lines = [
+            "Credential deleted.",
+            f"Credential ID: {credential_id or '<unknown>'}",
+        ]
+        if list_result.error:
+            status_lines.append(f"List refresh warning: {list_result.error}")
+
+        self.status_label.setText("\n".join(status_lines))
+        self._save_ui_preferences()
+
+    def _render_note_delete_result(self, result: ObjectCreateResult) -> None:
+        if result.error:
+            self.notes_output.setPlainText(
+                f"Note delete failed.\nError: {result.error}"
+            )
+            self.status_label.setText(
+                "Note delete failed.\n"
+                f"Error: {result.error}"
+            )
+            return
+
+        item = result.item or {}
+        note_id = str(item.get("note_id", ""))
+
+        list_result = self.desktop_service.fetch_notes()
+        self._render_notes(list_result)
+
+        self.selected_note_id = None
+        self.selected_note_current_version = None
+        self.reset_note_create_fields()
+        self.tabs.setCurrentIndex(1)
+
+        status_lines = [
+            "Note deleted.",
             f"Note ID: {note_id or '<unknown>'}",
         ]
         if list_result.error:
