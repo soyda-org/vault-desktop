@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from app.core.pin_bootstrap import (
+    LocalPinBootstrapStore,
+    create_local_pin_bootstrap,
+    unlock_master_key_b64_with_pin,
+)
 from app.core.session import DesktopSession, SessionStore
 from app.services.api_client import (
     ApiProbeResult,
@@ -24,13 +29,59 @@ class VaultDesktopService:
         api_client: VaultApiClient,
         vault_gateway: VaultGateway | None = None,
         session_store: SessionStore | None = None,
+        local_pin_bootstrap_store: LocalPinBootstrapStore | None = None,
     ) -> None:
         self.api_client = api_client
         self.session_store = session_store or SessionStore()
+        self.local_pin_bootstrap_store = (
+            local_pin_bootstrap_store or LocalPinBootstrapStore()
+        )
         self.vault_gateway = vault_gateway or AuthenticatedVaultGateway(api_client)
 
     def probe(self) -> ApiProbeResult:
         return self.api_client.probe()
+
+    def has_local_pin_bootstrap(self) -> bool:
+        return self.local_pin_bootstrap_store.load() is not None
+
+    def enroll_local_pin_bootstrap(self, *, pin: str) -> None:
+        session = self.session_store.current
+        if session is None:
+            raise ValueError("No active session.")
+
+        master_key_b64 = self.current_session_vault_master_key()
+        if not master_key_b64:
+            raise ValueError("Vault must be unlocked before enrolling PIN.")
+
+        bootstrap = create_local_pin_bootstrap(
+            user_id=session.user_id,
+            identifier_hint=session.identifier,
+            pin=pin,
+            master_key_b64=master_key_b64,
+        )
+        self.local_pin_bootstrap_store.save(bootstrap)
+
+    def clear_local_pin_bootstrap(self) -> None:
+        self.local_pin_bootstrap_store.clear()
+
+    def unlock_session_vault_with_pin(self, pin: str) -> None:
+        session = self.session_store.current
+        if session is None:
+            raise ValueError("No active session.")
+
+        bootstrap = self.local_pin_bootstrap_store.load()
+        if bootstrap is None:
+            raise ValueError("No local PIN enrollment exists for this device.")
+        if bootstrap.user_id != session.user_id:
+            raise ValueError(
+                "Local PIN enrollment belongs to another account on this device."
+            )
+
+        master_key_b64 = unlock_master_key_b64_with_pin(
+            bootstrap=bootstrap,
+            pin=pin,
+        )
+        self.set_session_vault_master_key(master_key_b64)
 
     def login(
         self,

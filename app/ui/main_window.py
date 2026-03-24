@@ -325,6 +325,9 @@ class MainWindow(QMainWindow):
         self.unlock_vault_pin_button = QPushButton("Unlock with PIN")
         self.unlock_vault_pin_button.clicked.connect(self.run_unlock_vault_with_pin)
 
+        self.enroll_vault_pin_button = QPushButton("Enroll PIN on This Device")
+        self.enroll_vault_pin_button.clicked.connect(self.run_enroll_vault_pin)
+
         self.lock_now_button = QPushButton("Lock Now")
         self.lock_now_button.clicked.connect(self.run_lock_vault_now)
 
@@ -413,6 +416,7 @@ class MainWindow(QMainWindow):
         vault_row.addWidget(QLabel("Vault"))
         vault_row.addWidget(self.vault_pin_input, 1)
         vault_row.addWidget(self.unlock_vault_pin_button)
+        vault_row.addWidget(self.enroll_vault_pin_button)
         vault_row.addWidget(self.lock_now_button)
         vault_row.addWidget(self.toggle_advanced_recovery_button)
 
@@ -429,8 +433,8 @@ class MainWindow(QMainWindow):
         self.advanced_recovery_widget.setVisible(False)
 
         vault_hint_label = QLabel(
-            "Vault controls are global for this session. Everyday use should move to PIN unlock. "
-            "The recovery key path below is temporary and intended for recovery/dev use until real PIN-based unwrap is implemented."
+            "Vault controls are global for this session. Everyday use can enroll a PIN on this device after unlocking once with the recovery key. "
+            "The recovery key path below remains the advanced fallback until real PIN-based unwrap is fully in place."
         )
         vault_hint_label.setWordWrap(True)
 
@@ -502,6 +506,7 @@ class MainWindow(QMainWindow):
         self.files_list.currentItemChanged.connect(lambda *_: self._refresh_action_states())
         self.file_path_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.file_download_target_input.textChanged.connect(lambda *_: self._refresh_action_states())
+        self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
 
         self.vault_auto_lock_timeout_ms = self._read_timeout_ms(
             "VAULT_DESKTOP_AUTO_LOCK_SECONDS",
@@ -1355,14 +1360,6 @@ class MainWindow(QMainWindow):
             )
             return
 
-        if self._is_vault_unlocked():
-            self.status_label.setText(
-                "Vault already unlocked.\n"
-                "Lock it first if you want to test the recovery path again."
-            )
-            self._refresh_action_states()
-            return
-
         pin_value = self.vault_pin_input.text().strip()
         if not pin_value:
             self.status_label.setText(
@@ -1371,12 +1368,63 @@ class MainWindow(QMainWindow):
             )
             return
 
+        try:
+            self.desktop_service.unlock_session_vault_with_pin(pin_value)
+        except ValueError as exc:
+            self.status_label.setText(
+                "Vault PIN unlock failed.\n"
+                f"Error: {exc}"
+            )
+            self._refresh_action_states()
+            return
+
+        self.vault_pin_input.clear()
         self.status_label.setText(
-            "PIN-first unlock UI scaffold only for now.\n"
-            "Use Advanced Recovery with the recovery key until PIN-based unwrap is implemented."
+            "Vault unlocked with PIN.\n"
+            "Credentials, notes, and files can now use the shared session vault state."
         )
-        self.advanced_recovery_widget.setVisible(True)
-        self.toggle_advanced_recovery_button.setText("Hide Advanced Recovery")
+        self.refresh_session_label()
+        self._refresh_after_vault_unlock()
+        self._refresh_idle_policy()
+        self._refresh_action_states()
+
+    def run_enroll_vault_pin(self) -> None:
+        if not self.desktop_service.is_authenticated():
+            self.status_label.setText(
+                "PIN enrollment failed.\n"
+                "Error: No active session."
+            )
+            return
+
+        if not self._is_vault_unlocked():
+            self.status_label.setText(
+                "PIN enrollment failed.\n"
+                "Error: Unlock the vault with Advanced Recovery first."
+            )
+            return
+
+        pin_value = self.vault_pin_input.text().strip()
+        if not pin_value:
+            self.status_label.setText(
+                "PIN enrollment failed.\n"
+                "Error: PIN input is empty."
+            )
+            return
+
+        try:
+            self.desktop_service.enroll_local_pin_bootstrap(pin=pin_value)
+        except ValueError as exc:
+            self.status_label.setText(
+                "PIN enrollment failed.\n"
+                f"Error: {exc}"
+            )
+            return
+
+        self.vault_pin_input.clear()
+        self.status_label.setText(
+            "PIN enrolled for this device.\n"
+            "Future vault unlocks can use PIN on this desktop."
+        )
         self._refresh_action_states()
 
     def run_lock_vault_now(self) -> None:
@@ -1424,8 +1472,8 @@ class MainWindow(QMainWindow):
 
         self.file_master_key_b64_input.clear()
         self.status_label.setText(
-            "Vault unlocked in memory only.\n"
-            "Credentials, notes, and files can now use the shared session vault state."
+            "Vault unlocked with recovery key.\n"
+            "You can now enroll a PIN on this device for everyday unlocks."
         )
         self.refresh_session_label()
         self._refresh_after_vault_unlock()
@@ -1700,9 +1748,20 @@ class MainWindow(QMainWindow):
         authenticated = self.desktop_service.is_authenticated()
         vault_unlocked = self._is_vault_unlocked()
         recovery_visible = self.advanced_recovery_widget.isVisible()
+        pin_bootstrap_available = self.desktop_service.has_local_pin_bootstrap()
 
-        self.vault_pin_input.setEnabled(authenticated and not vault_unlocked)
-        self.unlock_vault_pin_button.setEnabled(authenticated and not vault_unlocked)
+        self.vault_pin_input.setEnabled(authenticated)
+        self.unlock_vault_pin_button.setEnabled(
+            authenticated
+            and not vault_unlocked
+            and pin_bootstrap_available
+            and bool(self.vault_pin_input.text().strip())
+        )
+        self.enroll_vault_pin_button.setEnabled(
+            authenticated
+            and vault_unlocked
+            and bool(self.vault_pin_input.text().strip())
+        )
         self.lock_now_button.setEnabled(authenticated and vault_unlocked)
         self.toggle_advanced_recovery_button.setEnabled(authenticated)
         self.file_master_key_b64_input.setEnabled(
