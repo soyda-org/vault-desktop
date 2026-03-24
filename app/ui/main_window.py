@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 
-from PySide6.QtCore import QThread, Qt
+from PySide6.QtCore import QThread, Qt, QEvent, QTimer
+
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -470,8 +472,32 @@ class MainWindow(QMainWindow):
         self.file_path_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.file_download_target_input.textChanged.connect(lambda *_: self._refresh_action_states())
 
+        self.vault_auto_lock_timeout_ms = self._read_timeout_ms(
+            "VAULT_DESKTOP_AUTO_LOCK_SECONDS",
+            default_seconds=180,
+            minimum_seconds=5,
+        )
+        self.session_auto_logout_timeout_ms = self._read_timeout_ms(
+            "VAULT_DESKTOP_AUTO_LOGOUT_SECONDS",
+            default_seconds=720,
+            minimum_seconds=15,
+        )
+
+        self.vault_auto_lock_timer = QTimer(self)
+        self.vault_auto_lock_timer.setSingleShot(True)
+        self.vault_auto_lock_timer.timeout.connect(self._handle_vault_auto_lock_timeout)
+
+        self.session_auto_logout_timer = QTimer(self)
+        self.session_auto_logout_timer.setSingleShot(True)
+        self.session_auto_logout_timer.timeout.connect(self._handle_session_auto_logout_timeout)
+
+        app = QApplication.instance()
+        if app is not None:
+            app.installEventFilter(self)
+
         self.refresh_session_label()
         self._refresh_action_states()
+        self._refresh_idle_policy()
 
     def _build_tab(
         self,
@@ -726,6 +752,7 @@ class MainWindow(QMainWindow):
             )
             event.ignore()
             return
+        self._stop_idle_timers()
         self._save_ui_preferences()
         super().closeEvent(event)
 
@@ -781,6 +808,8 @@ class MainWindow(QMainWindow):
         )
         self.file_master_key_b64_input.clear()
         self.refresh_session_label()
+        self._refresh_action_states()
+        self._refresh_idle_policy()
         self._save_ui_preferences()
 
     def run_logout(self) -> None:
@@ -790,27 +819,7 @@ class MainWindow(QMainWindow):
                 "Wait for completion before logging out."
             )
             return
-        self.desktop_service.logout()
-        self.reset_credential_create_fields()
-        self.reset_note_create_fields()
-        self.file_manifest_input.clear()
-        self.file_header_input.clear()
-        self.file_chunks_input.clear()
-        self.credentials_list.clear()
-        self.notes_list.clear()
-        self.files_list.clear()
-        self.credentials_output.clear()
-        self.notes_output.clear()
-        self.files_output.clear()
-        self.file_master_key_b64_input.clear()
-        self.selected_credential_id = None
-        self.selected_credential_current_version = None
-        self.selected_note_id = None
-        self.selected_note_current_version = None
-        self.refresh_session_label()
-        self._refresh_action_states()
-        self.status_label.setText("Session cleared locally.")
-        self._save_ui_preferences()
+        self._perform_local_logout("Session cleared locally.")
 
     def run_close(self) -> None:
         if self._is_file_job_running():
@@ -819,6 +828,7 @@ class MainWindow(QMainWindow):
                 "Wait for completion before closing the app."
             )
             return
+        self._stop_idle_timers()
         self._save_ui_preferences()
         app = QApplication.instance()
         if app is not None:
@@ -1345,6 +1355,7 @@ class MainWindow(QMainWindow):
         )
         self.refresh_session_label()
         self._refresh_after_vault_unlock()
+        self._refresh_idle_policy()
 
     def run_clear_session_key(self) -> None:
         if self._is_file_job_running():
@@ -1366,6 +1377,7 @@ class MainWindow(QMainWindow):
             "The in-memory vault key was cleared and sensitive editors were wiped."
         )
         self.refresh_session_label()
+        self._refresh_idle_policy()
 
     def run_create_file(self) -> None:
         if self._is_file_job_running():
@@ -1699,6 +1711,113 @@ class MainWindow(QMainWindow):
             self.load_credential_detail()
         if self.selected_note_id:
             self.load_note_detail()
+
+    def _read_timeout_ms(
+        self,
+        env_name: str,
+        *,
+        default_seconds: int,
+        minimum_seconds: int,
+    ) -> int:
+        raw = os.getenv(env_name, "").strip()
+        if not raw:
+            return default_seconds * 1000
+        try:
+            value = int(raw)
+        except ValueError:
+            return default_seconds * 1000
+        if value < minimum_seconds:
+            value = minimum_seconds
+        return value * 1000
+
+    def _stop_idle_timers(self) -> None:
+        self.vault_auto_lock_timer.stop()
+        self.session_auto_logout_timer.stop()
+
+    def _refresh_idle_policy(self) -> None:
+        if not self.desktop_service.is_authenticated():
+            self._stop_idle_timers()
+            return
+
+        self.session_auto_logout_timer.start(self.session_auto_logout_timeout_ms)
+
+        if self._is_vault_unlocked():
+            self.vault_auto_lock_timer.start(self.vault_auto_lock_timeout_ms)
+        else:
+            self.vault_auto_lock_timer.stop()
+
+    def _handle_user_activity(self) -> None:
+        if not self.desktop_service.is_authenticated():
+            return
+        self._refresh_idle_policy()
+
+    def _handle_vault_auto_lock_timeout(self) -> None:
+        if not self.desktop_service.is_authenticated():
+            return
+        if not self._is_vault_unlocked():
+            return
+        if self._is_file_job_running():
+            self.vault_auto_lock_timer.start(15000)
+            self.status_label.setText(
+                "Vault auto-lock delayed because a file job is still running."
+            )
+            return
+
+        self.desktop_service.clear_session_vault_master_key()
+        self.file_master_key_b64_input.clear()
+        self._clear_sensitive_views_for_locked_vault()
+        self.refresh_session_label()
+        self.status_label.setText(
+            "Vault auto-locked after inactivity.\n"
+            "Sensitive editors were wiped from memory."
+        )
+        self._refresh_idle_policy()
+
+    def _perform_local_logout(self, status_text: str) -> None:
+        self.desktop_service.logout()
+        self.reset_credential_create_fields()
+        self.reset_note_create_fields()
+        self.file_manifest_input.clear()
+        self.file_header_input.clear()
+        self.file_chunks_input.clear()
+        self.credentials_list.clear()
+        self.notes_list.clear()
+        self.files_list.clear()
+        self.credentials_output.clear()
+        self.notes_output.clear()
+        self.files_output.clear()
+        self.file_master_key_b64_input.clear()
+        self.selected_credential_id = None
+        self.selected_credential_current_version = None
+        self.selected_note_id = None
+        self.selected_note_current_version = None
+        self._stop_idle_timers()
+        self.refresh_session_label()
+        self._refresh_action_states()
+        self.status_label.setText(status_text)
+        self._save_ui_preferences()
+
+    def _handle_session_auto_logout_timeout(self) -> None:
+        if not self.desktop_service.is_authenticated():
+            return
+        if self._is_file_job_running():
+            self.session_auto_logout_timer.start(30000)
+            self.status_label.setText(
+                "Session auto-logout delayed because a file job is still running."
+            )
+            return
+        self._perform_local_logout("Session expired after inactivity.")
+
+    def eventFilter(self, watched, event):  # type: ignore[override]
+        if event is not None and event.type() in {
+            QEvent.Type.MouseButtonPress,
+            QEvent.Type.MouseButtonRelease,
+            QEvent.Type.KeyPress,
+            QEvent.Type.Wheel,
+            QEvent.Type.FocusIn,
+        }:
+            self._handle_user_activity()
+        return super().eventFilter(watched, event)
 
     def load_all(self) -> None:
         credentials_result = self.desktop_service.fetch_credentials()
