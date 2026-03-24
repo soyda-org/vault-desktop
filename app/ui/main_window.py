@@ -316,13 +316,30 @@ class MainWindow(QMainWindow):
         self.file_chunk_size_kib_input.setValue(8192)
         self.file_chunk_size_kib_input.setSuffix(" KiB")
 
+        self.vault_pin_input = QLineEdit()
+        self.vault_pin_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.vault_pin_input.setPlaceholderText(
+            "Everyday use target: unlock with PIN (scaffold only for now)."
+        )
+
+        self.unlock_vault_pin_button = QPushButton("Unlock with PIN")
+        self.unlock_vault_pin_button.clicked.connect(self.run_unlock_vault_with_pin)
+
+        self.lock_now_button = QPushButton("Lock Now")
+        self.lock_now_button.clicked.connect(self.run_lock_vault_now)
+
+        self.toggle_advanced_recovery_button = QPushButton("Show Advanced Recovery")
+        self.toggle_advanced_recovery_button.clicked.connect(
+            self.toggle_advanced_recovery
+        )
+
         self.file_master_key_b64_input = QLineEdit()
         self.file_master_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.file_master_key_b64_input.setPlaceholderText(
             "Temporary recovery/dev path: enter the vault key to unlock this session."
         )
 
-        self.unlock_session_key_button = QPushButton("Unlock Vault")
+        self.unlock_session_key_button = QPushButton("Unlock with Recovery Key")
         self.unlock_session_key_button.clicked.connect(self.run_unlock_session_key)
 
         self.clear_session_key_button = QPushButton("Clear Vault Key")
@@ -393,14 +410,27 @@ class MainWindow(QMainWindow):
         vault_row = QHBoxLayout()
         vault_row.setContentsMargins(0, 0, 0, 0)
         vault_row.setSpacing(4)
-        vault_row.addWidget(QLabel("Vault key"))
-        vault_row.addWidget(self.file_master_key_b64_input, 1)
-        vault_row.addWidget(self.unlock_session_key_button)
-        vault_row.addWidget(self.clear_session_key_button)
+        vault_row.addWidget(QLabel("Vault"))
+        vault_row.addWidget(self.vault_pin_input, 1)
+        vault_row.addWidget(self.unlock_vault_pin_button)
+        vault_row.addWidget(self.lock_now_button)
+        vault_row.addWidget(self.toggle_advanced_recovery_button)
+
+        advanced_recovery_row = QHBoxLayout()
+        advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
+        advanced_recovery_row.setSpacing(4)
+        advanced_recovery_row.addWidget(QLabel("Recovery key"))
+        advanced_recovery_row.addWidget(self.file_master_key_b64_input, 1)
+        advanced_recovery_row.addWidget(self.unlock_session_key_button)
+        advanced_recovery_row.addWidget(self.clear_session_key_button)
+
+        self.advanced_recovery_widget = QWidget()
+        self.advanced_recovery_widget.setLayout(advanced_recovery_row)
+        self.advanced_recovery_widget.setVisible(False)
 
         vault_hint_label = QLabel(
-            "Vault controls are global for this session. Credentials, notes, and files all use the same in-memory vault state. "
-            "The raw key field below is temporary and intended for recovery/dev use until PIN unlock is implemented."
+            "Vault controls are global for this session. Everyday use should move to PIN unlock. "
+            "The recovery key path below is temporary and intended for recovery/dev use until real PIN-based unwrap is implemented."
         )
         vault_hint_label.setWordWrap(True)
 
@@ -455,6 +485,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(form_layout)
         layout.addLayout(auth_buttons_layout)
         layout.addLayout(vault_row)
+        layout.addWidget(self.advanced_recovery_widget)
         layout.addWidget(vault_hint_label)
         layout.addWidget(self.status_label)
         layout.addWidget(self.session_label)
@@ -1316,6 +1347,49 @@ class MainWindow(QMainWindow):
             f"Planned chunks: {result.chunk_count}"
         )
 
+    def run_unlock_vault_with_pin(self) -> None:
+        if not self.desktop_service.is_authenticated():
+            self.status_label.setText(
+                "Vault PIN unlock failed.\n"
+                "Error: No active session."
+            )
+            return
+
+        if self._is_vault_unlocked():
+            self.status_label.setText(
+                "Vault already unlocked.\n"
+                "Lock it first if you want to test the recovery path again."
+            )
+            self._refresh_action_states()
+            return
+
+        pin_value = self.vault_pin_input.text().strip()
+        if not pin_value:
+            self.status_label.setText(
+                "Vault PIN unlock failed.\n"
+                "Error: PIN input is empty."
+            )
+            return
+
+        self.status_label.setText(
+            "PIN-first unlock UI scaffold only for now.\n"
+            "Use Advanced Recovery with the recovery key until PIN-based unwrap is implemented."
+        )
+        self.advanced_recovery_widget.setVisible(True)
+        self.toggle_advanced_recovery_button.setText("Hide Advanced Recovery")
+        self._refresh_action_states()
+
+    def run_lock_vault_now(self) -> None:
+        self.run_clear_session_key()
+
+    def toggle_advanced_recovery(self) -> None:
+        visible = not self.advanced_recovery_widget.isVisible()
+        self.advanced_recovery_widget.setVisible(visible)
+        self.toggle_advanced_recovery_button.setText(
+            "Hide Advanced Recovery" if visible else "Show Advanced Recovery"
+        )
+        self._refresh_action_states()
+
     def run_unlock_session_key(self) -> None:
         if not self.desktop_service.is_authenticated():
             self.status_label.setText(
@@ -1623,7 +1697,21 @@ class MainWindow(QMainWindow):
         self._render_files(result)
 
     def _refresh_action_states(self) -> None:
+        authenticated = self.desktop_service.is_authenticated()
         vault_unlocked = self._is_vault_unlocked()
+        recovery_visible = self.advanced_recovery_widget.isVisible()
+
+        self.vault_pin_input.setEnabled(authenticated and not vault_unlocked)
+        self.unlock_vault_pin_button.setEnabled(authenticated and not vault_unlocked)
+        self.lock_now_button.setEnabled(authenticated and vault_unlocked)
+        self.toggle_advanced_recovery_button.setEnabled(authenticated)
+        self.file_master_key_b64_input.setEnabled(
+            authenticated and not vault_unlocked and recovery_visible
+        )
+        self.unlock_session_key_button.setEnabled(
+            authenticated and not vault_unlocked and recovery_visible
+        )
+        self.clear_session_key_button.setEnabled(vault_unlocked)
 
         credential_item_selected = self.credentials_list.currentItem() is not None
         credential_detail_loaded = (
