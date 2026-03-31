@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from vault_crypto.encoding import b64encode_bytes
+from vault_crypto.vault_setup import recover_vault_root_key_with_recovery
+
 from app.core.pin_bootstrap import (
     LocalPinBootstrapStore,
     create_local_pin_bootstrap,
@@ -68,7 +71,43 @@ class VaultDesktopService:
     def clear_vault_unlock_method(self) -> None:
         self._last_vault_unlock_method = None
 
-    def unlock_session_vault_with_recovery_key(self, master_key_b64: str) -> None:
+    def unlock_session_vault_with_recovery_key(self, recovery_key_b64: str) -> None:
+        session = self.session_store.current
+        if session is None:
+            raise ValueError("No active session.")
+
+        recovery_key_b64 = recovery_key_b64.strip()
+        if not recovery_key_b64:
+            raise ValueError("Recovery key input is empty.")
+
+        profile_result = self.fetch_vault_profile()
+        if profile_result.error is not None or profile_result.item is None:
+            detail = profile_result.error or "Vault profile fetch failed."
+            raise ValueError(f"Vault profile fetch failed. {detail}")
+
+        recovery_wrapped_vault_root_key = profile_result.item.get(
+            "recovery_wrapped_vault_root_key"
+        )
+        if (
+            not isinstance(recovery_wrapped_vault_root_key, dict)
+            or not recovery_wrapped_vault_root_key
+        ):
+            raise ValueError("Recovery key is not enabled for this vault profile.")
+
+        try:
+            recovered = recover_vault_root_key_with_recovery(
+                recovery_key_b64=recovery_key_b64,
+                recovery_wrapped_vault_root_key=recovery_wrapped_vault_root_key,
+            )
+        except Exception as exc:
+            raise ValueError("Recovery key unlock failed.") from exc
+
+        master_key_b64 = (
+            b64encode_bytes(recovered)
+            if isinstance(recovered, bytes)
+            else str(recovered)
+        )
+
         self.set_session_vault_master_key(master_key_b64)
         self._last_vault_unlock_method = "recovery_key"
 
@@ -205,6 +244,13 @@ class VaultDesktopService:
             device_id=result.device_id,
         )
         return result
+
+    def fetch_vault_profile(self) -> ObjectDetailResult:
+        return self._fetch_detail_with_refresh(
+            lambda session: self.api_client.fetch_vault_profile(
+                access_token=session.access_token
+            )
+        )
 
     def fetch_credentials(self) -> ObjectListResult:
         return self._fetch_list_with_refresh(

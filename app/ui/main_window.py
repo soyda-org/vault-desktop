@@ -342,7 +342,7 @@ class MainWindow(QMainWindow):
         self.file_master_key_b64_input = QLineEdit()
         self.file_master_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.file_master_key_b64_input.setPlaceholderText(
-            "Temporary recovery/dev path: enter the vault key to unlock this session."
+            "Paste the recovery key (base64 text). The app will fetch wrapped bootstrap material from the API and unwrap the vault key locally."
         )
 
         self.unlock_session_key_button = QPushButton("Unlock with Recovery Key")
@@ -454,8 +454,8 @@ class MainWindow(QMainWindow):
         self.advanced_recovery_widget.setVisible(False)
 
         vault_hint_label = QLabel(
-            "Vault controls are global for this session. Everyday use can enroll a PIN on this device after unlocking once with the recovery key. "
-            "The recovery key path below remains the advanced fallback until real PIN-based unwrap is fully in place."
+            "Vault controls are global for this session. Everyday use can unlock with a local PIN on this device after enrollment. "
+            "Advanced Recovery uses the recovery key plus wrapped bootstrap material fetched from the API to unwrap the vault key locally."
         )
         vault_hint_label.setWordWrap(True)
 
@@ -1532,7 +1532,7 @@ class MainWindow(QMainWindow):
     def run_unlock_session_key(self) -> None:
         if not self.desktop_service.is_authenticated():
             self.status_label.setText(
-                "Session vault key unlock failed.\n"
+                "Recovery key unlock failed.\n"
                 "Error: No active session."
             )
             return
@@ -1544,31 +1544,35 @@ class MainWindow(QMainWindow):
             )
             return
 
-        master_key_b64 = self.file_master_key_b64_input.text().strip()
-        if not master_key_b64:
+        recovery_key_b64 = self.file_master_key_b64_input.text().strip()
+        if not recovery_key_b64:
             self.status_label.setText(
-                "Session vault key unlock failed.\n"
-                "Error: Session key input is empty."
+                "Recovery key unlock failed.\n"
+                "Error: Recovery key input is empty."
             )
             return
 
         try:
-            self.desktop_service.unlock_session_vault_with_recovery_key(master_key_b64)
+            self.desktop_service.unlock_session_vault_with_recovery_key(
+                recovery_key_b64
+            )
         except ValueError as exc:
             self.status_label.setText(
-                "Session vault key unlock failed.\n"
+                "Recovery key unlock failed.\n"
                 f"Error: {exc}"
             )
+            self._refresh_action_states()
             return
 
         self.file_master_key_b64_input.clear()
         self.status_label.setText(
             "Vault unlocked with recovery key.\n"
-            "You can now enroll or replace a PIN on this device for everyday unlocks."
+            "The app fetched wrapped bootstrap material from the API and unwrapped the session vault key locally."
         )
         self.refresh_session_label()
         self._refresh_after_vault_unlock()
         self._refresh_idle_policy()
+        self._refresh_action_states()
 
     def run_clear_session_key(self) -> None:
         if self._is_file_job_running():

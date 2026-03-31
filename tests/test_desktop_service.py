@@ -7,6 +7,8 @@ from app.services.api_client import (
     RefreshResult,
 )
 from app.services.desktop_service import VaultDesktopService
+from vault_crypto.encoding import b64encode_bytes
+from vault_crypto.vault_setup import bootstrap_new_vault
 
 
 class FakeApiClient:
@@ -663,3 +665,114 @@ def test_logout_clears_session_and_vault_master_key() -> None:
     assert service.current_session() is None
     assert service.current_session_vault_master_key() is None
     assert service.has_session_vault_master_key() is False
+
+
+class RecoveryProfileApiClient(FakeApiClient):
+    def __init__(
+        self,
+        *,
+        vault_profile_result=None,
+        vault_profile_error=None,
+        vault_profile_status_code=200,
+    ) -> None:
+        super().__init__()
+        self.profile_calls = 0
+        self.vault_profile_result = vault_profile_result
+        self.vault_profile_error = vault_profile_error
+        self.vault_profile_status_code = vault_profile_status_code
+
+    def fetch_vault_profile(self, access_token=None):
+        self.profile_calls += 1
+        return ObjectDetailResult(
+            item=self.vault_profile_result,
+            error=self.vault_profile_error,
+            status_code=self.vault_profile_status_code,
+        )
+
+
+def _recovery_fixture():
+    result = bootstrap_new_vault(
+        unlock_passphrase="desktop-recovery-passphrase",
+        include_recovery_key=True,
+    )
+    expected_master_key_b64 = (
+        b64encode_bytes(result.vault_root_key)
+        if isinstance(result.vault_root_key, bytes)
+        else str(result.vault_root_key)
+    )
+    vault_profile = {
+        "user_id": "user_001",
+        "vault_format_version": 1,
+        "active_keyset_version": 1,
+        "unlock_salt_b64": result.persisted.unlock_salt_b64,
+        "unlock_kdf_params": result.persisted.unlock_kdf_params,
+        "wrapped_vault_root_key": result.persisted.wrapped_vault_root_key,
+        "recovery_wrapped_vault_root_key": result.persisted.recovery_wrapped_vault_root_key,
+    }
+    return result.recovery_key_b64, vault_profile, expected_master_key_b64
+
+
+def test_unlock_session_vault_with_recovery_key_uses_vault_profile_material() -> None:
+    recovery_key_b64, vault_profile, expected_master_key_b64 = _recovery_fixture()
+    api_client = RecoveryProfileApiClient(vault_profile_result=vault_profile)
+    service = VaultDesktopService(api_client=api_client, vault_gateway=FakeVaultGateway())
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    service.unlock_session_vault_with_recovery_key(recovery_key_b64)
+
+    assert api_client.profile_calls == 1
+    assert service.current_session_vault_master_key() == expected_master_key_b64
+    assert service.current_vault_unlock_method() == "recovery_key"
+
+
+def test_unlock_session_vault_with_recovery_key_rejects_missing_profile() -> None:
+    api_client = RecoveryProfileApiClient(
+        vault_profile_result=None,
+        vault_profile_error="Vault profile not found",
+        vault_profile_status_code=404,
+    )
+    service = VaultDesktopService(api_client=api_client, vault_gateway=FakeVaultGateway())
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    try:
+        service.unlock_session_vault_with_recovery_key("abcd")
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert str(exc) == "Vault profile fetch failed. Vault profile not found"
+
+
+def test_unlock_session_vault_with_recovery_key_rejects_missing_recovery_material() -> None:
+    api_client = RecoveryProfileApiClient(
+        vault_profile_result={
+            "user_id": "user_001",
+            "vault_format_version": 1,
+            "active_keyset_version": 1,
+            "unlock_salt_b64": "c2FsdA==",
+            "unlock_kdf_params": {"scheme": "argon2id"},
+            "wrapped_vault_root_key": {"wrap_scheme": "aes256-kw", "wrapped_key_b64": "YWJj"},
+            "recovery_wrapped_vault_root_key": None,
+        }
+    )
+    service = VaultDesktopService(api_client=api_client, vault_gateway=FakeVaultGateway())
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    try:
+        service.unlock_session_vault_with_recovery_key("abcd")
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert str(exc) == "Recovery key is not enabled for this vault profile."

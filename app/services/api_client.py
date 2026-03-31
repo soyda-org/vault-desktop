@@ -236,6 +236,15 @@ class VaultApiClient:
                 status_code=None,
             )
 
+    def fetch_vault_profile(
+        self,
+        access_token: str | None = None,
+    ) -> ObjectDetailResult:
+        return self._fetch_detail(
+            "/api/v1/vault/profile",
+            access_token=access_token,
+        )
+
     def fetch_credentials(self, access_token: str | None = None) -> ObjectListResult:
         return self._fetch_list("/api/v1/vault/credentials", access_token=access_token)
 
