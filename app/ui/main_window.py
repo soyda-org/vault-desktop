@@ -36,6 +36,7 @@ from app.services.api_client import (
     VaultApiClient,
 )
 from app.services.desktop_service import VaultDesktopService
+from app.ui.signup_dialog import SignupDialog
 from app.services.file_crypto_bridge import inspect_plaintext_file
 from app.services.item_crypto_bridge import (
     build_encrypted_item_finalize_payload,
@@ -126,6 +127,9 @@ class MainWindow(QMainWindow):
 
         self.login_button = QPushButton("Login")
         self.login_button.clicked.connect(self.run_login)
+
+        self.sign_up_button = QPushButton("Sign Up")
+        self.sign_up_button.clicked.connect(self.run_open_signup_dialog)
 
         self.logout_button = QPushButton("Logout")
         self.logout_button.clicked.connect(self.run_logout)
@@ -410,6 +414,7 @@ class MainWindow(QMainWindow):
         auth_buttons_layout.setContentsMargins(0, 0, 0, 0)
         auth_buttons_layout.setSpacing(4)
         auth_buttons_layout.addWidget(self.login_button)
+        auth_buttons_layout.addWidget(self.sign_up_button)
         auth_buttons_layout.addWidget(self.logout_button)
         auth_buttons_layout.addWidget(self.close_button)
 
@@ -841,6 +846,25 @@ class MainWindow(QMainWindow):
             f"Version: {result.version}\n"
             f"Environment: {result.environment}"
         )
+
+
+    def run_open_signup_dialog(self) -> None:
+        dialog = SignupDialog(
+            api_base_url=self.api_client.base_url,
+            identifier=self.identifier_input.text().strip(),
+            device_name=self.device_name_input.text().strip() or "vault-desktop-dev",
+            platform=self.platform_input.text().strip() or "linux",
+            parent=self,
+        )
+        if dialog.exec():
+            self.identifier_input.setText(dialog.registered_identifier)
+            self.password_input.clear()
+            self.status_label.setText(
+                "Registration complete. Recovery key was shown once. "
+                "Save it somewhere safe, then log in."
+            )
+            self.refresh_session_label()
+            self._refresh_action_states()
 
     def run_login(self) -> None:
         result = self.desktop_service.login(
