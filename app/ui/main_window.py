@@ -876,6 +876,8 @@ class MainWindow(QMainWindow):
         )
         self.recovery_key_b64_input.clear()
         self.refresh_session_label()
+        if not self._is_vault_unlocked():
+            self._clear_sensitive_views_for_locked_vault()
         self._refresh_action_states()
         self._refresh_idle_policy()
         self._save_ui_preferences()
@@ -2050,6 +2052,16 @@ class MainWindow(QMainWindow):
             lines.append(f"Type: {note_type}")
         return "\n".join(lines)
 
+    def _locked_placeholder_text(self, kind: str) -> str:
+        return "\n".join(
+            [
+                f"{kind} detail is locked.",
+                "Unlock Vault to view decrypted content.",
+                "",
+                "Sensitive content is hidden while the vault is locked.",
+            ]
+        )
+
     def _clear_sensitive_views_for_locked_vault(self) -> None:
         self.reset_credential_create_fields()
         self.reset_note_create_fields()
@@ -2067,6 +2079,10 @@ class MainWindow(QMainWindow):
                     },
                 )
             )
+        else:
+            self.credentials_output.setPlainText(
+                self._locked_placeholder_text("Credential")
+            )
 
         if self.selected_note_id:
             self.notes_output.setPlainText(
@@ -2078,6 +2094,14 @@ class MainWindow(QMainWindow):
                     },
                 )
             )
+        else:
+            self.notes_output.setPlainText(
+                self._locked_placeholder_text("Note")
+            )
+
+        self.files_output.setPlainText(
+            self._locked_placeholder_text("File")
+        )
 
         self._refresh_action_states()
 

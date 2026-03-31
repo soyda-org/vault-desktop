@@ -6,7 +6,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton, QTextEdit, QWidget
 
 from app.core.pin_bootstrap import LocalPinBootstrapStore
 from app.services.desktop_service import VaultDesktopService
@@ -138,6 +138,13 @@ def make_window_harness(
     window.status_label = QLabel()
     window.session_label = QLabel()
 
+    window.credentials_output = QTextEdit()
+    window.notes_output = QTextEdit()
+    window.files_output = QTextEdit()
+    window.file_manifest_input = QTextEdit()
+    window.file_header_input = QTextEdit()
+    window.file_chunks_input = QTextEdit()
+
     window.vault_pin_input = QLineEdit()
     window.pin_confirmation_input = QLineEdit()
     window.recovery_key_b64_input = QLineEdit()
@@ -189,9 +196,16 @@ def make_window_harness(
     )
     window._is_file_job_running = lambda: False
     window._refresh_action_states = lambda: MainWindow._refresh_action_states(window)
+    window._locked_detail_text = lambda kind, item: MainWindow._locked_detail_text(window, kind, item)
+    window._locked_placeholder_text = lambda kind: MainWindow._locked_placeholder_text(window, kind)
+    window._clear_sensitive_views_for_locked_vault = lambda: MainWindow._clear_sensitive_views_for_locked_vault(window)
     window.refresh_session_label = lambda: None
     window._refresh_after_vault_unlock = lambda: None
     window._refresh_idle_policy = lambda: None
+    window._stop_idle_timers = lambda: None
+    window.reset_credential_create_fields = lambda: None
+    window.reset_note_create_fields = lambda: None
+    window._save_ui_preferences = lambda: None
 
     return window
 
@@ -374,3 +388,74 @@ def test_logged_out_guidance_prompts_login(qapp, tmp_path: Path) -> None:
 
     assert "none (logged out)" in window.vault_unlock_source_label.text()
     assert "Next step: log in" in window.vault_next_step_label.text()
+
+
+def _seed_sensitive_views(window) -> None:
+    window.credentials_output.setPlainText("SECRET credential")
+    window.notes_output.setPlainText("SECRET note")
+    window.files_output.setPlainText("SECRET file")
+    window.file_manifest_input.setPlainText("SECRET manifest")
+    window.file_header_input.setPlainText("SECRET header")
+    window.file_chunks_input.setPlainText("SECRET chunks")
+
+
+def test_clear_sensitive_views_for_locked_vault_sets_locked_placeholders(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    _seed_sensitive_views(window)
+
+    MainWindow._clear_sensitive_views_for_locked_vault(window)
+
+    assert "Credential detail is locked." in window.credentials_output.toPlainText()
+    assert "Note detail is locked." in window.notes_output.toPlainText()
+    assert "File detail is locked." in window.files_output.toPlainText()
+    assert "SECRET" not in window.credentials_output.toPlainText()
+    assert "SECRET" not in window.notes_output.toPlainText()
+    assert "SECRET" not in window.files_output.toPlainText()
+    assert window.file_manifest_input.toPlainText() == ""
+    assert window.file_header_input.toPlainText() == ""
+    assert window.file_chunks_input.toPlainText() == ""
+
+
+def test_run_clear_vault_key_wipes_sensitive_views(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+    _seed_sensitive_views(window)
+
+    MainWindow.run_clear_vault_key(window)
+
+    assert window.desktop_service.current_session_vault_master_key() is None
+    assert "Vault locked." in window.status_label.text()
+    assert "Credential detail is locked." in window.credentials_output.toPlainText()
+    assert "Note detail is locked." in window.notes_output.toPlainText()
+    assert "File detail is locked." in window.files_output.toPlainText()
+    assert window.file_manifest_input.toPlainText() == ""
+
+
+def test_handle_vault_auto_lock_timeout_wipes_sensitive_views(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+    _seed_sensitive_views(window)
+
+    MainWindow._handle_vault_auto_lock_timeout(window)
+
+    assert window.desktop_service.current_session_vault_master_key() is None
+    assert "Vault auto-locked after inactivity." in window.status_label.text()
+    assert "Credential detail is locked." in window.credentials_output.toPlainText()
+    assert "Note detail is locked." in window.notes_output.toPlainText()
+    assert "File detail is locked." in window.files_output.toPlainText()
+
+
+def test_perform_local_logout_clears_sensitive_outputs(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+    _seed_sensitive_views(window)
+
+    MainWindow._perform_local_logout(window, "Logged out.")
+
+    assert window.credentials_output.toPlainText() == ""
+    assert window.notes_output.toPlainText() == ""
+    assert window.files_output.toPlainText() == ""
+    assert window.file_manifest_input.toPlainText() == ""
+    assert window.file_header_input.toPlainText() == ""
+    assert window.file_chunks_input.toPlainText() == ""
+    assert window.status_label.text() == "Logged out."
