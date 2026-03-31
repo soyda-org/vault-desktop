@@ -146,6 +146,7 @@ def make_window_harness(
 
     window.pin_bootstrap_status_label = QLabel()
     window.vault_unlock_source_label = QLabel()
+    window.vault_next_step_label = QLabel()
     window.device_pin_scope_label = QLabel()
     window.pin_confirmation_label = QLabel()
 
@@ -203,6 +204,7 @@ def test_first_time_enroll_requires_no_confirmation(qapp, tmp_path: Path) -> Non
     MainWindow._refresh_action_states(window)
 
     assert "No local PIN is enrolled" in window.pin_bootstrap_status_label.text()
+    assert "Vault is unlocked" in window.vault_next_step_label.text()
     assert "local to this desktop only and not synced" in window.device_pin_scope_label.text()
     assert "No confirmation is required" in window.pin_confirmation_label.text()
     assert window.enroll_vault_pin_button.text() == "Enroll PIN on This Device"
@@ -219,6 +221,7 @@ def test_current_account_pin_requires_confirm_for_change_and_remove(qapp, tmp_pa
     MainWindow._refresh_action_states(window)
 
     assert "current account" in window.pin_bootstrap_status_label.text()
+    assert "Vault is unlocked" in window.vault_next_step_label.text()
     assert "currently enrolled for this account" in window.device_pin_scope_label.text()
     assert window.enroll_vault_pin_button.text() == "Change PIN on This Device"
     assert window.enroll_vault_pin_button.isEnabled() is False
@@ -244,6 +247,7 @@ def test_other_account_pin_disables_unlock_and_requires_confirm(qapp, tmp_path: 
     MainWindow._refresh_action_states(window)
 
     assert "another account" in window.pin_bootstrap_status_label.text()
+    assert "stored local PIN belongs to another account" in window.vault_next_step_label.text()
     assert "another account hint: alice" in window.device_pin_scope_label.text()
     assert "Replace PIN for Current Account" == window.enroll_vault_pin_button.text()
     assert window.unlock_vault_pin_button.isEnabled() is False
@@ -269,12 +273,14 @@ def test_unlock_source_label_tracks_recovery_then_pin(qapp, tmp_path: Path) -> N
     assert window.desktop_service.current_session_vault_master_key() == expected_master_key_b64
     MainWindow._refresh_action_states(window)
     assert "Advanced Recovery key" in window.vault_unlock_source_label.text()
+    assert "Enroll a local PIN on this device" in window.vault_next_step_label.text()
 
     window.desktop_service.enroll_local_pin_bootstrap(pin="1234")
     window.desktop_service.clear_session_vault_master_key()
     window.desktop_service.unlock_session_vault_with_pin("1234")
     MainWindow._refresh_action_states(window)
     assert "PIN on this device" in window.vault_unlock_source_label.text()
+    assert "Vault is unlocked" in window.vault_next_step_label.text()
 
 
 def test_run_enroll_vault_pin_first_time_sets_local_only_message(qapp, tmp_path: Path) -> None:
@@ -358,3 +364,13 @@ def test_run_unlock_with_recovery_key_reports_incorrect_recovery_key(qapp, tmp_p
     MainWindow.run_unlock_with_recovery_key(window)
 
     assert "Recovery key unlock failed. Check that the recovery key is correct." in window.status_label.text()
+
+
+def test_logged_out_guidance_prompts_login(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.desktop_service.logout()
+
+    MainWindow._refresh_action_states(window)
+
+    assert "none (logged out)" in window.vault_unlock_source_label.text()
+    assert "Next step: log in" in window.vault_next_step_label.text()

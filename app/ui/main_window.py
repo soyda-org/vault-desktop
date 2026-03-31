@@ -430,6 +430,9 @@ class MainWindow(QMainWindow):
         self.vault_unlock_source_label = QLabel()
         self.vault_unlock_source_label.setWordWrap(True)
 
+        self.vault_next_step_label = QLabel()
+        self.vault_next_step_label.setWordWrap(True)
+
         self.pin_confirmation_input = QLineEdit()
         self.pin_confirmation_input.setPlaceholderText(
             'Type CONFIRM before changing, replacing, or removing the device PIN.'
@@ -513,6 +516,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(vault_row)
         layout.addWidget(self.pin_bootstrap_status_label)
         layout.addWidget(self.vault_unlock_source_label)
+        layout.addWidget(self.vault_next_step_label)
         layout.addWidget(self.device_pin_scope_label)
         layout.addWidget(self.pin_confirmation_input)
         layout.addWidget(self.pin_confirmation_label)
@@ -1881,21 +1885,50 @@ class MainWindow(QMainWindow):
             self.vault_unlock_source_label.setText(
                 "Vault unlock source: none (logged out)."
             )
+            self.vault_next_step_label.setText(
+                "Next step: log in, then unlock with a local PIN if this device is enrolled or use Advanced Recovery otherwise."
+            )
+        elif not vault_unlocked and pin_bootstrap_status == "current_account":
+            self.vault_unlock_source_label.setText(
+                "Vault unlock source: vault is currently locked."
+            )
+            self.vault_next_step_label.setText(
+                "Next step: enter the local PIN for this device and click Unlock with PIN. Advanced Recovery remains available if needed."
+            )
+        elif not vault_unlocked and pin_bootstrap_status == "other_account":
+            self.vault_unlock_source_label.setText(
+                "Vault unlock source: vault is currently locked."
+            )
+            self.vault_next_step_label.setText(
+                "Next step: use Advanced Recovery for this account. The stored local PIN belongs to another account on this device."
+            )
         elif not vault_unlocked:
             self.vault_unlock_source_label.setText(
                 "Vault unlock source: vault is currently locked."
+            )
+            self.vault_next_step_label.setText(
+                "Next step: use Advanced Recovery to unlock, then enroll a local PIN on this device for everyday use."
             )
         elif unlock_method == "pin":
             self.vault_unlock_source_label.setText(
                 "Vault unlock source: PIN on this device."
             )
+            self.vault_next_step_label.setText(
+                "Vault is unlocked. Sensitive create, update, and decrypt actions are available for this session."
+            )
         elif unlock_method == "recovery_key":
             self.vault_unlock_source_label.setText(
                 "Vault unlock source: Advanced Recovery key."
             )
+            self.vault_next_step_label.setText(
+                "Vault is unlocked. Enroll a local PIN on this device if you want a faster everyday unlock path."
+            )
         else:
             self.vault_unlock_source_label.setText(
                 "Vault unlock source: session vault key is present."
+            )
+            self.vault_next_step_label.setText(
+                "Vault is unlocked. Sensitive create, update, and decrypt actions are available for this session."
             )
 
         if pin_bootstrap_status == "other_account" and identifier_hint:
