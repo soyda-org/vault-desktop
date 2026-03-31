@@ -140,7 +140,7 @@ def make_window_harness(
 
     window.vault_pin_input = QLineEdit()
     window.pin_confirmation_input = QLineEdit()
-    window.file_master_key_b64_input = QLineEdit()
+    window.recovery_key_b64_input = QLineEdit()
     window.file_path_input = QLineEdit()
     window.file_download_target_input = QLineEdit()
 
@@ -154,8 +154,8 @@ def make_window_harness(
     window.remove_vault_pin_button = QPushButton()
     window.lock_now_button = QPushButton()
     window.toggle_advanced_recovery_button = QPushButton()
-    window.unlock_session_key_button = QPushButton()
-    window.clear_session_key_button = QPushButton()
+    window.unlock_with_recovery_key_button = QPushButton()
+    window.clear_vault_key_button = QPushButton()
 
     window.load_credential_detail_button = QPushButton()
     window.create_credential_button = QPushButton()
@@ -312,21 +312,21 @@ def test_run_remove_vault_pin_with_confirm_clears_local_bootstrap(qapp, tmp_path
     assert "Only this desktop was affected" in window.status_label.text()
 
 
-def test_run_unlock_session_key_uses_recovery_key_material(qapp, tmp_path: Path) -> None:
+def test_run_unlock_with_recovery_key_uses_recovery_key_material(qapp, tmp_path: Path) -> None:
     recovery_key_b64, vault_profile, expected_master_key_b64 = make_recovery_fixture()
     window = make_window_harness(
         tmp_path,
         vault_profile_result=vault_profile,
     )
-    window.file_master_key_b64_input.setText(recovery_key_b64)
+    window.recovery_key_b64_input.setText(recovery_key_b64)
 
-    MainWindow.run_unlock_session_key(window)
+    MainWindow.run_unlock_with_recovery_key(window)
 
     assert window.desktop_service.current_session_vault_master_key() == expected_master_key_b64
     assert "Vault unlocked with recovery key." in window.status_label.text()
 
 
-def test_run_unlock_session_key_reports_missing_recovery_material(qapp, tmp_path: Path) -> None:
+def test_run_unlock_with_recovery_key_reports_missing_recovery_material(qapp, tmp_path: Path) -> None:
     window = make_window_harness(
         tmp_path,
         vault_profile_result={
@@ -339,22 +339,22 @@ def test_run_unlock_session_key_reports_missing_recovery_material(qapp, tmp_path
             "recovery_wrapped_vault_root_key": None,
         },
     )
-    window.file_master_key_b64_input.setText("abcd")
+    window.recovery_key_b64_input.setText("abcd")
 
-    MainWindow.run_unlock_session_key(window)
+    MainWindow.run_unlock_with_recovery_key(window)
 
     assert "Recovery key is not enabled for this vault profile." in window.status_label.text()
 
 
-def test_run_unlock_session_key_reports_incorrect_recovery_key(qapp, tmp_path: Path) -> None:
+def test_run_unlock_with_recovery_key_reports_incorrect_recovery_key(qapp, tmp_path: Path) -> None:
     _, vault_profile, _ = make_recovery_fixture()
     wrong_recovery_key_b64, _, _ = make_recovery_fixture()
     window = make_window_harness(
         tmp_path,
         vault_profile_result=vault_profile,
     )
-    window.file_master_key_b64_input.setText(wrong_recovery_key_b64)
+    window.recovery_key_b64_input.setText(wrong_recovery_key_b64)
 
-    MainWindow.run_unlock_session_key(window)
+    MainWindow.run_unlock_with_recovery_key(window)
 
     assert "Recovery key unlock failed. Check that the recovery key is correct." in window.status_label.text()

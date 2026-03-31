@@ -339,17 +339,17 @@ class MainWindow(QMainWindow):
             self.toggle_advanced_recovery
         )
 
-        self.file_master_key_b64_input = QLineEdit()
-        self.file_master_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.file_master_key_b64_input.setPlaceholderText(
+        self.recovery_key_b64_input = QLineEdit()
+        self.recovery_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.recovery_key_b64_input.setPlaceholderText(
             "Paste the recovery key (base64 text). The app will fetch wrapped bootstrap material from the API and unwrap the vault key locally."
         )
 
-        self.unlock_session_key_button = QPushButton("Unlock with Recovery Key")
-        self.unlock_session_key_button.clicked.connect(self.run_unlock_session_key)
+        self.unlock_with_recovery_key_button = QPushButton("Unlock with Recovery Key")
+        self.unlock_with_recovery_key_button.clicked.connect(self.run_unlock_with_recovery_key)
 
-        self.clear_session_key_button = QPushButton("Clear Vault Key")
-        self.clear_session_key_button.clicked.connect(self.run_clear_session_key)
+        self.clear_vault_key_button = QPushButton("Clear Vault Key")
+        self.clear_vault_key_button.clicked.connect(self.run_clear_vault_key)
 
         self.file_upload_progress = QProgressBar()
         self.file_upload_progress.setRange(0, 100)
@@ -445,9 +445,9 @@ class MainWindow(QMainWindow):
         advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
         advanced_recovery_row.setSpacing(4)
         advanced_recovery_row.addWidget(QLabel("Advanced Recovery Key"))
-        advanced_recovery_row.addWidget(self.file_master_key_b64_input, 1)
-        advanced_recovery_row.addWidget(self.unlock_session_key_button)
-        advanced_recovery_row.addWidget(self.clear_session_key_button)
+        advanced_recovery_row.addWidget(self.recovery_key_b64_input, 1)
+        advanced_recovery_row.addWidget(self.unlock_with_recovery_key_button)
+        advanced_recovery_row.addWidget(self.clear_vault_key_button)
 
         self.advanced_recovery_widget = QWidget()
         self.advanced_recovery_widget.setLayout(advanced_recovery_row)
@@ -870,7 +870,7 @@ class MainWindow(QMainWindow):
             f"Token type: {session.token_type}\n"
             f"Access token preview: {access_preview}"
         )
-        self.file_master_key_b64_input.clear()
+        self.recovery_key_b64_input.clear()
         self.refresh_session_label()
         self._refresh_action_states()
         self._refresh_idle_policy()
@@ -1520,7 +1520,7 @@ class MainWindow(QMainWindow):
         self._refresh_action_states()
 
     def run_lock_vault_now(self) -> None:
-        self.run_clear_session_key()
+        self.run_clear_vault_key()
 
     def toggle_advanced_recovery(self) -> None:
         visible = not self.advanced_recovery_widget.isVisible()
@@ -1530,7 +1530,7 @@ class MainWindow(QMainWindow):
         )
         self._refresh_action_states()
 
-    def run_unlock_session_key(self) -> None:
+    def run_unlock_with_recovery_key(self) -> None:
         if not self.desktop_service.is_authenticated():
             self.status_label.setText(
                 "Recovery key unlock failed.\n"
@@ -1541,11 +1541,11 @@ class MainWindow(QMainWindow):
         if self._is_file_job_running():
             self.status_label.setText(
                 "A file job is still running.\n"
-                "Wait for completion before changing the session key."
+                "Wait for completion before changing the vault key."
             )
             return
 
-        recovery_key_b64 = self.file_master_key_b64_input.text().strip()
+        recovery_key_b64 = self.recovery_key_b64_input.text().strip()
         if not recovery_key_b64:
             self.status_label.setText(
                 "Recovery key unlock failed.\n"
@@ -1565,7 +1565,7 @@ class MainWindow(QMainWindow):
             self._refresh_action_states()
             return
 
-        self.file_master_key_b64_input.clear()
+        self.recovery_key_b64_input.clear()
         self.status_label.setText(
             "Vault unlocked with recovery key.\n"
             "The app fetched wrapped bootstrap material from the API and unwrapped the session vault key locally."
@@ -1575,11 +1575,11 @@ class MainWindow(QMainWindow):
         self._refresh_idle_policy()
         self._refresh_action_states()
 
-    def run_clear_session_key(self) -> None:
+    def run_clear_vault_key(self) -> None:
         if self._is_file_job_running():
             self.status_label.setText(
                 "A file job is still running.\n"
-                "Wait for completion before clearing the session key."
+                "Wait for completion before clearing the vault key."
             )
             return
 
@@ -1588,7 +1588,7 @@ class MainWindow(QMainWindow):
             return
 
         self.desktop_service.clear_session_vault_master_key()
-        self.file_master_key_b64_input.clear()
+        self.recovery_key_b64_input.clear()
         self._clear_sensitive_views_for_locked_vault()
         self.status_label.setText(
             "Vault locked.\n"
@@ -1821,7 +1821,7 @@ class MainWindow(QMainWindow):
         self.file_path_input.clear()
         self.file_download_target_input.clear()
         self.file_chunk_size_kib_input.setValue(8192)
-        self.file_master_key_b64_input.clear()
+        self.recovery_key_b64_input.clear()
         self.file_manifest_input.clear()
         self.file_header_input.clear()
         self.file_chunks_input.clear()
@@ -1960,13 +1960,13 @@ class MainWindow(QMainWindow):
         )
         self.lock_now_button.setEnabled(authenticated and vault_unlocked)
         self.toggle_advanced_recovery_button.setEnabled(authenticated)
-        self.file_master_key_b64_input.setEnabled(
+        self.recovery_key_b64_input.setEnabled(
             authenticated and not vault_unlocked and recovery_visible
         )
-        self.unlock_session_key_button.setEnabled(
+        self.unlock_with_recovery_key_button.setEnabled(
             authenticated and not vault_unlocked and recovery_visible
         )
-        self.clear_session_key_button.setEnabled(vault_unlocked)
+        self.clear_vault_key_button.setEnabled(vault_unlocked)
 
         credential_item_selected = self.credentials_list.currentItem() is not None
         credential_detail_loaded = (
@@ -2107,7 +2107,7 @@ class MainWindow(QMainWindow):
             return
 
         self.desktop_service.clear_session_vault_master_key()
-        self.file_master_key_b64_input.clear()
+        self.recovery_key_b64_input.clear()
         self._clear_sensitive_views_for_locked_vault()
         self.refresh_session_label()
         self.status_label.setText(
@@ -2129,7 +2129,7 @@ class MainWindow(QMainWindow):
         self.credentials_output.clear()
         self.notes_output.clear()
         self.files_output.clear()
-        self.file_master_key_b64_input.clear()
+        self.recovery_key_b64_input.clear()
         self.selected_credential_id = None
         self.selected_credential_current_version = None
         self.selected_note_id = None
@@ -2509,9 +2509,9 @@ class MainWindow(QMainWindow):
             self.reset_file_payload_button,
             self.load_file_detail_button,
             self.file_chunk_size_kib_input,
-            self.file_master_key_b64_input,
-            self.unlock_session_key_button,
-            self.clear_session_key_button,
+            self.recovery_key_b64_input,
+            self.unlock_with_recovery_key_button,
+            self.clear_vault_key_button,
         ]
         for widget in widgets:
             widget.setEnabled(not (upload_busy or download_busy))
