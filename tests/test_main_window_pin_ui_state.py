@@ -324,3 +324,37 @@ def test_run_unlock_session_key_uses_recovery_key_material(qapp, tmp_path: Path)
 
     assert window.desktop_service.current_session_vault_master_key() == expected_master_key_b64
     assert "Vault unlocked with recovery key." in window.status_label.text()
+
+
+def test_run_unlock_session_key_reports_missing_recovery_material(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(
+        tmp_path,
+        vault_profile_result={
+            "user_id": "user_1",
+            "vault_format_version": 1,
+            "active_keyset_version": 1,
+            "unlock_salt_b64": "c2FsdA==",
+            "unlock_kdf_params": {"scheme": "argon2id"},
+            "wrapped_vault_root_key": {"wrap_scheme": "aes256-kw", "wrapped_key_b64": "YWJj"},
+            "recovery_wrapped_vault_root_key": None,
+        },
+    )
+    window.file_master_key_b64_input.setText("abcd")
+
+    MainWindow.run_unlock_session_key(window)
+
+    assert "Recovery key is not enabled for this vault profile." in window.status_label.text()
+
+
+def test_run_unlock_session_key_reports_incorrect_recovery_key(qapp, tmp_path: Path) -> None:
+    _, vault_profile, _ = make_recovery_fixture()
+    wrong_recovery_key_b64, _, _ = make_recovery_fixture()
+    window = make_window_harness(
+        tmp_path,
+        vault_profile_result=vault_profile,
+    )
+    window.file_master_key_b64_input.setText(wrong_recovery_key_b64)
+
+    MainWindow.run_unlock_session_key(window)
+
+    assert "Recovery key unlock failed. Check that the recovery key is correct." in window.status_label.text()

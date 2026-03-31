@@ -776,3 +776,41 @@ def test_unlock_session_vault_with_recovery_key_rejects_missing_recovery_materia
         assert False, "Expected ValueError"
     except ValueError as exc:
         assert str(exc) == "Recovery key is not enabled for this vault profile."
+
+
+def test_unlock_session_vault_with_recovery_key_rejects_profile_user_mismatch() -> None:
+    recovery_key_b64, vault_profile, _ = _recovery_fixture()
+    vault_profile["user_id"] = "user_other"
+    api_client = RecoveryProfileApiClient(vault_profile_result=vault_profile)
+    service = VaultDesktopService(api_client=api_client, vault_gateway=FakeVaultGateway())
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    try:
+        service.unlock_session_vault_with_recovery_key(recovery_key_b64)
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert str(exc) == "Vault profile user mismatch."
+
+
+def test_unlock_session_vault_with_recovery_key_rejects_incorrect_key() -> None:
+    _, vault_profile, _ = _recovery_fixture()
+    wrong_recovery_key_b64, _, _ = _recovery_fixture()
+    api_client = RecoveryProfileApiClient(vault_profile_result=vault_profile)
+    service = VaultDesktopService(api_client=api_client, vault_gateway=FakeVaultGateway())
+    service.login(
+        identifier="alice",
+        password="strong-password",
+        device_name="desktop-dev",
+        platform="linux",
+    )
+
+    try:
+        service.unlock_session_vault_with_recovery_key(wrong_recovery_key_b64)
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert str(exc) == "Recovery key unlock failed. Check that the recovery key is correct."

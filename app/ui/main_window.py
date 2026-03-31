@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
         advanced_recovery_row = QHBoxLayout()
         advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
         advanced_recovery_row.setSpacing(4)
-        advanced_recovery_row.addWidget(QLabel("Recovery key"))
+        advanced_recovery_row.addWidget(QLabel("Advanced Recovery Key"))
         advanced_recovery_row.addWidget(self.file_master_key_b64_input, 1)
         advanced_recovery_row.addWidget(self.unlock_session_key_button)
         advanced_recovery_row.addWidget(self.clear_session_key_button)
@@ -455,7 +455,8 @@ class MainWindow(QMainWindow):
 
         vault_hint_label = QLabel(
             "Vault controls are global for this session. Everyday use can unlock with a local PIN on this device after enrollment. "
-            "Advanced Recovery uses the recovery key plus wrapped bootstrap material fetched from the API to unwrap the vault key locally."
+            "Advanced Recovery uses the recovery key plus wrapped bootstrap material fetched from the API to unwrap the vault key locally. "
+            "Failures now distinguish missing profile access, missing recovery material, and an incorrect recovery key."
         )
         vault_hint_label.setWordWrap(True)
 

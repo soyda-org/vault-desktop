@@ -85,7 +85,12 @@ class VaultDesktopService:
             detail = profile_result.error or "Vault profile fetch failed."
             raise ValueError(f"Vault profile fetch failed. {detail}")
 
-        recovery_wrapped_vault_root_key = profile_result.item.get(
+        profile = profile_result.item
+        profile_user_id = str(profile.get("user_id", "")).strip()
+        if profile_user_id and profile_user_id != session.user_id:
+            raise ValueError("Vault profile user mismatch.")
+
+        recovery_wrapped_vault_root_key = profile.get(
             "recovery_wrapped_vault_root_key"
         )
         if (
@@ -100,7 +105,9 @@ class VaultDesktopService:
                 recovery_wrapped_vault_root_key=recovery_wrapped_vault_root_key,
             )
         except Exception as exc:
-            raise ValueError("Recovery key unlock failed.") from exc
+            raise ValueError(
+                "Recovery key unlock failed. Check that the recovery key is correct."
+            ) from exc
 
         master_key_b64 = (
             b64encode_bytes(recovered)
