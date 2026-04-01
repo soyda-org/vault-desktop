@@ -928,6 +928,24 @@ class MainWindow(QMainWindow):
         self._refresh_idle_policy()
         self._save_ui_preferences()
 
+    def run_open_signup_dialog(self) -> None:
+        dialog = SignupDialog(
+            api_base_url=self.api_client.base_url,
+            identifier=self.identifier_input.text().strip(),
+            device_name=self.device_name_input.text().strip() or "vault-desktop-dev",
+            platform=self.platform_input.text().strip() or "linux",
+            parent=self,
+        )
+        if dialog.exec():
+            self.identifier_input.setText(dialog.registered_identifier)
+            self.password_input.clear()
+            self.status_label.setText(
+                "Registration complete. Recovery key was shown once. "
+                "Save it somewhere safe, then log in."
+            )
+            self.refresh_session_label()
+            self._refresh_action_states()
+
     def run_login(self) -> None:
         identifier = self.identifier_input.text().strip()
         password = self.password_input.text()
