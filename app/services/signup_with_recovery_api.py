@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 import json
+import sys
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+
+try:
+    from vault_crypto.vault_setup import bootstrap_new_vault
+except ModuleNotFoundError:
+    sibling_src = Path(__file__).resolve().parents[3] / "vault-crypto" / "src"
+    if sibling_src.exists() and str(sibling_src) not in sys.path:
+        sys.path.append(str(sibling_src))
+    from vault_crypto.vault_setup import bootstrap_new_vault
 
 
 class SignupWithRecoveryError(RuntimeError):
@@ -66,52 +76,6 @@ def _post_json(
     return data
 
 
-def _try_register(
-    *,
-    base_url: str,
-    identifier: str,
-    password: str,
-    device_name: str,
-    platform: str,
-) -> None:
-    attempts = [
-        {
-            "identifier": identifier,
-            "password": password,
-            "device_name": device_name,
-            "platform": platform,
-        },
-        {
-            "primary_identifier": identifier,
-            "password": password,
-            "device_name": device_name,
-            "platform": platform,
-        },
-        {
-            "identifier": identifier,
-            "passphrase": password,
-            "device_name": device_name,
-            "platform": platform,
-        },
-    ]
-
-    last_error: Exception | None = None
-    for payload in attempts:
-        try:
-            _post_json(
-                base_url=base_url,
-                path="/api/v1/auth/register",
-                payload=payload,
-                expected_statuses=(200, 201),
-            )
-            return
-        except SignupWithRecoveryError as exc:
-            last_error = exc
-    if last_error is not None:
-        raise last_error
-    raise SignupWithRecoveryError("Registration failed for an unknown reason.")
-
-
 def register_with_recovery(
     *,
     base_url: str,
@@ -120,25 +84,38 @@ def register_with_recovery(
     device_name: str,
     platform: str,
 ) -> dict[str, Any]:
-    _try_register(
+    try:
+        bootstrap = bootstrap_new_vault(
+            unlock_passphrase=password,
+            include_recovery_key=True,
+        )
+    except Exception as exc:
+        raise SignupWithRecoveryError(f"Local vault bootstrap failed: {exc}") from exc
+
+    recovery_key_b64 = getattr(bootstrap, "recovery_key_b64", None)
+    if not recovery_key_b64:
+        raise SignupWithRecoveryError("Local vault bootstrap did not return recovery_key_b64.")
+
+    persisted = getattr(bootstrap, "persisted", None)
+    if persisted is None:
+        raise SignupWithRecoveryError("Local vault bootstrap did not return persisted material.")
+
+    payload = {
+        "identifier": identifier,
+        "password": password,
+        "device_name": device_name,
+        "platform": platform,
+        "unlock_salt_b64": persisted.unlock_salt_b64,
+        "unlock_kdf_params": persisted.unlock_kdf_params,
+        "wrapped_vault_root_key": persisted.wrapped_vault_root_key,
+        "recovery_wrapped_vault_root_key": persisted.recovery_wrapped_vault_root_key,
+    }
+
+    register_response = _post_json(
         base_url=base_url,
-        identifier=identifier,
-        password=password,
-        device_name=device_name,
-        platform=platform,
+        path="/api/v1/auth/register",
+        payload=payload,
+        expected_statuses=(200, 201),
     )
-
-    reset_response = _post_json(
-        base_url=base_url,
-        path="/api/v1/auth/recovery/reset",
-        payload={
-            "identifier": identifier,
-            "unlock_passphrase": password,
-        },
-        expected_statuses=(200,),
-    )
-
-    if "recovery_key_b64" not in reset_response:
-        raise SignupWithRecoveryError("Recovery reset response did not contain recovery_key_b64.")
-
-    return reset_response
+    register_response["recovery_key_b64"] = recovery_key_b64
+    return register_response
