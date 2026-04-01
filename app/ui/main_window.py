@@ -37,6 +37,7 @@ from app.services.api_client import (
 )
 from app.services.desktop_service import VaultDesktopService
 from app.ui.signup_dialog import SignupDialog
+from app.ui.network_action_worker import NetworkActionWorker
 from app.services.file_crypto_bridge import inspect_plaintext_file
 from app.services.item_crypto_bridge import (
     build_encrypted_item_finalize_payload,
@@ -218,6 +219,8 @@ class MainWindow(QMainWindow):
         self.file_upload_worker: FileUploadWorker | None = None
         self.file_download_thread: QThread | None = None
         self.file_download_worker: FileDownloadWorker | None = None
+        self._network_action_thread: QThread | None = None
+        self._network_action_worker: NetworkActionWorker | None = None
 
         self.selected_credential_id: str | None = None
         self.selected_credential_current_version: int | None = None
@@ -829,9 +832,47 @@ class MainWindow(QMainWindow):
         self._save_ui_preferences()
         super().closeEvent(event)
 
-    def run_probe(self) -> None:
-        result = self.desktop_service.probe()
+    def _set_auth_network_controls_enabled(self, enabled: bool) -> None:
+        self.probe_button.setEnabled(enabled)
+        self.login_button.setEnabled(enabled)
+        if hasattr(self, "sign_up_button"):
+            self.sign_up_button.setEnabled(enabled)
 
+    def _cleanup_network_action(self) -> None:
+        self._network_action_worker = None
+        self._network_action_thread = None
+        self._set_auth_network_controls_enabled(True)
+
+    def _on_network_action_failed(self, message: str) -> None:
+        self.status_label.setText(message)
+
+    def _start_network_action(self, *, status_text: str, action, on_success) -> None:
+        if self._network_action_thread is not None and self._network_action_thread.isRunning():
+            self.status_label.setText("Another network action is already running.")
+            return
+
+        self.status_label.setText(status_text)
+        self._set_auth_network_controls_enabled(False)
+
+        thread = QThread(self)
+        worker = NetworkActionWorker(action)
+        worker.moveToThread(thread)
+
+        thread.started.connect(worker.run)
+        worker.succeeded.connect(on_success)
+        worker.failed.connect(self._on_network_action_failed)
+        worker.succeeded.connect(thread.quit)
+        worker.failed.connect(thread.quit)
+        worker.succeeded.connect(lambda _result: self._cleanup_network_action())
+        worker.failed.connect(lambda _message: self._cleanup_network_action())
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+
+        self._network_action_thread = thread
+        self._network_action_worker = worker
+        thread.start()
+
+    def _handle_probe_result(self, result) -> None:
         if result.error:
             self.status_label.setText(
                 "Backend probe failed.\n"
@@ -847,33 +888,14 @@ class MainWindow(QMainWindow):
             f"Environment: {result.environment}"
         )
 
-
-    def run_open_signup_dialog(self) -> None:
-        dialog = SignupDialog(
-            api_base_url=self.api_client.base_url,
-            identifier=self.identifier_input.text().strip(),
-            device_name=self.device_name_input.text().strip() or "vault-desktop-dev",
-            platform=self.platform_input.text().strip() or "linux",
-            parent=self,
-        )
-        if dialog.exec():
-            self.identifier_input.setText(dialog.registered_identifier)
-            self.password_input.clear()
-            self.status_label.setText(
-                "Registration complete. Recovery key was shown once. "
-                "Save it somewhere safe, then log in."
-            )
-            self.refresh_session_label()
-            self._refresh_action_states()
-
-    def run_login(self) -> None:
-        result = self.desktop_service.login(
-            identifier=self.identifier_input.text().strip(),
-            password=self.password_input.text(),
-            device_name=self.device_name_input.text().strip(),
-            platform=self.platform_input.text().strip(),
+    def run_probe(self) -> None:
+        self._start_network_action(
+            status_text="Probing API...",
+            action=self.desktop_service.probe,
+            on_success=self._handle_probe_result,
         )
 
+    def _handle_login_result(self, result) -> None:
         if result.error:
             self.status_label.setText(
                 "Login failed.\n"
@@ -905,6 +927,23 @@ class MainWindow(QMainWindow):
         self._refresh_action_states()
         self._refresh_idle_policy()
         self._save_ui_preferences()
+
+    def run_login(self) -> None:
+        identifier = self.identifier_input.text().strip()
+        password = self.password_input.text()
+        device_name = self.device_name_input.text().strip()
+        platform = self.platform_input.text().strip()
+
+        self._start_network_action(
+            status_text="Logging in...",
+            action=lambda: self.desktop_service.login(
+                identifier=identifier,
+                password=password,
+                device_name=device_name,
+                platform=platform,
+            ),
+            on_success=self._handle_login_result,
+        )
 
     def run_logout(self) -> None:
         if self._is_file_job_running():
