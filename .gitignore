@@ -6,3 +6,11 @@ __pycache__/
 .idea/
 .vscode/
 .env
+
+
+recovery-key.txt
+/TO_CHAT/
+/FROM_CHAT/
+recovery_key.txt
+*recovery-key*.txt
+*recovery_key*.txt
