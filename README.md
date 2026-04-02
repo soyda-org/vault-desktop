@@ -19,6 +19,12 @@ This phase provides:
 - selected object detail fetches
 - desktop-side authenticated service abstraction
 - selection-driven dashboard lists
+- signup with local vault bootstrap material generation
+- one-time recovery-key reveal during signup
+- vault unlock with recovery key
+- device-local PIN enrollment and PIN unlock
+- encrypted credential/note create, update, and delete flows
+- encrypted file upload and download flows
 - local persistence for non-sensitive UI preferences
 - config layer
 - test scaffold
@@ -26,13 +32,13 @@ This phase provides:
 ## Architecture notes
 
 - desktop client is separate from the backend API
-- local crypto and unlock flows will be added later
-- current UI supports backend probing, login, logout, list fetches, and detail fetches
+- current UI supports backend probing, signup, login, logout, unlock, CRUD flows, and file flows
 - session state is currently kept in memory only
 - vault reads go through an authenticated gateway abstraction
 - when a vault read gets HTTP 401, the desktop service attempts one refresh and retries once
 - both access token and refresh token are rotated in memory after a successful refresh
 - only non-sensitive desktop preferences are persisted locally
+- the pilot desktop flow uses the account's default vault; explicit vault switching is still future work
 
 <!-- BEGIN:OPENAI_DESKTOP_AUTH_UX -->
 ## Signup, login, and recovery UX
