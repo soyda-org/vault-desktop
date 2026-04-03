@@ -1626,7 +1626,16 @@ class MainWindow(QMainWindow):
                 background: {input};
                 border: 0;
                 height: 0;
+                width: 0;
                 margin: 0;
+            }}
+            #activityLog QScrollBar::sub-line:vertical {{
+                subcontrol-origin: margin;
+                subcontrol-position: top;
+            }}
+            #activityLog QScrollBar::add-line:vertical {{
+                subcontrol-origin: margin;
+                subcontrol-position: bottom;
             }}
             #activityLog QScrollBar::up-arrow:vertical,
             #activityLog QScrollBar::down-arrow:vertical {{
