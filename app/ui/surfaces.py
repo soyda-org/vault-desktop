@@ -160,7 +160,6 @@ class VaultWorkspaceView(QWidget):
         pin_widgets: dict[str, QWidget],
         recovery_widgets: dict[str, QWidget],
         status_labels: dict[str, QLabel],
-        generator_widgets: dict[str, QWidget],
         load_buttons: dict[str, QWidget],
         session_actions: dict[str, QWidget],
         tabs: QWidget,
@@ -202,6 +201,49 @@ class VaultWorkspaceView(QWidget):
         access_layout.addWidget(recovery_widgets["toggle"])
         access_layout.addWidget(recovery_widgets["container"])
 
+        workspace_panel, workspace_layout = _panel(
+            title="Vault workspace",
+            description=(
+                "Load credentials, notes, or files, then work inside the section tabs "
+                "below. Locked sessions can still browse list metadata but sensitive "
+                "detail remains hidden."
+            ),
+        )
+        load_row = QHBoxLayout()
+        load_row.setContentsMargins(0, 8, 0, 0)
+        load_row.setSpacing(8)
+        load_row.addWidget(load_buttons["credentials"])
+        load_row.addWidget(load_buttons["notes"])
+        load_row.addWidget(load_buttons["files"])
+        load_row.addStretch(1)
+        load_row.addWidget(load_buttons["all"])
+        workspace_layout.addLayout(load_row)
+
+        tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        workspace_layout.addWidget(tabs, 1)
+
+        sidebar = QVBoxLayout()
+        sidebar.setContentsMargins(0, 0, 0, 0)
+        sidebar.setSpacing(16)
+        sidebar.addWidget(access_panel)
+        sidebar.addStretch(1)
+
+        body = QHBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(16)
+        body.addLayout(sidebar, 2)
+        body.addWidget(workspace_panel, 3)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addLayout(body, 1)
+
+
+class GeneratorWorkspaceView(QWidget):
+    def __init__(self, *, generator_widgets: dict[str, QWidget]) -> None:
+        super().__init__()
+
         generator_panel, generator_layout = _panel(
             title="Password generator",
             description=(
@@ -230,42 +272,9 @@ class VaultWorkspaceView(QWidget):
         output_row.addWidget(generator_widgets["generate"])
         output_row.addWidget(generator_widgets["copy"])
         generator_layout.addLayout(output_row)
-
-        workspace_panel, workspace_layout = _panel(
-            title="Vault workspace",
-            description=(
-                "Load credentials, notes, or files, then work inside the section tabs "
-                "below. Locked sessions can still browse list metadata but sensitive "
-                "detail remains hidden."
-            ),
-        )
-        load_row = QHBoxLayout()
-        load_row.setContentsMargins(0, 8, 0, 0)
-        load_row.setSpacing(8)
-        load_row.addWidget(load_buttons["credentials"])
-        load_row.addWidget(load_buttons["notes"])
-        load_row.addWidget(load_buttons["files"])
-        load_row.addStretch(1)
-        load_row.addWidget(load_buttons["all"])
-        workspace_layout.addLayout(load_row)
-
-        tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        workspace_layout.addWidget(tabs, 1)
-
-        sidebar = QVBoxLayout()
-        sidebar.setContentsMargins(0, 0, 0, 0)
-        sidebar.setSpacing(16)
-        sidebar.addWidget(access_panel)
-        sidebar.addWidget(generator_panel)
-        sidebar.addStretch(1)
-
-        body = QHBoxLayout()
-        body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(16)
-        body.addLayout(sidebar, 2)
-        body.addWidget(workspace_panel, 3)
+        generator_layout.addStretch(1)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addLayout(body, 1)
+        layout.addWidget(generator_panel, 1)

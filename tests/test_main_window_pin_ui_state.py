@@ -205,6 +205,7 @@ def make_window_harness(
     window.shell_toolbar_frame = QWidget()
     window.system_service_tab_button = QPushButton()
     window.system_messages_tab_button = QPushButton()
+    window.nav_generator_button = QPushButton()
     window.nav_system_button = QPushButton()
     window.nav_vault_button = QPushButton()
     window.theme_toggle_button = QPushButton()

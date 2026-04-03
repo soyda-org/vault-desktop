@@ -62,6 +62,7 @@ from app.ui.file_download_worker import FileDownloadWorker
 from app.ui.file_upload_worker import FileUploadWorker
 from app.ui.item_editor_dialog import JsonItemEditorDialog
 from app.ui.surfaces import (
+    GeneratorWorkspaceView,
     SystemWorkspaceView,
     VaultWorkspaceView,
 )
@@ -616,6 +617,9 @@ class MainWindow(QMainWindow):
         self.theme_toggle_button = QPushButton("Theme: Light")
         self.theme_toggle_button.setProperty("nav", "true")
         self.theme_toggle_button.clicked.connect(self.run_toggle_theme)
+        self.nav_generator_button = QPushButton("Generator")
+        self.nav_generator_button.setProperty("nav", "true")
+        self.nav_generator_button.clicked.connect(lambda: self._switch_to_screen("generator"))
         self.system_service_tab_button = QPushButton("Access")
         self.system_service_tab_button.setProperty("segment", "true")
         self.system_service_tab_button.clicked.connect(lambda: self._switch_system_panel("service"))
@@ -683,16 +687,6 @@ class MainWindow(QMainWindow):
                 "scope": self.device_pin_scope_label,
                 "confirmation": self.pin_confirmation_label,
             },
-            generator_widgets={
-                "length": self.password_length_input,
-                "upper": self.use_uppercase_checkbox,
-                "lower": self.use_lowercase_checkbox,
-                "digits": self.use_digits_checkbox,
-                "symbols": self.use_symbols_checkbox,
-                "output": self.generated_password_output,
-                "generate": self.generate_password_button,
-                "copy": self.copy_generated_password_button,
-            },
             load_buttons={
                 "credentials": self.load_credentials_button,
                 "notes": self.load_notes_button,
@@ -705,9 +699,22 @@ class MainWindow(QMainWindow):
             },
             tabs=self.tabs,
         )
+        self.generator_workspace_view = GeneratorWorkspaceView(
+            generator_widgets={
+                "length": self.password_length_input,
+                "upper": self.use_uppercase_checkbox,
+                "lower": self.use_lowercase_checkbox,
+                "digits": self.use_digits_checkbox,
+                "symbols": self.use_symbols_checkbox,
+                "output": self.generated_password_output,
+                "generate": self.generate_password_button,
+                "copy": self.copy_generated_password_button,
+            },
+        )
 
         self.screen_stack.addWidget(self.system_workspace_view)
         self.screen_stack.addWidget(self.vault_workspace_view)
+        self.screen_stack.addWidget(self.generator_workspace_view)
 
         toolbar_frame = QFrame()
         toolbar_frame.setObjectName("toolbarFrame")
@@ -717,6 +724,7 @@ class MainWindow(QMainWindow):
         toolbar_layout.addWidget(self.system_service_tab_button)
         toolbar_layout.addWidget(self.system_messages_tab_button)
         toolbar_layout.addStretch(1)
+        toolbar_layout.addWidget(self.nav_generator_button)
         toolbar_layout.addWidget(self.theme_toggle_button)
         toolbar_layout.addWidget(self.nav_system_button)
         toolbar_layout.addWidget(self.nav_vault_button)
@@ -1080,6 +1088,7 @@ class MainWindow(QMainWindow):
         return {
             "system": 0,
             "vault": 1,
+            "generator": 2,
         }.get(screen, 0)
 
     def _apply_screen_state(self) -> None:
@@ -1089,6 +1098,7 @@ class MainWindow(QMainWindow):
             "screen_title_label",
             "screen_subtitle_label",
             "nav_system_button",
+            "nav_generator_button",
             "nav_vault_button",
         )
         if not all(hasattr(self, attr) for attr in required_attrs):
@@ -1109,6 +1119,11 @@ class MainWindow(QMainWindow):
                 "Unlock, manage access, and work in the vault",
                 "PIN, recovery, lock, password generation, and the credentials, notes, and files workspace stay together here.",
             ),
+            "generator": (
+                "Screen 3 / Generator",
+                "Generate passwords outside the vault workspace",
+                "Use the password generator independently, then copy the result where needed.",
+            ),
         }
         eyebrow, title, subtitle = descriptors[screen]
         self.screen_eyebrow_label.setText(eyebrow)
@@ -1116,8 +1131,10 @@ class MainWindow(QMainWindow):
         self.screen_subtitle_label.setText(subtitle)
 
         authenticated = self.desktop_service.is_authenticated()
+        self.nav_generator_button.setVisible(True)
         self.nav_system_button.setVisible(True)
         self.nav_vault_button.setVisible(True)
+        self.nav_generator_button.setEnabled(True)
         self.nav_system_button.setEnabled(True)
         self.nav_vault_button.setEnabled(authenticated)
         if hasattr(self, "shell_toolbar_frame"):
@@ -1147,7 +1164,9 @@ class MainWindow(QMainWindow):
                 getattr(self, "current_system_panel", "service")
             )
         self.nav_system_button.setProperty("navCurrent", screen == "system")
+        self.nav_generator_button.setProperty("navCurrent", screen == "generator")
         self.nav_vault_button.setProperty("navCurrent", screen == "vault")
+        self._repolish(self.nav_generator_button)
         self._repolish(self.nav_system_button)
         self._repolish(self.nav_vault_button)
 
