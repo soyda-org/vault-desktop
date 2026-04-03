@@ -100,6 +100,8 @@ class SystemWorkspaceView(QWidget):
         primary_row.addStretch(1)
         primary_row.addWidget(auth_buttons["login"])
         primary_row.addWidget(auth_buttons["signup"])
+        primary_row.addWidget(utility_buttons["logout"])
+        primary_row.addWidget(utility_buttons["close"])
         primary_row.addStretch(1)
         content_column.addLayout(primary_row)
 
@@ -125,14 +127,6 @@ class SystemWorkspaceView(QWidget):
             ),
         )
 
-        utility_row = QHBoxLayout()
-        utility_row.setContentsMargins(0, 2, 0, 0)
-        utility_row.setSpacing(6)
-        utility_row.addWidget(utility_buttons["logout"])
-        utility_row.addWidget(utility_buttons["close"])
-        utility_row.addStretch(1)
-        messages_layout.addLayout(utility_row)
-        messages_layout.addWidget(_divider())
         messages_layout.addWidget(api_details_label)
         messages_layout.addWidget(status_label)
 
