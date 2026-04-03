@@ -1367,7 +1367,7 @@ class MainWindow(QMainWindow):
             }}
             QPushButton[tone="danger"] {{
                 background: {danger_bg};
-                border-color: {danger};
+                border-color: #7f1d1d;
                 color: {danger};
             }}
             QPushButton[tone="danger"]:hover {{
