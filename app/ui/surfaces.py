@@ -16,8 +16,8 @@ def _panel(*, title: str, description: str | None = None) -> tuple[QWidget, QVBo
     frame = QFrame()
     frame.setObjectName("surfacePanel")
     layout = QVBoxLayout(frame)
-    layout.setContentsMargins(20, 20, 20, 20)
-    layout.setSpacing(12)
+    layout.setContentsMargins(14, 14, 14, 14)
+    layout.setSpacing(8)
 
     title_label = QLabel(title)
     title_label.setObjectName("surfacePanelTitle")
@@ -36,8 +36,8 @@ def _panel_shell() -> tuple[QWidget, QVBoxLayout]:
     frame = QFrame()
     frame.setObjectName("surfacePanel")
     layout = QVBoxLayout(frame)
-    layout.setContentsMargins(20, 20, 20, 20)
-    layout.setSpacing(12)
+    layout.setContentsMargins(14, 14, 14, 14)
+    layout.setSpacing(8)
     return frame, layout
 
 
@@ -73,7 +73,7 @@ class SystemWorkspaceView(QWidget):
 
         content_column = QVBoxLayout()
         content_column.setContentsMargins(0, 0, 0, 0)
-        content_column.setSpacing(14)
+        content_column.setSpacing(10)
 
         connection_row = QHBoxLayout()
         connection_row.setContentsMargins(0, 0, 0, 0)
@@ -89,8 +89,8 @@ class SystemWorkspaceView(QWidget):
             content_column.addWidget(form_widgets[key], 0)
 
         primary_row = QHBoxLayout()
-        primary_row.setContentsMargins(0, 8, 0, 0)
-        primary_row.setSpacing(8)
+        primary_row.setContentsMargins(0, 4, 0, 0)
+        primary_row.setSpacing(6)
         primary_row.addStretch(1)
         primary_row.addWidget(auth_buttons["probe"])
         primary_row.addWidget(auth_buttons["login"])
@@ -123,8 +123,8 @@ class SystemWorkspaceView(QWidget):
         messages_layout.addWidget(session_label)
 
         utility_row = QHBoxLayout()
-        utility_row.setContentsMargins(0, 4, 0, 0)
-        utility_row.setSpacing(8)
+        utility_row.setContentsMargins(0, 2, 0, 0)
+        utility_row.setSpacing(6)
         utility_row.addWidget(utility_buttons["logout"])
         utility_row.addWidget(utility_buttons["close"])
         utility_row.addStretch(1)
@@ -142,7 +142,7 @@ class SystemWorkspaceView(QWidget):
 
         log_toolbar = QHBoxLayout()
         log_toolbar.setContentsMargins(0, 0, 0, 0)
-        log_toolbar.setSpacing(8)
+        log_toolbar.setSpacing(6)
         log_toolbar.addWidget(log_widgets["copy"])
         log_toolbar.addWidget(log_widgets["clear"])
         log_toolbar.addStretch(1)

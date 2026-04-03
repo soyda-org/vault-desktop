@@ -699,8 +699,8 @@ class MainWindow(QMainWindow):
         toolbar_frame = QFrame()
         toolbar_frame.setObjectName("toolbarFrame")
         toolbar_layout = QHBoxLayout(toolbar_frame)
-        toolbar_layout.setContentsMargins(18, 12, 18, 12)
-        toolbar_layout.setSpacing(8)
+        toolbar_layout.setContentsMargins(12, 8, 12, 8)
+        toolbar_layout.setSpacing(6)
         toolbar_layout.addWidget(self.system_service_tab_button)
         toolbar_layout.addWidget(self.system_messages_tab_button)
         toolbar_layout.addStretch(1)
@@ -710,8 +710,8 @@ class MainWindow(QMainWindow):
         self.shell_toolbar_frame = toolbar_frame
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(10)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(8)
         layout.addWidget(toolbar_frame)
         layout.addWidget(self.screen_stack, 1)
 
@@ -1294,7 +1294,7 @@ class MainWindow(QMainWindow):
                 border: 1px solid {border};
                 border-radius: 10px;
                 color: {text};
-                padding: 8px 10px;
+                padding: 6px 8px;
                 selection-background-color: {selection};
             }}
             QLineEdit:focus,
@@ -1310,8 +1310,8 @@ class MainWindow(QMainWindow):
                 border-radius: 10px;
                 color: {text};
                 font-weight: 600;
-                min-height: 30px;
-                padding: 6px 12px;
+                min-height: 26px;
+                padding: 4px 10px;
             }}
             QPushButton:hover {{
                 border-color: {primary};
@@ -1346,7 +1346,7 @@ class MainWindow(QMainWindow):
                 background: {nav_bg};
                 border: 1px solid {border};
                 border-radius: 999px;
-                padding: 6px 12px;
+                padding: 4px 10px;
             }}
             QPushButton[segment="true"] {{
                 background: {surface_alt};
@@ -1354,7 +1354,7 @@ class MainWindow(QMainWindow):
                 border-radius: 999px;
                 color: {text};
                 font-weight: 600;
-                padding: 6px 12px;
+                padding: 4px 10px;
             }}
             QPushButton[segment="true"][segmentCurrent="true"] {{
                 background: {primary};
