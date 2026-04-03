@@ -1563,7 +1563,8 @@ class MainWindow(QMainWindow):
                 border: 1px solid {border};
                 border-radius: 10px;
                 font-family: monospace;
-                padding: 8px 10px;
+                font-size: 8px;
+                padding: 4px 6px;
             }}
             #activityLog {{
                 background: {input};
