@@ -1212,12 +1212,12 @@ class MainWindow(QMainWindow):
             self._set_badge_state(self.vault_state_label, "warning")
         elif self._is_vault_unlocked():
             self.session_state_label.setText("Session active.")
-            self._set_badge_state(self.session_state_label, "success")
+            self._set_badge_state(self.session_state_label, "warning")
             self.vault_state_label.setText("Vault open.")
             self._set_badge_state(self.vault_state_label, "success")
         else:
             self.session_state_label.setText("Session active.")
-            self._set_badge_state(self.session_state_label, "info")
+            self._set_badge_state(self.session_state_label, "warning")
             self.vault_state_label.setText("Vault locked.")
             self._set_badge_state(self.vault_state_label, "warning")
 
