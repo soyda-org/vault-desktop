@@ -121,11 +121,9 @@ class SystemWorkspaceView(QWidget):
         messages_panel, messages_layout = _panel(
             title="System messages",
             description=(
-                "Review the current desktop session and keep recent system activity in one place."
+                "Keep recent diagnostics and local system activity in one place."
             ),
         )
-        messages_layout.addWidget(session_state_label)
-        messages_layout.addWidget(session_label)
 
         utility_row = QHBoxLayout()
         utility_row.setContentsMargins(0, 2, 0, 0)
