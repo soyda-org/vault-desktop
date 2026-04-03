@@ -1598,7 +1598,7 @@ class MainWindow(QMainWindow):
                 background: {input};
                 border: 0;
                 border-radius: 999px;
-                margin: 6px 0 6px 0;
+                margin: 0;
                 width: 8px;
             }}
             #activityLog::corner {{
