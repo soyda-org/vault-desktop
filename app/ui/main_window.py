@@ -219,10 +219,14 @@ class MainWindow(QMainWindow):
         self.device_name_input = QLineEdit()
         self.device_name_input.setText(self.persisted_ui_settings.device_name)
         self.device_name_input.setPlaceholderText("device name")
+        self.device_name_input.setReadOnly(True)
+        self.device_name_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.platform_input = QLineEdit()
         self.platform_input.setText(self.persisted_ui_settings.platform)
         self.platform_input.setPlaceholderText("platform")
+        self.platform_input.setReadOnly(True)
+        self.platform_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.probe_button = QPushButton("Probe API")
         self.probe_button.setProperty("tone", "primary")

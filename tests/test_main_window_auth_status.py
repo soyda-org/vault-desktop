@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton
 
+from app.core.config import get_settings
 from app.ui.main_window import MainWindow
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -79,6 +80,13 @@ def test_refresh_system_state_indicators_reflect_probe_and_session(app_fixture) 
     assert window.session_state_label.text() == "Session active, vault locked"
     assert "Project: vault-api" in window.api_details_label.text()
     assert "API: http://127.0.0.1:8000" in window.api_details_label.text()
+
+
+def test_main_window_device_fields_are_read_only(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    assert window.device_name_input.isReadOnly()
+    assert window.platform_input.isReadOnly()
 
 
 def test_append_activity_log_keeps_newest_first_and_dedupes(app_fixture) -> None:

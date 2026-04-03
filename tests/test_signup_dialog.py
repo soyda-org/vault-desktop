@@ -71,3 +71,5 @@ def test_signup_dialog_prefills_detected_device_defaults(monkeypatch, app_fixtur
 
     assert dialog.device_name_input.text() == "studio-box"
     assert dialog.platform_input.text() == "linux"
+    assert dialog.device_name_input.isReadOnly()
+    assert dialog.platform_input.isReadOnly()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QThread
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QFormLayout,
@@ -53,10 +54,14 @@ class SignupDialog(QDialog):
 
         self.device_name_input = QLineEdit()
         self.device_name_input.setText(device_name or default_device_name)
+        self.device_name_input.setReadOnly(True)
+        self.device_name_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         form.addRow("Device name", self.device_name_input)
 
         self.platform_input = QLineEdit()
         self.platform_input.setText(platform or default_platform)
+        self.platform_input.setReadOnly(True)
+        self.platform_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         form.addRow("Platform", self.platform_input)
 
         outer.addLayout(form)
