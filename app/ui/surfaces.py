@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QTabWidget,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -123,27 +124,15 @@ class SystemWorkspaceView(QWidget):
         messages_layout.addLayout(log_toolbar)
         messages_layout.addWidget(log_widgets["list"], 1)
 
-        left = QVBoxLayout()
-        left.setContentsMargins(0, 0, 0, 0)
-        left.setSpacing(16)
-        left.addWidget(connect_panel)
-        left.addStretch(1)
-
-        right = QVBoxLayout()
-        right.setContentsMargins(0, 0, 0, 0)
-        right.setSpacing(16)
-        right.addWidget(messages_panel, 1)
-
-        body = QHBoxLayout()
-        body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(16)
-        body.addLayout(left, 3)
-        body.addLayout(right, 2)
+        tabs = QTabWidget()
+        tabs.addTab(connect_panel, "Service access")
+        tabs.addTab(messages_panel, "System messages")
+        tabs.setDocumentMode(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addLayout(body)
+        layout.addWidget(tabs, 1)
 
 
 class VaultWorkspaceView(QWidget):
