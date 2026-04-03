@@ -75,7 +75,7 @@ def test_refresh_system_state_indicators_reflect_probe_and_session(app_fixture) 
 
     MainWindow._refresh_system_state_indicators(window)
 
-    assert window.connection_state_label.text() == "API reachable"
+    assert window.connection_state_label.text() == "API ok"
     assert window.session_state_label.text() == "Session active, vault locked"
     assert "Project: vault-api" in window.api_details_label.text()
     assert "API: http://127.0.0.1:8000" in window.api_details_label.text()

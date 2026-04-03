@@ -1145,13 +1145,13 @@ class MainWindow(QMainWindow):
             return
 
         if self._last_probe_result is None:
-            self.connection_state_label.setText("Connection not checked")
+            self.connection_state_label.setText("API not tested")
             self._set_badge_state(self.connection_state_label, "warning")
         elif getattr(self._last_probe_result, "error", None):
-            self.connection_state_label.setText("API unreachable")
+            self.connection_state_label.setText("API KO")
             self._set_badge_state(self.connection_state_label, "error")
         else:
-            self.connection_state_label.setText("API reachable")
+            self.connection_state_label.setText("API ok")
             self._set_badge_state(self.connection_state_label, "success")
 
         if not self.desktop_service.is_authenticated():

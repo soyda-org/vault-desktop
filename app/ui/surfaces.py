@@ -75,9 +75,8 @@ class SystemWorkspaceView(QWidget):
         connection_row.setContentsMargins(0, 0, 0, 0)
         connection_row.setSpacing(10)
         connection_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-        api_details_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         connection_row.addWidget(connection_label, 0)
-        connection_row.addWidget(api_details_label, 1)
+        connection_row.addStretch(1)
         connect_layout.addLayout(connection_row)
 
         form_layout = QFormLayout()
@@ -116,6 +115,7 @@ class SystemWorkspaceView(QWidget):
         utility_row.addStretch(1)
         messages_layout.addLayout(utility_row)
         messages_layout.addWidget(_divider())
+        messages_layout.addWidget(api_details_label)
         messages_layout.addWidget(status_label)
 
         log_intro = QLabel(
