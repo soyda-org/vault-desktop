@@ -1625,6 +1625,8 @@ class MainWindow(QMainWindow):
             #activityLog QScrollBar::sub-page:vertical {{
                 background: {input};
                 border: 0;
+                height: 0;
+                margin: 0;
             }}
             #activityLog QScrollBar::up-arrow:vertical,
             #activityLog QScrollBar::down-arrow:vertical {{
