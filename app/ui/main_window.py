@@ -1236,15 +1236,8 @@ class MainWindow(QMainWindow):
         probe_meta.append(f"API: {self.api_client.base_url}")
         self.api_details_label.setText(" | ".join(probe_meta))
 
-        if self._last_probe_result is None or getattr(self._last_probe_result, "error", None):
-            self._set_button_tone(self.probe_button, "primary")
-            self._set_button_tone(self.login_button, "secondary")
-        elif not self.desktop_service.is_authenticated():
-            self._set_button_tone(self.probe_button, "secondary")
-            self._set_button_tone(self.login_button, "primary")
-        else:
-            self._set_button_tone(self.probe_button, "secondary")
-            self._set_button_tone(self.login_button, "secondary")
+        self._set_button_tone(self.probe_button, "secondary")
+        self._set_button_tone(self.login_button, "secondary")
 
     def run_copy_activity_log(self) -> None:
         app = QApplication.instance()
