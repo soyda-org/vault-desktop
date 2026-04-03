@@ -1334,8 +1334,8 @@ class MainWindow(QMainWindow):
                 border-radius: 10px;
                 color: {text};
                 font-weight: 600;
-                min-height: 26px;
-                padding: 4px 10px;
+                min-height: 22px;
+                padding: 2px 8px;
             }}
             QPushButton:hover {{
                 border-color: {primary};
@@ -1370,7 +1370,7 @@ class MainWindow(QMainWindow):
                 background: {nav_bg};
                 border: 1px solid {border};
                 border-radius: 999px;
-                padding: 4px 10px;
+                padding: 2px 8px;
             }}
             QPushButton[segment="true"] {{
                 background: {surface_alt};
@@ -1378,7 +1378,7 @@ class MainWindow(QMainWindow):
                 border-radius: 999px;
                 color: {text};
                 font-weight: 600;
-                padding: 4px 10px;
+                padding: 2px 8px;
             }}
             QPushButton[segment="true"][segmentCurrent="true"] {{
                 background: {primary};
