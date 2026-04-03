@@ -1078,9 +1078,12 @@ class MainWindow(QMainWindow):
         return scroll_area
 
     def _resolve_active_screen(self) -> str:
+        current = getattr(self, "current_screen", "system")
+        if current == "generator":
+            return "generator"
         if not self.desktop_service.is_authenticated():
             return "system"
-        if getattr(self, "current_screen", "system") == "vault":
+        if current == "vault":
             return "vault"
         return "system"
 

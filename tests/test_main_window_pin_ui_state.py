@@ -317,6 +317,19 @@ def test_logged_out_routes_to_welcome_screen(qapp, tmp_path: Path) -> None:
     assert window.nav_vault_button.isEnabled() is False
 
 
+def test_generator_screen_remains_available_while_logged_out(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.desktop_service.logout()
+    window.current_screen = "generator"
+
+    MainWindow._apply_screen_state(window)
+
+    assert window.screen_stack.current_index == 2
+    assert window.screen_title_label.text() == "Generate passwords outside the vault workspace"
+    assert window.nav_generator_button.isHidden() is False
+    assert window.nav_generator_button.isEnabled() is True
+
+
 def test_locked_session_routes_to_unlock_screen(qapp, tmp_path: Path) -> None:
     window = make_window_harness(tmp_path)
     window.current_screen = "vault"
