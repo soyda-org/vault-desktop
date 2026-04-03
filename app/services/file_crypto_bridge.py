@@ -32,6 +32,7 @@ class PlaintextFileInspection:
 @dataclass(frozen=True)
 class EncryptedFileFinalizePayload:
     source_path: str
+    plaintext_filename: str
     file_id: str
     file_version: int
     total_plaintext_size: int
@@ -210,6 +211,7 @@ def build_encrypted_file_finalize_payload(
 
     return EncryptedFileFinalizePayload(
         source_path=str(path.resolve()),
+        plaintext_filename=path.name,
         file_id=file_id,
         file_version=file_version,
         total_plaintext_size=total_plaintext_size,

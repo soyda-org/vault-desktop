@@ -8,7 +8,7 @@ from app.ui.file_upload_worker import FileUploadWorker
 class FakeDesktopService:
     def __init__(self) -> None:
         self.prepare_calls: list[tuple[str, int]] = []
-        self.finalize_calls: list[tuple[str, str, int, int]] = []
+        self.finalize_calls: list[tuple[str, str, int, str, int, int]] = []
 
     def prepare_file(self, *, device_name: str, chunk_count: int) -> ObjectDetailResult:
         self.prepare_calls.append((device_name, chunk_count))
@@ -31,11 +31,22 @@ class FakeDesktopService:
         device_name: str,
         file_id: str,
         file_version: int,
+        plaintext_filename: str,
+        plaintext_size_bytes: int,
         encrypted_manifest: dict,
         encryption_header: dict,
         chunks: list[dict],
     ) -> ObjectCreateResult:
-        self.finalize_calls.append((device_name, file_id, file_version, len(chunks)))
+        self.finalize_calls.append(
+            (
+                device_name,
+                file_id,
+                file_version,
+                plaintext_filename,
+                plaintext_size_bytes,
+                len(chunks),
+            )
+        )
         return ObjectCreateResult(
             item={"file_id": file_id},
             error=None,

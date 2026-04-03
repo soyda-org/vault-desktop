@@ -15,12 +15,15 @@ def test_credential_list_label() -> None:
     text = credential_list_label(
         {
             "credential_id": "cred_001",
+            "plaintext_app_name": "GitHub",
+            "plaintext_username": "alice",
             "state": "active",
             "current_version": 1,
         }
     )
 
-    assert "cred_001" in text
+    assert "GitHub" in text
+    assert "alice" in text
     assert "active" in text
     assert "v1" in text
 
@@ -29,13 +32,14 @@ def test_note_list_label() -> None:
     text = note_list_label(
         {
             "note_id": "note_001",
+            "plaintext_title": "todo",
             "note_type": "note",
             "state": "active",
             "current_version": 1,
         }
     )
 
-    assert "note_001" in text
+    assert "todo" in text
     assert "note" in text
     assert "v1" in text
 
@@ -66,6 +70,8 @@ def test_format_credentials_items_with_one_item() -> None:
         [
             {
                 "credential_id": "cred_001",
+                "plaintext_app_name": "GitHub",
+                "plaintext_username": "alice",
                 "state": "active",
                 "current_version": 1,
                 "updated_at": "2030-01-01T00:00:00Z",
@@ -73,7 +79,8 @@ def test_format_credentials_items_with_one_item() -> None:
         ]
     )
 
-    assert "cred_001" in text
+    assert "GitHub" in text
+    assert "alice" in text
     assert "Current version: 1" in text
 
 
@@ -82,6 +89,7 @@ def test_format_notes_items_with_one_item() -> None:
         [
             {
                 "note_id": "note_001",
+                "plaintext_title": "todo",
                 "note_type": "note",
                 "state": "active",
                 "current_version": 1,
@@ -90,7 +98,7 @@ def test_format_notes_items_with_one_item() -> None:
         ]
     )
 
-    assert "note_001" in text
+    assert "todo" in text
     assert "Type: note" in text
 
 

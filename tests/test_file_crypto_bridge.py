@@ -57,6 +57,7 @@ def test_build_encrypted_file_finalize_payload_returns_real_encrypted_payloads(t
     )
 
     assert result.file_id == "file_001"
+    assert result.plaintext_filename == "sample.bin"
     assert result.file_version == 1
     assert result.total_plaintext_size == 10
     assert result.chunk_size_bytes == 4

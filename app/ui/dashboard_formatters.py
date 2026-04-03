@@ -36,16 +36,20 @@ def _append_local_decrypt_sections(lines: list[str], item: dict) -> None:
 
 
 def credential_list_label(item: dict) -> str:
+    app_name = item.get("plaintext_app_name") or item.get("credential_id", "-")
+    username = item.get("plaintext_username") or "username unknown"
     return (
-        f"{item.get('credential_id', '-')}"
+        f"{app_name}"
+        f" | {username}"
         f" | {item.get('state', '-')}"
         f" | v{item.get('current_version', '-')}"
     )
 
 
 def note_list_label(item: dict) -> str:
+    title = item.get("plaintext_title") or item.get("note_id", "-")
     return (
-        f"{item.get('note_id', '-')}"
+        f"{title}"
         f" | {item.get('note_type', '-')}"
         f" | {item.get('state', '-')}"
         f" | v{item.get('current_version', '-')}"
@@ -53,8 +57,12 @@ def note_list_label(item: dict) -> str:
 
 
 def file_list_label(item: dict) -> str:
+    filename = item.get("plaintext_filename") or item.get("file_id", "-")
+    size = item.get("plaintext_size_bytes")
+    size_text = f"{size} B" if size is not None else "size unknown"
     return (
-        f"{item.get('file_id', '-')}"
+        f"{filename}"
+        f" | {size_text}"
         f" | {item.get('state', '-')}"
         f" | v{item.get('current_version', '-')}"
     )
@@ -74,6 +82,8 @@ def format_credentials_items(items: list[dict]) -> str:
         lines.extend(
             [
                 f"[{index}] Credential",
+                f"  App: {item.get('plaintext_app_name', '-')}",
+                f"  Username: {item.get('plaintext_username', '-')}",
                 f"  ID: {item.get('credential_id', '-')}",
                 f"  State: {item.get('state', '-')}",
                 f"  Current version: {item.get('current_version', '-')}",
@@ -99,6 +109,7 @@ def format_notes_items(items: list[dict]) -> str:
         lines.extend(
             [
                 f"[{index}] Note",
+                f"  Title: {item.get('plaintext_title', '-')}",
                 f"  ID: {item.get('note_id', '-')}",
                 f"  Type: {item.get('note_type', '-')}",
                 f"  State: {item.get('state', '-')}",
@@ -125,6 +136,8 @@ def format_files_items(items: list[dict]) -> str:
         lines.extend(
             [
                 f"[{index}] File",
+                f"  Name: {item.get('plaintext_filename', '-')}",
+                f"  Size: {item.get('plaintext_size_bytes', '-')}",
                 f"  ID: {item.get('file_id', '-')}",
                 f"  State: {item.get('state', '-')}",
                 f"  Current version: {item.get('current_version', '-')}",
@@ -140,6 +153,8 @@ def format_credential_detail(item: dict) -> str:
     lines = [
         "Credential detail loaded successfully.",
         "",
+        f"App: {item.get('plaintext_app_name', '-')}",
+        f"Username: {item.get('plaintext_username', '-')}",
         f"ID: {item.get('credential_id', '-')}",
         f"User ID: {item.get('user_id', '-')}",
         f"State: {item.get('state', '-')}",
@@ -170,6 +185,7 @@ def format_note_detail(item: dict) -> str:
     lines = [
         "Note detail loaded successfully.",
         "",
+        f"Title: {item.get('plaintext_title', '-')}",
         f"ID: {item.get('note_id', '-')}",
         f"User ID: {item.get('user_id', '-')}",
         f"Type: {item.get('note_type', '-')}",
@@ -200,6 +216,8 @@ def format_note_detail(item: dict) -> str:
 def format_file_detail(item: dict) -> str:
     return (
         "File detail loaded successfully.\n\n"
+        f"Name: {item.get('plaintext_filename', '-')}\n"
+        f"Size: {item.get('plaintext_size_bytes', '-')}\n"
         f"ID: {item.get('file_id', '-')}\n"
         f"User ID: {item.get('user_id', '-')}\n"
         f"State: {item.get('state', '-')}\n"

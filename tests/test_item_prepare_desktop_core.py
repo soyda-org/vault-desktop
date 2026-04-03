@@ -94,6 +94,8 @@ def test_api_client_finalize_credential_posts_authenticated_payload(monkeypatch)
         device_name="desktop-dev",
         credential_id="cred_prepared_001",
         credential_version=1,
+        plaintext_app_name="Personal",
+        plaintext_username="alice",
         encrypted_metadata={"header": {}, "ciphertext_b64": "YWJj"},
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -106,6 +108,8 @@ def test_api_client_finalize_credential_posts_authenticated_payload(monkeypatch)
     assert captured["url"] == "http://127.0.0.1:8000/api/v1/vault/credentials/finalize"
     assert captured["json"]["credential_id"] == "cred_prepared_001"
     assert captured["json"]["credential_version"] == 1
+    assert captured["json"]["plaintext_app_name"] == "Personal"
+    assert captured["json"]["plaintext_username"] == "alice"
 
 
 def test_api_client_prepare_note_posts_authenticated_payload(monkeypatch) -> None:
@@ -163,6 +167,7 @@ def test_api_client_finalize_note_posts_authenticated_payload(monkeypatch) -> No
         device_name="desktop-dev",
         note_id="note_prepared_001",
         note_version=1,
+        plaintext_title="todo",
         encrypted_metadata=None,
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -175,6 +180,7 @@ def test_api_client_finalize_note_posts_authenticated_payload(monkeypatch) -> No
     assert captured["url"] == "http://127.0.0.1:8000/api/v1/vault/notes/finalize"
     assert captured["json"]["note_id"] == "note_prepared_001"
     assert captured["json"]["note_version"] == 1
+    assert captured["json"]["plaintext_title"] == "todo"
 
 
 class FakeGatewayApiClient:
@@ -185,7 +191,7 @@ class FakeGatewayApiClient:
         self.calls.append(("prepare_credential", device_name, access_token))
         return ObjectDetailResult(item={"credential_id": "cred_prepared_001", "credential_version": 1}, error=None, status_code=200)
 
-    def finalize_credential(self, *, device_name, credential_id, credential_version, encrypted_metadata, encrypted_payload, encryption_header, access_token=None):
+    def finalize_credential(self, *, device_name, credential_id, credential_version, plaintext_app_name=None, plaintext_username=None, encrypted_metadata, encrypted_payload, encryption_header, access_token=None):
         self.calls.append(("finalize_credential", device_name, credential_id, credential_version, access_token))
         return ObjectCreateResult(item={"credential_id": credential_id}, error=None, status_code=201)
 
@@ -193,7 +199,7 @@ class FakeGatewayApiClient:
         self.calls.append(("prepare_note", device_name, note_type, access_token))
         return ObjectDetailResult(item={"note_id": "note_prepared_001", "note_version": 1, "note_type": note_type}, error=None, status_code=200)
 
-    def finalize_note(self, *, device_name, note_id, note_version, encrypted_metadata, encrypted_payload, encryption_header, access_token=None):
+    def finalize_note(self, *, device_name, note_id, note_version, plaintext_title=None, encrypted_metadata, encrypted_payload, encryption_header, access_token=None):
         self.calls.append(("finalize_note", device_name, note_id, note_version, access_token))
         return ObjectCreateResult(item={"note_id": note_id}, error=None, status_code=201)
 
@@ -219,6 +225,7 @@ def test_authenticated_gateway_finalize_note_uses_access_token() -> None:
         device_name="desktop-dev",
         note_id="note_prepared_001",
         note_version=1,
+        plaintext_title="todo",
         encrypted_metadata=None,
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -275,7 +282,7 @@ class FakePrepareGateway:
             status_code=200,
         )
 
-    def finalize_credential(self, session, *, device_name, credential_id, credential_version, encrypted_metadata, encrypted_payload, encryption_header):
+    def finalize_credential(self, session, *, device_name, credential_id, credential_version, plaintext_app_name=None, plaintext_username=None, encrypted_metadata, encrypted_payload, encryption_header):
         self.calls.append(("finalize_credential", device_name, credential_id, credential_version, session.access_token))
         return ObjectCreateResult(item={"credential_id": credential_id}, error=None, status_code=201)
 
@@ -287,7 +294,7 @@ class FakePrepareGateway:
             status_code=200,
         )
 
-    def finalize_note(self, session, *, device_name, note_id, note_version, encrypted_metadata, encrypted_payload, encryption_header):
+    def finalize_note(self, session, *, device_name, note_id, note_version, plaintext_title=None, encrypted_metadata, encrypted_payload, encryption_header):
         self.calls.append(("finalize_note", device_name, note_id, note_version, session.access_token))
         return ObjectCreateResult(item={"note_id": note_id}, error=None, status_code=201)
 
@@ -357,6 +364,7 @@ def test_desktop_service_finalize_note_uses_gateway_with_current_session() -> No
         device_name="desktop-dev",
         note_id="note_prepared_001",
         note_version=1,
+        plaintext_title="todo",
         encrypted_metadata=None,
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},

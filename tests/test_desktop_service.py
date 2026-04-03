@@ -123,11 +123,13 @@ class FakeVaultGateway:
         session,
         *,
         device_name,
+        plaintext_app_name=None,
+        plaintext_username=None,
         encrypted_metadata,
         encrypted_payload,
         encryption_header,
     ):
-        self.calls.append(("create_credential", device_name, session.access_token))
+        self.calls.append(("create_credential", device_name, plaintext_app_name, plaintext_username, session.access_token))
         return ObjectCreateResult(
             item={"credential_id": "cred_001"},
             error=None,
@@ -140,11 +142,12 @@ class FakeVaultGateway:
         *,
         device_name,
         note_type,
+        plaintext_title=None,
         encrypted_metadata,
         encrypted_payload,
         encryption_header,
     ):
-        self.calls.append(("create_note", note_type, device_name, session.access_token))
+        self.calls.append(("create_note", note_type, device_name, plaintext_title, session.access_token))
         return ObjectCreateResult(
             item={"note_id": "note_001"},
             error=None,
@@ -156,11 +159,22 @@ class FakeVaultGateway:
         session,
         *,
         device_name,
+        plaintext_filename,
+        plaintext_size_bytes,
         encrypted_manifest,
         encryption_header,
         chunks,
     ):
-        self.calls.append(("create_file", device_name, len(chunks), session.access_token))
+        self.calls.append(
+            (
+                "create_file",
+                device_name,
+                plaintext_filename,
+                plaintext_size_bytes,
+                len(chunks),
+                session.access_token,
+            )
+        )
         return ObjectCreateResult(
             item={"file_id": "file_001"},
             error=None,
@@ -192,11 +206,24 @@ class FakeVaultGateway:
         device_name,
         file_id,
         file_version,
+        plaintext_filename,
+        plaintext_size_bytes,
         encrypted_manifest,
         encryption_header,
         chunks,
     ):
-        self.calls.append(("finalize_file", device_name, file_id, file_version, len(chunks), session.access_token))
+        self.calls.append(
+            (
+                "finalize_file",
+                device_name,
+                file_id,
+                file_version,
+                plaintext_filename,
+                plaintext_size_bytes,
+                len(chunks),
+                session.access_token,
+            )
+        )
         return ObjectCreateResult(
             item={"file_id": file_id},
             error=None,
@@ -222,8 +249,8 @@ class OneCreate401ThenSuccessGateway(FakeVaultGateway):
         super().__init__()
         self.first = True
 
-    def create_credential(self, session, *, device_name, encrypted_metadata, encrypted_payload, encryption_header):
-        self.calls.append(("create_credential", device_name, session.access_token))
+    def create_credential(self, session, *, device_name, plaintext_app_name=None, plaintext_username=None, encrypted_metadata, encrypted_payload, encryption_header):
+        self.calls.append(("create_credential", device_name, plaintext_app_name, plaintext_username, session.access_token))
         if self.first:
             self.first = False
             return ObjectCreateResult(item=None, error="Unauthorized", status_code=401)
@@ -235,8 +262,8 @@ class OneCreateNote401ThenSuccessGateway(FakeVaultGateway):
         super().__init__()
         self.first = True
 
-    def create_note(self, session, *, device_name, note_type, encrypted_metadata, encrypted_payload, encryption_header):
-        self.calls.append(("create_note", note_type, device_name, session.access_token))
+    def create_note(self, session, *, device_name, note_type, plaintext_title=None, encrypted_metadata, encrypted_payload, encryption_header):
+        self.calls.append(("create_note", note_type, device_name, plaintext_title, session.access_token))
         if self.first:
             self.first = False
             return ObjectCreateResult(item=None, error="Unauthorized", status_code=401)
@@ -269,8 +296,31 @@ class OneFinalize401ThenSuccessGateway(FakeVaultGateway):
         super().__init__()
         self.first = True
 
-    def finalize_file(self, session, *, device_name, file_id, file_version, encrypted_manifest, encryption_header, chunks):
-        self.calls.append(("finalize_file", device_name, file_id, file_version, len(chunks), session.access_token))
+    def finalize_file(
+        self,
+        session,
+        *,
+        device_name,
+        file_id,
+        file_version,
+        plaintext_filename,
+        plaintext_size_bytes,
+        encrypted_manifest,
+        encryption_header,
+        chunks,
+    ):
+        self.calls.append(
+            (
+                "finalize_file",
+                device_name,
+                file_id,
+                file_version,
+                plaintext_filename,
+                plaintext_size_bytes,
+                len(chunks),
+                session.access_token,
+            )
+        )
         if self.first:
             self.first = False
             return ObjectCreateResult(item=None, error="Unauthorized", status_code=401)
@@ -332,6 +382,8 @@ def test_create_credential_requires_session() -> None:
 
     result = service.create_credential(
         device_name="desktop-dev",
+        plaintext_app_name="Personal",
+        plaintext_username="alice",
         encrypted_metadata={"ciphertext_b64": "YWJj"},
         encrypted_payload={"ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -349,6 +401,8 @@ def test_create_credential_uses_gateway_with_current_session() -> None:
 
     result = service.create_credential(
         device_name="desktop-dev",
+        plaintext_app_name="Personal",
+        plaintext_username="alice",
         encrypted_metadata={"ciphertext_b64": "YWJj"},
         encrypted_payload={"ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -357,7 +411,7 @@ def test_create_credential_uses_gateway_with_current_session() -> None:
     assert result.error is None
     assert result.item is not None
     assert result.item["credential_id"] == "cred_001"
-    assert gateway.calls[0] == ("create_credential", "desktop-dev", "access-token-1")
+    assert gateway.calls[0] == ("create_credential", "desktop-dev", "Personal", "alice", "access-token-1")
 
 
 def test_create_note_requires_session() -> None:
@@ -366,6 +420,7 @@ def test_create_note_requires_session() -> None:
     result = service.create_note(
         device_name="desktop-dev",
         note_type="note",
+        plaintext_title="todo",
         encrypted_metadata={"ciphertext_b64": "YWJj"},
         encrypted_payload={"ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -384,6 +439,7 @@ def test_create_note_uses_gateway_with_current_session() -> None:
     result = service.create_note(
         device_name="desktop-dev",
         note_type="note",
+        plaintext_title="todo",
         encrypted_metadata={"ciphertext_b64": "YWJj"},
         encrypted_payload={"ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -392,7 +448,7 @@ def test_create_note_uses_gateway_with_current_session() -> None:
     assert result.error is None
     assert result.item is not None
     assert result.item["note_id"] == "note_001"
-    assert gateway.calls[0] == ("create_note", "note", "desktop-dev", "access-token-1")
+    assert gateway.calls[0] == ("create_note", "note", "desktop-dev", "todo", "access-token-1")
 
 
 def test_prepare_file_requires_session() -> None:
@@ -425,6 +481,8 @@ def test_finalize_file_requires_session() -> None:
         device_name="desktop-dev",
         file_id="prepared_file_001",
         file_version=1,
+        plaintext_filename="sample.bin",
+        plaintext_size_bytes=16,
         encrypted_manifest={"ciphertext_b64": "YWJj"},
         encryption_header={"nonce_b64": "bm9uY2U="},
         chunks=[{"chunk_index": 0, "object_key": "files/prepared_file_001/v1/chunk_0000.bin", "ciphertext_b64": "ZmFrZQ==", "ciphertext_sha256_hex": "a" * 64}],
@@ -444,6 +502,8 @@ def test_finalize_file_uses_gateway_with_current_session() -> None:
         device_name="desktop-dev",
         file_id="prepared_file_001",
         file_version=1,
+        plaintext_filename="sample.bin",
+        plaintext_size_bytes=16,
         encrypted_manifest={"ciphertext_b64": "YWJj"},
         encryption_header={"nonce_b64": "bm9uY2U="},
         chunks=[{"chunk_index": 0, "object_key": "files/prepared_file_001/v1/chunk_0000.bin", "ciphertext_b64": "ZmFrZQ==", "ciphertext_sha256_hex": "a" * 64}],
@@ -452,7 +512,16 @@ def test_finalize_file_uses_gateway_with_current_session() -> None:
     assert result.error is None
     assert result.item is not None
     assert result.item["file_id"] == "prepared_file_001"
-    assert gateway.calls[0] == ("finalize_file", "desktop-dev", "prepared_file_001", 1, 1, "access-token-1")
+    assert gateway.calls[0] == (
+        "finalize_file",
+        "desktop-dev",
+        "prepared_file_001",
+        1,
+        "sample.bin",
+        16,
+        1,
+        "access-token-1",
+    )
 
 
 def test_fetch_credentials_refreshes_and_retries_once_after_401() -> None:
@@ -482,6 +551,8 @@ def test_create_credential_refreshes_and_retries_once_after_401() -> None:
 
     result = service.create_credential(
         device_name="desktop-dev",
+        plaintext_app_name="Personal",
+        plaintext_username="alice",
         encrypted_metadata={"ciphertext_b64": "YWJj"},
         encrypted_payload={"ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -492,8 +563,8 @@ def test_create_credential_refreshes_and_retries_once_after_401() -> None:
     assert result.item["credential_id"] == "cred_001"
     assert api_client.refresh_calls == 1
     assert gateway.calls == [
-        ("create_credential", "desktop-dev", "access-token-1"),
-        ("create_credential", "desktop-dev", "access-token-2"),
+        ("create_credential", "desktop-dev", "Personal", "alice", "access-token-1"),
+        ("create_credential", "desktop-dev", "Personal", "alice", "access-token-2"),
     ]
 
 
@@ -506,6 +577,7 @@ def test_create_note_refreshes_and_retries_once_after_401() -> None:
     result = service.create_note(
         device_name="desktop-dev",
         note_type="note",
+        plaintext_title="todo",
         encrypted_metadata={"ciphertext_b64": "YWJj"},
         encrypted_payload={"ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -516,8 +588,8 @@ def test_create_note_refreshes_and_retries_once_after_401() -> None:
     assert result.item["note_id"] == "note_001"
     assert api_client.refresh_calls == 1
     assert gateway.calls == [
-        ("create_note", "note", "desktop-dev", "access-token-1"),
-        ("create_note", "note", "desktop-dev", "access-token-2"),
+        ("create_note", "note", "desktop-dev", "todo", "access-token-1"),
+        ("create_note", "note", "desktop-dev", "todo", "access-token-2"),
     ]
 
 
@@ -549,6 +621,8 @@ def test_finalize_file_refreshes_and_retries_once_after_401() -> None:
         device_name="desktop-dev",
         file_id="prepared_file_001",
         file_version=1,
+        plaintext_filename="sample.bin",
+        plaintext_size_bytes=16,
         encrypted_manifest={"ciphertext_b64": "YWJj"},
         encryption_header={"nonce_b64": "bm9uY2U="},
         chunks=[{"chunk_index": 0, "object_key": "files/prepared_file_001/v1/chunk_0000.bin", "ciphertext_b64": "ZmFrZQ==", "ciphertext_sha256_hex": "a" * 64}],
@@ -559,8 +633,8 @@ def test_finalize_file_refreshes_and_retries_once_after_401() -> None:
     assert result.item["file_id"] == "prepared_file_001"
     assert api_client.refresh_calls == 1
     assert gateway.calls == [
-        ("finalize_file", "desktop-dev", "prepared_file_001", 1, 1, "access-token-1"),
-        ("finalize_file", "desktop-dev", "prepared_file_001", 1, 1, "access-token-2"),
+        ("finalize_file", "desktop-dev", "prepared_file_001", 1, "sample.bin", 16, 1, "access-token-1"),
+        ("finalize_file", "desktop-dev", "prepared_file_001", 1, "sample.bin", 16, 1, "access-token-2"),
     ]
 
 

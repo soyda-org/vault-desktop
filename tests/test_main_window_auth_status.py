@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+import os
+from types import SimpleNamespace
+
+import pytest
+from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton
+
+from app.ui.main_window import MainWindow
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+
+@pytest.fixture
+def app_fixture() -> QApplication:
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    return app
+
+
+def test_handle_login_result_does_not_show_access_token_preview(app_fixture) -> None:
+    session = SimpleNamespace(
+        user_id="user_1",
+        device_id="device_1",
+        session_id="session_1",
+        token_type="bearer",
+        access_token="access-token-1",
+    )
+    desktop_service = SimpleNamespace(
+        current_session=lambda: session,
+    )
+    window = SimpleNamespace(
+        desktop_service=desktop_service,
+        status_label=QLabel(),
+        recovery_key_b64_input=QLineEdit(),
+        current_screen="system",
+        refresh_session_label=lambda: None,
+        _is_vault_unlocked=lambda: False,
+        _clear_sensitive_views_for_locked_vault=lambda: None,
+        _refresh_action_states=lambda: None,
+        _refresh_idle_policy=lambda: None,
+        _save_ui_preferences=lambda: None,
+    )
+
+    MainWindow._handle_login_result(window, SimpleNamespace(error=None))
+
+    assert "Login succeeded." in window.status_label.text()
+    assert "Token type: bearer" in window.status_label.text()
+    assert "Access token preview" not in window.status_label.text()
+
+
+def test_refresh_system_state_indicators_reflect_probe_and_session(app_fixture) -> None:
+    desktop_service = SimpleNamespace(
+        is_authenticated=lambda: True,
+    )
+    window = SimpleNamespace(
+        desktop_service=desktop_service,
+        _last_probe_result=SimpleNamespace(
+            error=None,
+            project_name="vault-api",
+            version="0.1.0",
+            environment="dev",
+        ),
+        connection_state_label=QLabel(),
+        session_state_label=QLabel(),
+        api_details_label=QLabel(),
+        api_client=SimpleNamespace(base_url="http://127.0.0.1:8000"),
+        _is_vault_unlocked=lambda: False,
+        probe_button=QPushButton(),
+        login_button=QPushButton(),
+        _set_badge_state=lambda label, level: None,
+        _set_button_tone=lambda button, tone: None,
+    )
+
+    MainWindow._refresh_system_state_indicators(window)
+
+    assert window.connection_state_label.text() == "API reachable"
+    assert window.session_state_label.text() == "Session active, vault locked"
+    assert "Project: vault-api" in window.api_details_label.text()
+    assert "API: http://127.0.0.1:8000" in window.api_details_label.text()
+
+
+def test_append_activity_log_keeps_newest_first_and_dedupes(app_fixture) -> None:
+    window = SimpleNamespace(
+        activity_log_list=QListWidget(),
+        _last_activity_message="",
+        _infer_status_severity=lambda message: MainWindow._infer_status_severity(SimpleNamespace(), message),
+    )
+
+    MainWindow._append_activity_log(window, "Login succeeded.")
+    MainWindow._append_activity_log(window, "Login succeeded.")
+    MainWindow._append_activity_log(window, "Vault locked.")
+
+    assert window.activity_log_list.count() == 2
+    assert "Vault locked." in window.activity_log_list.item(0).text()
+    assert "Login succeeded." in window.activity_log_list.item(1).text()

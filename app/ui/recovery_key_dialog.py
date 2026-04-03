@@ -33,6 +33,10 @@ class RecoveryKeyDialog(QDialog):
         warning.setWordWrap(True)
         layout.addWidget(warning)
 
+        self.feedback_label = QLabel("Save or copy the key, then confirm you stored it safely.")
+        self.feedback_label.setWordWrap(True)
+        layout.addWidget(self.feedback_label)
+
         self.key_view = QPlainTextEdit()
         self.key_view.setReadOnly(True)
         self.key_view.setPlainText(recovery_key_b64)
@@ -63,6 +67,7 @@ class RecoveryKeyDialog(QDialog):
 
     def _copy_key(self) -> None:
         QApplication.clipboard().setText(self.recovery_key_b64)
+        self.feedback_label.setText("Recovery key copied to clipboard.")
 
     def _save_key(self) -> None:
         filename, _ = QFileDialog.getSaveFileName(
@@ -74,6 +79,7 @@ class RecoveryKeyDialog(QDialog):
         if not filename:
             return
         Path(filename).write_text(self.recovery_key_b64 + "\n", encoding="utf-8")
+        self.feedback_label.setText(f"Recovery key saved to: {filename}")
 
 
 def show_recovery_key_dialog(parent, recovery_key_b64: str) -> bool:

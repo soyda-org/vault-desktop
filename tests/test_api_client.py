@@ -264,6 +264,8 @@ def test_finalize_file_posts_authenticated_payload(monkeypatch) -> None:
         device_name="desktop-dev",
         file_id="prepared_file_001",
         file_version=1,
+        plaintext_filename="sample.bin",
+        plaintext_size_bytes=16,
         encrypted_manifest={"ciphertext_b64": "YWJj"},
         encryption_header={"nonce_b64": "bm9uY2U="},
         chunks=[
@@ -284,4 +286,6 @@ def test_finalize_file_posts_authenticated_payload(monkeypatch) -> None:
     assert captured["url"] == "http://127.0.0.1:8000/api/v1/vault/files/finalize"
     assert captured["headers"]["Authorization"] == "Bearer access-token"
     assert captured["json"]["file_id"] == "prepared_file_001"
+    assert captured["json"]["plaintext_filename"] == "sample.bin"
+    assert captured["json"]["plaintext_size_bytes"] == 16
     assert len(captured["json"]["chunks"]) == 1

@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+from datetime import datetime
 import json
 import os
 
 from PySide6.QtCore import QThread, Qt, QEvent, QTimer
+from PySide6.QtGui import QColor
 
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QFileDialog,
+    QFrame,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -16,11 +19,13 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QPlainTextEdit,
     QPushButton,
     QProgressBar,
     QScrollArea,
     QSpinBox,
     QSplitter,
+    QStackedWidget,
     QTabWidget,
     QTextEdit,
     QVBoxLayout,
@@ -51,6 +56,11 @@ from app.services.password_generator import (
 from app.services.vault_gateway import AuthenticatedVaultGateway
 from app.ui.file_download_worker import FileDownloadWorker
 from app.ui.file_upload_worker import FileUploadWorker
+from app.ui.item_editor_dialog import JsonItemEditorDialog
+from app.ui.surfaces import (
+    SystemWorkspaceView,
+    VaultWorkspaceView,
+)
 from app.ui.dashboard_formatters import (
     credential_list_label,
     file_list_label,
@@ -62,6 +72,60 @@ from app.ui.dashboard_formatters import (
     format_notes_items,
     note_list_label,
 )
+
+
+class ActivityStatusLabel(QLabel):
+    def __init__(self, on_change, text: str = "") -> None:
+        super().__init__(text)
+        self._on_change = on_change
+
+    def setText(self, text: str) -> None:  # type: ignore[override]
+        super().setText(text)
+        self._on_change(text)
+
+
+def _theme_palette(theme: str) -> dict[str, str]:
+    if theme == "dark":
+        return {
+            "window": "#0b1220",
+            "surface": "#0f172a",
+            "surface_alt": "#111c2e",
+            "input": "#162235",
+            "border": "#243247",
+            "text": "#e2e8f0",
+            "muted": "#94a3b8",
+            "primary": "#2563eb",
+            "primary_hover": "#1d4ed8",
+            "danger": "#ef4444",
+            "danger_bg": "#2b1318",
+            "success": "#22c55e",
+            "warning": "#f59e0b",
+            "info": "#38bdf8",
+            "nav_bg": "#162235",
+            "selection": "#1d4ed8",
+            "badge_bg": "#15243a",
+            "mono_bg": "#0b1322",
+        }
+    return {
+        "window": "#f6f7fb",
+        "surface": "#ffffff",
+        "surface_alt": "#f5f7fb",
+        "input": "#fbfcfe",
+        "border": "#d8e0ea",
+        "text": "#0f172a",
+        "muted": "#475569",
+        "primary": "#2563eb",
+        "primary_hover": "#1d4ed8",
+        "danger": "#ef4444",
+        "danger_bg": "#fff2f2",
+        "success": "#16a34a",
+        "warning": "#d97706",
+        "info": "#0284c7",
+        "nav_bg": "#f0f4f8",
+        "selection": "#dbeafe",
+        "badge_bg": "#eff4ff",
+        "mono_bg": "#eef3f8",
+    }
 
 
 class MainWindow(QMainWindow):
@@ -76,39 +140,45 @@ class MainWindow(QMainWindow):
             api_client=self.api_client,
             vault_gateway=AuthenticatedVaultGateway(self.api_client),
         )
+        self.current_theme = (
+            self.persisted_ui_settings.theme
+            if self.persisted_ui_settings.theme in {"light", "dark"}
+            else "light"
+        )
 
         self.setWindowTitle(settings.app_name)
         self.resize(1180, 780)
         self.setMinimumSize(960, 640)
-        self.setStyleSheet(
-            """
-            QWidget {
-                font-size: 10px;
-            }
-            QPushButton,
-            QLineEdit,
-            QTextEdit,
-            QListWidget,
-            QSpinBox,
-            QLabel,
-            QCheckBox,
-            QTabBar::tab {
-                font-size: 10px;
-            }
-            QPushButton {
-                padding: 1px 5px;
-            }
-            QTabBar::tab {
-                padding: 3px 8px;
-            }
-            """
-        )
+        self._apply_theme()
 
-        self.status_label = QLabel("Press 'Probe API' or login.")
+        self._last_activity_message = ""
+        self._last_probe_result = None
+
+        self.status_label = ActivityStatusLabel(
+            self._handle_status_text_change,
+            "Press 'Probe API' or login.",
+        )
         self.status_label.setWordWrap(True)
 
         self.session_label = QLabel("No active session.")
         self.session_label.setWordWrap(True)
+
+        self.connection_state_label = QLabel()
+        self.connection_state_label.setObjectName("statePill")
+        self.session_state_label = QLabel()
+        self.session_state_label.setObjectName("statePill")
+        self.api_details_label = QLabel()
+        self.api_details_label.setObjectName("technicalMeta")
+        self.api_details_label.setWordWrap(True)
+
+        self.activity_log_list = QListWidget()
+        self.activity_log_list.setObjectName("activityLog")
+        self.activity_log_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+
+        self.copy_activity_log_button = QPushButton("Copy Diagnostics")
+        self.copy_activity_log_button.clicked.connect(self.run_copy_activity_log)
+        self.clear_activity_log_button = QPushButton("Clear Log")
+        self.clear_activity_log_button.clicked.connect(self.run_clear_activity_log)
 
         self.identifier_input = QLineEdit()
         self.identifier_input.setText(self.persisted_ui_settings.identifier)
@@ -124,67 +194,86 @@ class MainWindow(QMainWindow):
         self.platform_input.setText(self.persisted_ui_settings.platform)
 
         self.probe_button = QPushButton("Probe API")
+        self.probe_button.setProperty("tone", "primary")
         self.probe_button.clicked.connect(self.run_probe)
 
         self.login_button = QPushButton("Login")
+        self.login_button.setProperty("tone", "secondary")
         self.login_button.clicked.connect(self.run_login)
 
         self.sign_up_button = QPushButton("Sign Up")
+        self.sign_up_button.setProperty("tone", "secondary")
         self.sign_up_button.clicked.connect(self.run_open_signup_dialog)
 
         self.logout_button = QPushButton("Logout")
+        self.logout_button.setProperty("tone", "danger")
         self.logout_button.clicked.connect(self.run_logout)
+        self.vault_logout_button = QPushButton("Logout")
+        self.vault_logout_button.setProperty("tone", "danger")
+        self.vault_logout_button.clicked.connect(self.run_logout)
 
         self.close_button = QPushButton("Close App")
         self.close_button.clicked.connect(self.run_close)
 
         self.load_credentials_button = QPushButton("Load Credentials")
         self.load_credentials_button.clicked.connect(self.load_credentials)
+        self.load_credentials_button.setProperty("tone", "secondary")
 
         self.load_notes_button = QPushButton("Load Notes")
         self.load_notes_button.clicked.connect(self.load_notes)
+        self.load_notes_button.setProperty("tone", "secondary")
 
         self.load_files_button = QPushButton("Load Files")
         self.load_files_button.clicked.connect(self.load_files)
+        self.load_files_button.setProperty("tone", "secondary")
 
         self.load_all_button = QPushButton("Load All")
         self.load_all_button.clicked.connect(self.load_all)
+        self.load_all_button.setProperty("tone", "secondary")
 
         self.load_credential_detail_button = QPushButton("Load Selected Credential")
         self.load_credential_detail_button.clicked.connect(self.load_credential_detail)
         self.load_credential_detail_button.setEnabled(False)
+        self.load_credential_detail_button.setProperty("tone", "secondary")
 
-        self.create_credential_button = QPushButton("Create Credential")
-        self.create_credential_button.clicked.connect(self.run_create_credential)
+        self.create_credential_button = QPushButton("New Credential")
+        self.create_credential_button.clicked.connect(self.run_open_create_credential_dialog)
+        self.create_credential_button.setProperty("tone", "primary")
 
-        self.update_credential_button = QPushButton("Update Credential")
-        self.update_credential_button.clicked.connect(self.run_update_credential)
+        self.update_credential_button = QPushButton("Edit Credential")
+        self.update_credential_button.clicked.connect(self.run_open_update_credential_dialog)
         self.update_credential_button.setEnabled(False)
 
         self.delete_credential_button = QPushButton("Delete Credential")
         self.delete_credential_button.clicked.connect(self.run_delete_credential)
         self.delete_credential_button.setEnabled(False)
+        self.delete_credential_button.setProperty("tone", "danger")
 
         self.reset_credential_payload_button = QPushButton("Reset Payload")
         self.reset_credential_payload_button.clicked.connect(self.reset_credential_create_fields)
+        self.reset_credential_payload_button.setProperty("tone", "secondary")
 
         self.load_note_detail_button = QPushButton("Load Selected Note")
         self.load_note_detail_button.clicked.connect(self.load_note_detail)
         self.load_note_detail_button.setEnabled(False)
+        self.load_note_detail_button.setProperty("tone", "secondary")
 
-        self.create_note_button = QPushButton("Create Note")
-        self.create_note_button.clicked.connect(self.run_create_note)
+        self.create_note_button = QPushButton("New Note")
+        self.create_note_button.clicked.connect(self.run_open_create_note_dialog)
+        self.create_note_button.setProperty("tone", "primary")
 
-        self.update_note_button = QPushButton("Update Note")
-        self.update_note_button.clicked.connect(self.run_update_note)
+        self.update_note_button = QPushButton("Edit Note")
+        self.update_note_button.clicked.connect(self.run_open_update_note_dialog)
         self.update_note_button.setEnabled(False)
 
         self.delete_note_button = QPushButton("Delete Note")
         self.delete_note_button.clicked.connect(self.run_delete_note)
         self.delete_note_button.setEnabled(False)
+        self.delete_note_button.setProperty("tone", "danger")
 
         self.reset_note_payload_button = QPushButton("Reset Payload")
         self.reset_note_payload_button.clicked.connect(self.reset_note_create_fields)
+        self.reset_note_payload_button.setProperty("tone", "secondary")
 
         self.load_file_detail_button = QPushButton("Load Selected File")
         self.load_file_detail_button.clicked.connect(self.load_file_detail)
@@ -192,28 +281,35 @@ class MainWindow(QMainWindow):
 
         self.pick_file_button = QPushButton("Pick File")
         self.pick_file_button.clicked.connect(self.run_pick_file)
+        self.pick_file_button.setProperty("tone", "secondary")
 
         self.create_file_button = QPushButton("Create File")
         self.create_file_button.clicked.connect(self.run_create_file)
         self.create_file_button.setEnabled(False)
+        self.create_file_button.setProperty("tone", "primary")
 
         self.cancel_file_upload_button = QPushButton("Cancel Upload")
         self.cancel_file_upload_button.clicked.connect(self.run_cancel_file_upload)
         self.cancel_file_upload_button.setEnabled(False)
+        self.cancel_file_upload_button.setProperty("tone", "danger")
 
         self.pick_download_target_button = QPushButton("Pick Save Path")
         self.pick_download_target_button.clicked.connect(self.run_pick_download_target)
+        self.pick_download_target_button.setProperty("tone", "secondary")
 
         self.download_file_button = QPushButton("Download File")
         self.download_file_button.clicked.connect(self.run_download_file)
         self.download_file_button.setEnabled(False)
+        self.download_file_button.setProperty("tone", "primary")
 
         self.cancel_file_download_button = QPushButton("Cancel Download")
         self.cancel_file_download_button.clicked.connect(self.run_cancel_file_download)
         self.cancel_file_download_button.setEnabled(False)
+        self.cancel_file_download_button.setProperty("tone", "danger")
 
         self.reset_file_payload_button = QPushButton("Reset Payload")
         self.reset_file_payload_button.clicked.connect(self.reset_file_create_fields)
+        self.reset_file_payload_button.setProperty("tone", "secondary")
 
         self.file_upload_thread: QThread | None = None
         self.file_upload_worker: FileUploadWorker | None = None
@@ -331,20 +427,25 @@ class MainWindow(QMainWindow):
 
         self.unlock_vault_pin_button = QPushButton("Unlock with PIN")
         self.unlock_vault_pin_button.clicked.connect(self.run_unlock_vault_with_pin)
+        self.unlock_vault_pin_button.setProperty("tone", "primary")
 
         self.enroll_vault_pin_button = QPushButton("Enroll PIN on This Device")
+        self.enroll_vault_pin_button.setProperty("tone", "primary")
         self.enroll_vault_pin_button.clicked.connect(self.run_enroll_vault_pin)
 
         self.remove_vault_pin_button = QPushButton("Remove PIN from This Device")
+        self.remove_vault_pin_button.setProperty("tone", "danger")
         self.remove_vault_pin_button.clicked.connect(self.run_remove_vault_pin)
 
         self.lock_now_button = QPushButton("Lock Now")
+        self.lock_now_button.setProperty("tone", "danger")
         self.lock_now_button.clicked.connect(self.run_lock_vault_now)
 
         self.toggle_advanced_recovery_button = QPushButton("Show Advanced Recovery")
         self.toggle_advanced_recovery_button.clicked.connect(
             self.toggle_advanced_recovery
         )
+        self.toggle_advanced_recovery_button.setProperty("tone", "secondary")
 
         self.recovery_key_b64_input = QLineEdit()
         self.recovery_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
@@ -354,8 +455,10 @@ class MainWindow(QMainWindow):
 
         self.unlock_with_recovery_key_button = QPushButton("Unlock with Recovery Key")
         self.unlock_with_recovery_key_button.clicked.connect(self.run_unlock_with_recovery_key)
+        self.unlock_with_recovery_key_button.setProperty("tone", "secondary")
 
         self.clear_vault_key_button = QPushButton("Clear Vault Key")
+        self.clear_vault_key_button.setProperty("tone", "danger")
         self.clear_vault_key_button.clicked.connect(self.run_clear_vault_key)
 
         self.file_upload_progress = QProgressBar()
@@ -367,16 +470,6 @@ class MainWindow(QMainWindow):
         self.file_download_progress.setRange(0, 100)
         self.file_download_progress.setValue(0)
         self.file_download_progress.setFormat("%p%")
-
-        self.reset_credential_create_fields()
-        self.reset_note_create_fields()
-        self.reset_file_create_fields()
-
-        self.tabs = QTabWidget()
-        self.tabs.addTab(self._build_credentials_tab(), "Credentials")
-        self.tabs.addTab(self._build_notes_tab(), "Notes")
-        self.tabs.addTab(self._build_files_tab(), "Files")
-        self.tabs.setCurrentIndex(self.persisted_ui_settings.last_tab_index)
 
         self.password_length_input = QSpinBox()
         self.password_length_input.setRange(8, 256)
@@ -399,38 +492,12 @@ class MainWindow(QMainWindow):
         self.generated_password_output.setPlaceholderText("Generated password will appear here.")
 
         self.generate_password_button = QPushButton("Generate Password")
+        self.generate_password_button.setProperty("tone", "primary")
         self.generate_password_button.clicked.connect(self.run_generate_password)
 
         self.copy_generated_password_button = QPushButton("Copy Generated Password")
+        self.copy_generated_password_button.setProperty("tone", "secondary")
         self.copy_generated_password_button.clicked.connect(self.run_copy_generated_password)
-
-        form_layout = QFormLayout()
-        form_layout.setContentsMargins(0, 0, 0, 0)
-        form_layout.setHorizontalSpacing(6)
-        form_layout.setVerticalSpacing(4)
-        form_layout.addRow("Identifier", self.identifier_input)
-        form_layout.addRow("Password", self.password_input)
-        form_layout.addRow("Device name", self.device_name_input)
-        form_layout.addRow("Platform", self.platform_input)
-
-        auth_buttons_layout = QHBoxLayout()
-        auth_buttons_layout.setContentsMargins(0, 0, 0, 0)
-        auth_buttons_layout.setSpacing(4)
-        auth_buttons_layout.addWidget(self.login_button)
-        auth_buttons_layout.addWidget(self.sign_up_button)
-        auth_buttons_layout.addWidget(self.logout_button)
-        auth_buttons_layout.addWidget(self.close_button)
-
-        vault_row = QHBoxLayout()
-        vault_row.setContentsMargins(0, 0, 0, 0)
-        vault_row.setSpacing(4)
-        vault_row.addWidget(QLabel("Vault"))
-        vault_row.addWidget(self.vault_pin_input, 1)
-        vault_row.addWidget(self.unlock_vault_pin_button)
-        vault_row.addWidget(self.enroll_vault_pin_button)
-        vault_row.addWidget(self.remove_vault_pin_button)
-        vault_row.addWidget(self.lock_now_button)
-        vault_row.addWidget(self.toggle_advanced_recovery_button)
 
         self.pin_bootstrap_status_label = QLabel()
         self.pin_bootstrap_status_label.setWordWrap(True)
@@ -441,20 +508,23 @@ class MainWindow(QMainWindow):
         self.vault_next_step_label = QLabel()
         self.vault_next_step_label.setWordWrap(True)
 
+        self.vault_home_summary_label = QLabel()
+        self.vault_home_summary_label.setWordWrap(True)
+
+        self.device_pin_scope_label = QLabel()
+        self.device_pin_scope_label.setWordWrap(True)
+
         self.pin_confirmation_input = QLineEdit()
         self.pin_confirmation_input.setPlaceholderText(
-            'Type CONFIRM before changing, replacing, or removing the device PIN.'
+            "Type CONFIRM before changing, replacing, or removing the device PIN."
         )
 
         self.pin_confirmation_label = QLabel()
         self.pin_confirmation_label.setWordWrap(True)
 
-        self.device_pin_scope_label = QLabel()
-        self.device_pin_scope_label.setWordWrap(True)
-
         advanced_recovery_row = QHBoxLayout()
         advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
-        advanced_recovery_row.setSpacing(4)
+        advanced_recovery_row.setSpacing(8)
         advanced_recovery_row.addWidget(QLabel("Advanced Recovery Key"))
         advanced_recovery_row.addWidget(self.recovery_key_b64_input, 1)
         advanced_recovery_row.addWidget(self.unlock_with_recovery_key_button)
@@ -464,77 +534,144 @@ class MainWindow(QMainWindow):
         self.advanced_recovery_widget.setLayout(advanced_recovery_row)
         self.advanced_recovery_widget.setVisible(False)
 
-        vault_hint_label = QLabel(
-            "Vault controls are global for this session. Everyday use can unlock with a local PIN on this device after enrollment. "
-            "Advanced Recovery uses the recovery key plus wrapped bootstrap material fetched from the API to unwrap the vault key locally. "
-            "Failures now distinguish missing profile access, missing recovery material, and an incorrect recovery key."
-        )
-        vault_hint_label.setWordWrap(True)
+        self.reset_credential_create_fields()
+        self.reset_note_create_fields()
+        self.reset_file_create_fields()
 
-        dashboard_buttons_layout = QHBoxLayout()
-        dashboard_buttons_layout.setContentsMargins(0, 0, 0, 0)
-        dashboard_buttons_layout.setSpacing(4)
-        dashboard_buttons_layout.addWidget(self.load_credentials_button)
-        dashboard_buttons_layout.addWidget(self.load_notes_button)
-        dashboard_buttons_layout.addWidget(self.load_files_button)
-        dashboard_buttons_layout.addWidget(self.load_all_button)
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self._build_credentials_tab(), "Credentials")
+        self.tabs.addTab(self._build_notes_tab(), "Notes")
+        self.tabs.addTab(self._build_files_tab(), "Files")
+        self.tabs.setCurrentIndex(self.persisted_ui_settings.last_tab_index)
 
-        password_policy_layout = QHBoxLayout()
-        password_policy_layout.setContentsMargins(0, 0, 0, 0)
-        password_policy_layout.setSpacing(4)
-        password_policy_layout.addWidget(QLabel("Length"))
-        password_policy_layout.addWidget(self.password_length_input)
-        password_policy_layout.addWidget(self.use_uppercase_checkbox)
-        password_policy_layout.addWidget(self.use_lowercase_checkbox)
-        password_policy_layout.addWidget(self.use_digits_checkbox)
-        password_policy_layout.addWidget(self.use_symbols_checkbox)
-
-        header_label = QLabel(
+        self.header_label = QLabel(
             f"App: {settings.app_name} | Environment: {settings.environment} | API: {self.persisted_ui_settings.api_base_url}"
         )
-        header_label.setWordWrap(True)
+        self.header_label.setWordWrap(True)
 
-        header_layout = QHBoxLayout()
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(4)
-        header_layout.addWidget(header_label, 1)
-        header_layout.addWidget(self.probe_button)
+        self.screen_eyebrow_label = QLabel()
+        self.screen_eyebrow_label.setObjectName("screenEyebrow")
+        self.screen_title_label = QLabel()
+        self.screen_title_label.setObjectName("screenTitle")
+        self.screen_subtitle_label = QLabel()
+        self.screen_subtitle_label.setObjectName("screenSubtitle")
+        self.screen_subtitle_label.setWordWrap(True)
+        self.theme_toggle_button = QPushButton("Theme: Light")
+        self.theme_toggle_button.setProperty("nav", "true")
+        self.theme_toggle_button.clicked.connect(self.run_toggle_theme)
 
-        dashboard_row = QHBoxLayout()
-        dashboard_row.setContentsMargins(0, 0, 0, 0)
-        dashboard_row.setSpacing(4)
-        dashboard_row.addWidget(QLabel("Dashboard"))
-        dashboard_row.addLayout(dashboard_buttons_layout, 1)
+        self.nav_system_button = QPushButton("System")
+        self.nav_system_button.setProperty("nav", "true")
+        self.nav_system_button.clicked.connect(lambda: self._switch_to_screen("system"))
+        self.nav_vault_button = QPushButton("Vault")
+        self.nav_vault_button.setProperty("nav", "true")
+        self.nav_vault_button.clicked.connect(lambda: self._switch_to_screen("vault"))
 
-        password_row = QHBoxLayout()
-        password_row.setContentsMargins(0, 0, 0, 0)
-        password_row.setSpacing(4)
-        password_row.addWidget(QLabel("Password Tools"))
-        password_row.addLayout(password_policy_layout)
-        password_row.addWidget(self.generated_password_output, 1)
-        password_row.addWidget(self.generate_password_button)
-        password_row.addWidget(self.copy_generated_password_button)
+        self.screen_stack = QStackedWidget()
+        self.current_screen = "system"
+
+        self.system_workspace_view = SystemWorkspaceView(
+            header_label=self.header_label,
+            status_label=self.status_label,
+            session_label=self.session_label,
+            connection_label=self.connection_state_label,
+            session_state_label=self.session_state_label,
+            api_details_label=self.api_details_label,
+            form_widgets={
+                "identifier": self.identifier_input,
+                "password": self.password_input,
+                "device_name": self.device_name_input,
+                "platform": self.platform_input,
+            },
+            auth_buttons={
+                "probe": self.probe_button,
+                "login": self.login_button,
+                "signup": self.sign_up_button,
+            },
+            utility_buttons={
+                "logout": self.logout_button,
+                "close": self.close_button,
+            },
+            log_widgets={
+                "copy": self.copy_activity_log_button,
+                "clear": self.clear_activity_log_button,
+                "list": self.activity_log_list,
+            },
+        )
+        self.vault_workspace_view = VaultWorkspaceView(
+            summary_label=self.vault_home_summary_label,
+            pin_widgets={
+                "input": self.vault_pin_input,
+                "unlock": self.unlock_vault_pin_button,
+                "enroll": self.enroll_vault_pin_button,
+                "remove": self.remove_vault_pin_button,
+                "confirm_input": self.pin_confirmation_input,
+            },
+            recovery_widgets={
+                "toggle": self.toggle_advanced_recovery_button,
+                "container": self.advanced_recovery_widget,
+            },
+            status_labels={
+                "pin_status": self.pin_bootstrap_status_label,
+                "unlock_source": self.vault_unlock_source_label,
+                "next_step": self.vault_next_step_label,
+                "scope": self.device_pin_scope_label,
+                "confirmation": self.pin_confirmation_label,
+            },
+            generator_widgets={
+                "length": self.password_length_input,
+                "upper": self.use_uppercase_checkbox,
+                "lower": self.use_lowercase_checkbox,
+                "digits": self.use_digits_checkbox,
+                "symbols": self.use_symbols_checkbox,
+                "output": self.generated_password_output,
+                "generate": self.generate_password_button,
+                "copy": self.copy_generated_password_button,
+            },
+            load_buttons={
+                "credentials": self.load_credentials_button,
+                "notes": self.load_notes_button,
+                "files": self.load_files_button,
+                "all": self.load_all_button,
+            },
+            session_actions={
+                "lock": self.lock_now_button,
+                "logout": self.vault_logout_button,
+            },
+            tabs=self.tabs,
+        )
+
+        self.screen_stack.addWidget(self.system_workspace_view)
+        self.screen_stack.addWidget(self.vault_workspace_view)
+
+        hero_layout = QVBoxLayout()
+        hero_layout.setContentsMargins(0, 0, 0, 0)
+        hero_layout.setSpacing(4)
+        hero_layout.addWidget(self.screen_eyebrow_label)
+        hero_layout.addWidget(self.screen_title_label)
+        hero_layout.addWidget(self.screen_subtitle_label)
+
+        nav_layout = QHBoxLayout()
+        nav_layout.setContentsMargins(0, 0, 0, 0)
+        nav_layout.setSpacing(8)
+        nav_layout.addStretch(1)
+        nav_layout.addWidget(self.theme_toggle_button)
+        nav_layout.addWidget(self.nav_system_button)
+        nav_layout.addWidget(self.nav_vault_button)
+
+        hero_frame = QFrame()
+        hero_frame.setObjectName("heroFrame")
+        hero_frame_layout = QHBoxLayout(hero_frame)
+        hero_frame_layout.setContentsMargins(18, 16, 18, 16)
+        hero_frame_layout.setSpacing(16)
+        hero_frame_layout.addLayout(hero_layout, 1)
+        hero_frame_layout.addLayout(nav_layout)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(4)
-        layout.addLayout(header_layout)
-        layout.addLayout(form_layout)
-        layout.addLayout(auth_buttons_layout)
-        layout.addLayout(vault_row)
-        layout.addWidget(self.pin_bootstrap_status_label)
-        layout.addWidget(self.vault_unlock_source_label)
-        layout.addWidget(self.vault_next_step_label)
-        layout.addWidget(self.device_pin_scope_label)
-        layout.addWidget(self.pin_confirmation_input)
-        layout.addWidget(self.pin_confirmation_label)
-        layout.addWidget(self.advanced_recovery_widget)
-        layout.addWidget(vault_hint_label)
-        layout.addWidget(self.status_label)
-        layout.addWidget(self.session_label)
-        layout.addLayout(dashboard_row)
-        layout.addWidget(self.tabs, 1)
-        layout.addLayout(password_row)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+        layout.addWidget(hero_frame)
+        layout.addWidget(self.screen_stack, 1)
 
         container = QWidget()
         container.setLayout(layout)
@@ -571,7 +708,9 @@ class MainWindow(QMainWindow):
         if app is not None:
             app.installEventFilter(self)
 
+        self._apply_theme()
         self.refresh_session_label()
+        self._refresh_system_state_indicators()
         self._refresh_action_states()
         self._refresh_idle_policy()
 
@@ -589,6 +728,7 @@ class MainWindow(QMainWindow):
 
         left_widget = QWidget()
         left_widget.setLayout(left_layout)
+        left_widget.setMaximumWidth(460)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
@@ -607,47 +747,83 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
         return widget
 
+    def _build_workspace_card(self, *, title: str, hint: str, content_layout) -> QFrame:
+        card = QFrame()
+        card.setObjectName("workspaceCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(10)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("sectionTitle")
+        layout.addWidget(title_label)
+
+        hint_label = QLabel(hint)
+        hint_label.setObjectName("sectionHint")
+        hint_label.setWordWrap(True)
+        layout.addWidget(hint_label)
+
+        if isinstance(content_layout, QWidget):
+            layout.addWidget(content_layout, 1)
+        else:
+            layout.addLayout(content_layout, 1)
+
+        return card
+
     def _build_credentials_tab(self) -> QWidget:
-        create_buttons_layout = QHBoxLayout()
-        create_buttons_layout.addWidget(self.load_credential_detail_button)
-        create_buttons_layout.addWidget(self.create_credential_button)
-        create_buttons_layout.addWidget(self.update_credential_button)
-        create_buttons_layout.addWidget(self.delete_credential_button)
-        create_buttons_layout.addWidget(self.reset_credential_payload_button)
+        list_actions = QHBoxLayout()
+        list_actions.setContentsMargins(0, 0, 0, 0)
+        list_actions.setSpacing(8)
+        list_actions.addWidget(self.load_credentials_button)
+        list_actions.addWidget(self.load_credential_detail_button)
+        list_actions.addStretch(1)
 
-        create_hint_label = QLabel(
-            "Create/update uses the current 'Device name' value and the unlocked session vault key. "
-            "Create reserves a new credential ID; load a credential detail to prefill plaintext editors before saving a new encrypted version."
+        list_content = QVBoxLayout()
+        list_content.setContentsMargins(0, 0, 0, 0)
+        list_content.setSpacing(10)
+        list_content.addLayout(list_actions)
+        list_content.addWidget(self.credentials_list, 1)
+
+        left_card = self._build_workspace_card(
+            title="Credentials list",
+            hint="Browse apps and usernames first, then load the selected item to inspect or revise it.",
+            content_layout=list_content,
         )
-        create_hint_label.setWordWrap(True)
+        left_card.setMaximumWidth(420)
 
-        create_form_layout = QFormLayout()
-        create_form_layout.addRow("Metadata JSON (plaintext)", self.credential_metadata_input)
-        create_form_layout.addRow("Payload JSON (plaintext)", self.credential_payload_input)
-        create_form_layout.addRow("Generated header JSON", self.credential_header_input)
+        detail_actions = QHBoxLayout()
+        detail_actions.setContentsMargins(0, 0, 0, 0)
+        detail_actions.setSpacing(8)
+        detail_actions.addWidget(self.create_credential_button)
+        detail_actions.addWidget(self.update_credential_button)
+        detail_actions.addWidget(self.delete_credential_button)
+        detail_actions.addStretch(1)
+        detail_actions.addWidget(self.reset_credential_payload_button)
 
-        left_layout = QVBoxLayout()
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(4)
-        left_layout.addLayout(create_buttons_layout)
-        left_layout.addWidget(create_hint_label)
-        left_layout.addLayout(create_form_layout)
-        left_layout.addWidget(self.credentials_list)
+        detail_content = QVBoxLayout()
+        detail_content.setContentsMargins(0, 0, 0, 0)
+        detail_content.setSpacing(10)
+        detail_content.addLayout(detail_actions)
+        detail_content.addWidget(self.credentials_output, 1)
 
-        left_widget = QWidget()
-        left_widget.setLayout(left_layout)
+        detail_card = self._build_workspace_card(
+            title="Credential detail",
+            hint="The default view stays readable. Use New or Edit to open a focused draft dialog without turning the workspace into a raw editor.",
+            content_layout=detail_content,
+        )
+        detail_card.setObjectName("detailCard")
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
-        splitter.addWidget(left_widget)
-        splitter.addWidget(self.credentials_output)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 4)
-        splitter.setSizes([520, 680])
+        splitter.addWidget(left_card)
+        splitter.addWidget(detail_card)
+        splitter.setStretchFactor(0, 2)
+        splitter.setStretchFactor(1, 3)
+        splitter.setSizes([380, 760])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        layout.setSpacing(8)
         layout.addWidget(splitter)
 
         widget = QWidget()
@@ -655,47 +831,59 @@ class MainWindow(QMainWindow):
         return widget
 
     def _build_notes_tab(self) -> QWidget:
-        create_buttons_layout = QHBoxLayout()
-        create_buttons_layout.addWidget(self.load_note_detail_button)
-        create_buttons_layout.addWidget(self.create_note_button)
-        create_buttons_layout.addWidget(self.update_note_button)
-        create_buttons_layout.addWidget(self.delete_note_button)
-        create_buttons_layout.addWidget(self.reset_note_payload_button)
+        list_actions = QHBoxLayout()
+        list_actions.setContentsMargins(0, 0, 0, 0)
+        list_actions.setSpacing(8)
+        list_actions.addWidget(self.load_notes_button)
+        list_actions.addWidget(self.load_note_detail_button)
+        list_actions.addStretch(1)
 
-        create_hint_label = QLabel(
-            "Create/update uses the current 'Device name' value and the unlocked session vault key. "
-            "Create reserves a new note ID; load a note detail to prefill plaintext editors before saving a new encrypted version."
+        list_content = QVBoxLayout()
+        list_content.setContentsMargins(0, 0, 0, 0)
+        list_content.setSpacing(10)
+        list_content.addLayout(list_actions)
+        list_content.addWidget(self.notes_list, 1)
+
+        left_card = self._build_workspace_card(
+            title="Notes list",
+            hint="Browse note titles first, then load the selected item to review or revise it.",
+            content_layout=list_content,
         )
-        create_hint_label.setWordWrap(True)
+        left_card.setMaximumWidth(420)
 
-        create_form_layout = QFormLayout()
-        create_form_layout.addRow("Note type", self.note_type_input)
-        create_form_layout.addRow("Metadata JSON (plaintext)", self.note_metadata_input)
-        create_form_layout.addRow("Payload JSON (plaintext)", self.note_payload_input)
-        create_form_layout.addRow("Generated header JSON", self.note_header_input)
+        detail_actions = QHBoxLayout()
+        detail_actions.setContentsMargins(0, 0, 0, 0)
+        detail_actions.setSpacing(8)
+        detail_actions.addWidget(self.create_note_button)
+        detail_actions.addWidget(self.update_note_button)
+        detail_actions.addWidget(self.delete_note_button)
+        detail_actions.addStretch(1)
+        detail_actions.addWidget(self.reset_note_payload_button)
 
-        left_layout = QVBoxLayout()
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(4)
-        left_layout.addLayout(create_buttons_layout)
-        left_layout.addWidget(create_hint_label)
-        left_layout.addLayout(create_form_layout)
-        left_layout.addWidget(self.notes_list)
+        detail_content = QVBoxLayout()
+        detail_content.setContentsMargins(0, 0, 0, 0)
+        detail_content.setSpacing(10)
+        detail_content.addLayout(detail_actions)
+        detail_content.addWidget(self.notes_output, 1)
 
-        left_widget = QWidget()
-        left_widget.setLayout(left_layout)
+        detail_card = self._build_workspace_card(
+            title="Note detail",
+            hint="Keep the everyday view calm and readable. Open a focused draft dialog when you need to create or edit content.",
+            content_layout=detail_content,
+        )
+        detail_card.setObjectName("detailCard")
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
-        splitter.addWidget(left_widget)
-        splitter.addWidget(self.notes_output)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 4)
-        splitter.setSizes([520, 680])
+        splitter.addWidget(left_card)
+        splitter.addWidget(detail_card)
+        splitter.setStretchFactor(0, 2)
+        splitter.setStretchFactor(1, 3)
+        splitter.setSizes([380, 760])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        layout.setSpacing(8)
         layout.addWidget(splitter)
 
         widget = QWidget()
@@ -703,17 +891,23 @@ class MainWindow(QMainWindow):
         return widget
 
     def _build_files_tab(self) -> QWidget:
-        create_buttons_layout = QHBoxLayout()
-        create_buttons_layout.setContentsMargins(0, 0, 0, 0)
-        create_buttons_layout.setSpacing(4)
-        create_buttons_layout.addWidget(self.load_file_detail_button)
-        create_buttons_layout.addWidget(self.pick_file_button)
-        create_buttons_layout.addWidget(self.create_file_button)
-        create_buttons_layout.addWidget(self.cancel_file_upload_button)
-        create_buttons_layout.addWidget(self.pick_download_target_button)
-        create_buttons_layout.addWidget(self.download_file_button)
-        create_buttons_layout.addWidget(self.cancel_file_download_button)
-        create_buttons_layout.addWidget(self.reset_file_payload_button)
+        primary_actions_layout = QHBoxLayout()
+        primary_actions_layout.setContentsMargins(0, 0, 0, 0)
+        primary_actions_layout.setSpacing(8)
+        primary_actions_layout.addWidget(self.load_file_detail_button)
+        primary_actions_layout.addWidget(self.pick_file_button)
+        primary_actions_layout.addWidget(self.create_file_button)
+        primary_actions_layout.addWidget(self.cancel_file_upload_button)
+        primary_actions_layout.addStretch(1)
+
+        secondary_actions_layout = QHBoxLayout()
+        secondary_actions_layout.setContentsMargins(0, 0, 0, 0)
+        secondary_actions_layout.setSpacing(8)
+        secondary_actions_layout.addWidget(self.pick_download_target_button)
+        secondary_actions_layout.addWidget(self.download_file_button)
+        secondary_actions_layout.addWidget(self.cancel_file_download_button)
+        secondary_actions_layout.addWidget(self.reset_file_payload_button)
+        secondary_actions_layout.addStretch(1)
 
         create_hint_label = QLabel(
             "Pick a local file for encrypted upload, or select a vault file and download/decrypt it locally. "
@@ -723,26 +917,26 @@ class MainWindow(QMainWindow):
 
         path_row = QHBoxLayout()
         path_row.setContentsMargins(0, 0, 0, 0)
-        path_row.setSpacing(4)
+        path_row.setSpacing(8)
         path_row.addWidget(QLabel("Selected file"))
         path_row.addWidget(self.file_path_input, 1)
 
         target_row = QHBoxLayout()
         target_row.setContentsMargins(0, 0, 0, 0)
-        target_row.setSpacing(4)
+        target_row.setSpacing(8)
         target_row.addWidget(QLabel("Download target"))
         target_row.addWidget(self.file_download_target_input, 1)
 
         runtime_row = QHBoxLayout()
         runtime_row.setContentsMargins(0, 0, 0, 0)
-        runtime_row.setSpacing(4)
+        runtime_row.setSpacing(8)
         runtime_row.addWidget(QLabel("Chunk size"))
         runtime_row.addWidget(self.file_chunk_size_kib_input)
         runtime_row.addStretch(1)
 
         progress_row = QHBoxLayout()
         progress_row.setContentsMargins(0, 0, 0, 0)
-        progress_row.setSpacing(4)
+        progress_row.setSpacing(8)
         progress_row.addWidget(QLabel("Upload"))
         progress_row.addWidget(self.file_upload_progress, 1)
         progress_row.addWidget(QLabel("Download"))
@@ -768,15 +962,16 @@ class MainWindow(QMainWindow):
 
         previews_row = QHBoxLayout()
         previews_row.setContentsMargins(0, 0, 0, 0)
-        previews_row.setSpacing(4)
+        previews_row.setSpacing(8)
         previews_row.addLayout(manifest_layout, 1)
         previews_row.addLayout(header_layout, 1)
         previews_row.addLayout(chunks_layout, 1)
 
         left_layout = QVBoxLayout()
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(4)
-        left_layout.addLayout(create_buttons_layout)
+        left_layout.setSpacing(10)
+        left_layout.addLayout(primary_actions_layout)
+        left_layout.addLayout(secondary_actions_layout)
         left_layout.addWidget(create_hint_label)
         left_layout.addLayout(path_row)
         left_layout.addLayout(target_row)
@@ -785,20 +980,33 @@ class MainWindow(QMainWindow):
         left_layout.addLayout(previews_row)
         left_layout.addWidget(self.files_list)
 
-        left_widget = QWidget()
-        left_widget.setLayout(left_layout)
+        left_widget = self._build_workspace_card(
+            title="Files workflow",
+            hint="Pick a local file to encrypt and upload, or select a vault file and download it to a local path.",
+            content_layout=left_layout,
+        )
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
         splitter.addWidget(left_widget)
-        splitter.addWidget(self.files_output)
+        file_detail_layout = QVBoxLayout()
+        file_detail_layout.setContentsMargins(0, 0, 0, 0)
+        file_detail_layout.setSpacing(10)
+        file_detail_layout.addWidget(self.files_output, 1)
+        file_detail_card = self._build_workspace_card(
+            title="File detail",
+            hint="Use the list and progress controls on the left, and review file metadata or download status here.",
+            content_layout=file_detail_layout,
+        )
+        file_detail_card.setObjectName("detailCard")
+        splitter.addWidget(file_detail_card)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 4)
         splitter.setSizes([560, 640])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        layout.setSpacing(8)
         layout.addWidget(splitter)
 
         widget = QWidget()
@@ -809,6 +1017,388 @@ class MainWindow(QMainWindow):
         scroll_area.setWidget(widget)
         return scroll_area
 
+    def _resolve_active_screen(self) -> str:
+        if not self.desktop_service.is_authenticated():
+            return "system"
+        if getattr(self, "current_screen", "system") == "vault":
+            return "vault"
+        return "system"
+
+    def _screen_index(self, screen: str) -> int:
+        return {
+            "system": 0,
+            "vault": 1,
+        }.get(screen, 0)
+
+    def _apply_screen_state(self) -> None:
+        required_attrs = (
+            "screen_stack",
+            "screen_eyebrow_label",
+            "screen_title_label",
+            "screen_subtitle_label",
+            "nav_system_button",
+            "nav_vault_button",
+        )
+        if not all(hasattr(self, attr) for attr in required_attrs):
+            return
+
+        screen = self._resolve_active_screen()
+        self.current_screen = screen
+        self.screen_stack.setCurrentIndex(self._screen_index(screen))
+
+        descriptors = {
+            "system": (
+                "Screen 1 / System",
+                "Probe, connect, and review session state",
+                "Use this screen for API reachability, account login, and system messages before moving into vault operations.",
+            ),
+            "vault": (
+                "Screen 2 / Vault",
+                "Unlock, manage access, and work in the vault",
+                "PIN, recovery, lock, password generation, and the credentials, notes, and files workspace stay together here.",
+            ),
+        }
+        eyebrow, title, subtitle = descriptors[screen]
+        self.screen_eyebrow_label.setText(eyebrow)
+        self.screen_title_label.setText(title)
+        self.screen_subtitle_label.setText(subtitle)
+
+        authenticated = self.desktop_service.is_authenticated()
+        self.nav_system_button.setVisible(True)
+        self.nav_vault_button.setVisible(authenticated)
+        self.nav_system_button.setEnabled(True)
+        self.nav_vault_button.setEnabled(authenticated)
+        self.nav_system_button.setProperty("navCurrent", screen == "system")
+        self.nav_vault_button.setProperty("navCurrent", screen == "vault")
+        self._repolish(self.nav_system_button)
+        self._repolish(self.nav_vault_button)
+
+    def _switch_to_screen(self, screen: str) -> None:
+        self.current_screen = screen
+        self._apply_screen_state()
+
+    def _infer_status_severity(self, message: str) -> str:
+        lower = message.lower()
+        if any(token in lower for token in ("failed", "error", "cannot", "unavailable")):
+            return "error"
+        if any(token in lower for token in ("warning", "canceled", "cancelled")):
+            return "warning"
+        if any(token in lower for token in ("succeeded", "success", "completed", "copied", "saved", "selected", "unlocked")):
+            return "success"
+        return "info"
+
+    def _append_activity_log(self, message: str, *, severity: str | None = None) -> None:
+        message = message.strip()
+        if not message:
+            return
+        if message == self._last_activity_message:
+            return
+
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        level = (severity or self._infer_status_severity(message)).upper()
+        item = QListWidgetItem(f"{timestamp}  {level:<7} {message}")
+        level = severity or self._infer_status_severity(message)
+        palette = _theme_palette(getattr(self, "current_theme", "light"))
+        if level == "error":
+            item.setForeground(QColor(palette["danger"]))
+            item.setBackground(QColor(palette["danger_bg"]))
+        elif level == "warning":
+            item.setForeground(QColor(palette["warning"]))
+        elif level == "success":
+            item.setForeground(QColor(palette["success"]))
+        else:
+            item.setForeground(QColor(palette["text"]))
+        self.activity_log_list.insertItem(0, item)
+        while self.activity_log_list.count() > 200:
+            self.activity_log_list.takeItem(self.activity_log_list.count() - 1)
+        self._last_activity_message = message
+
+    def _handle_status_text_change(self, message: str) -> None:
+        if not hasattr(self, "activity_log_list"):
+            return
+        self._append_activity_log(message)
+        self._refresh_system_state_indicators()
+
+    def _refresh_system_state_indicators(self) -> None:
+        if not hasattr(self, "connection_state_label"):
+            return
+
+        if self._last_probe_result is None:
+            self.connection_state_label.setText("Connection not checked")
+            self._set_badge_state(self.connection_state_label, "warning")
+        elif getattr(self._last_probe_result, "error", None):
+            self.connection_state_label.setText("API unreachable")
+            self._set_badge_state(self.connection_state_label, "error")
+        else:
+            self.connection_state_label.setText("API reachable")
+            self._set_badge_state(self.connection_state_label, "success")
+
+        if not self.desktop_service.is_authenticated():
+            self.session_state_label.setText("No session")
+            self._set_badge_state(self.session_state_label, "warning")
+        elif self._is_vault_unlocked():
+            self.session_state_label.setText("Session active, vault unlocked")
+            self._set_badge_state(self.session_state_label, "success")
+        else:
+            self.session_state_label.setText("Session active, vault locked")
+            self._set_badge_state(self.session_state_label, "info")
+
+        probe_meta = []
+        if self._last_probe_result is not None and not getattr(self._last_probe_result, "error", None):
+            probe_meta.append(f"Project: {self._last_probe_result.project_name or '-'}")
+            probe_meta.append(f"Version: {self._last_probe_result.version or '-'}")
+            probe_meta.append(f"Env: {self._last_probe_result.environment or '-'}")
+        probe_meta.append(f"API: {self.api_client.base_url}")
+        self.api_details_label.setText(" | ".join(probe_meta))
+
+        if self._last_probe_result is None or getattr(self._last_probe_result, "error", None):
+            self._set_button_tone(self.probe_button, "primary")
+            self._set_button_tone(self.login_button, "secondary")
+        elif not self.desktop_service.is_authenticated():
+            self._set_button_tone(self.probe_button, "secondary")
+            self._set_button_tone(self.login_button, "primary")
+        else:
+            self._set_button_tone(self.probe_button, "secondary")
+            self._set_button_tone(self.login_button, "secondary")
+
+    def run_copy_activity_log(self) -> None:
+        app = QApplication.instance()
+        if app is None:
+            self.status_label.setText("Clipboard is unavailable.")
+            return
+        lines = []
+        for index in range(self.activity_log_list.count()):
+            item = self.activity_log_list.item(index)
+            if item is not None:
+                lines.append(item.text())
+        app.clipboard().setText("\n".join(lines))
+        self.status_label.setText("Diagnostics copied to clipboard.")
+
+    def run_clear_activity_log(self) -> None:
+        self.activity_log_list.clear()
+        self._last_activity_message = ""
+        self.status_label.setText("Activity log cleared.")
+
+    def _repolish(self, widget: QWidget) -> None:
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+        widget.update()
+
+    def _set_button_tone(self, button: QPushButton, tone: str) -> None:
+        button.setProperty("tone", tone)
+        self._repolish(button)
+
+    def _set_badge_state(self, label: QLabel, level: str) -> None:
+        label.setProperty("statusLevel", level)
+        self._repolish(label)
+
+    def _build_stylesheet(self) -> str:
+        palette = _theme_palette(self.current_theme)
+        return """
+            QWidget {{
+                background: {window};
+                color: {text};
+                font-size: 13px;
+            }}
+            QLabel {{
+                background: transparent;
+            }}
+            QPushButton,
+            QLineEdit,
+            QTextEdit,
+            QPlainTextEdit,
+            QListWidget,
+            QSpinBox,
+            QLabel,
+            QCheckBox,
+            QTabBar::tab {{
+                font-size: 13px;
+            }}
+            QLineEdit,
+            QTextEdit,
+            QPlainTextEdit,
+            QListWidget,
+            QSpinBox {{
+                background: {input};
+                border: 1px solid {border};
+                border-radius: 10px;
+                color: {text};
+                padding: 8px 10px;
+                selection-background-color: {selection};
+            }}
+            QLineEdit:focus,
+            QTextEdit:focus,
+            QPlainTextEdit:focus,
+            QListWidget:focus,
+            QSpinBox:focus {{
+                border: 1px solid {primary};
+            }}
+            QPushButton {{
+                background: {surface_alt};
+                border: 1px solid {border};
+                border-radius: 10px;
+                color: {text};
+                font-weight: 600;
+                min-height: 30px;
+                padding: 6px 12px;
+            }}
+            QPushButton:hover {{
+                border-color: {primary};
+            }}
+            QPushButton:pressed {{
+                background: {nav_bg};
+            }}
+            QPushButton:disabled {{
+                color: {muted};
+                background: {surface_alt};
+                border-color: {border};
+            }}
+            QPushButton[tone="primary"] {{
+                background: {primary};
+                border-color: {primary};
+                color: #ffffff;
+            }}
+            QPushButton[tone="primary"]:hover {{
+                background: {primary_hover};
+            }}
+            QPushButton[tone="secondary"] {{
+                background: {surface_alt};
+                border-color: {border};
+                color: {text};
+            }}
+            QPushButton[tone="danger"] {{
+                background: {danger_bg};
+                border-color: {danger};
+                color: {danger};
+            }}
+            QPushButton[nav="true"] {{
+                background: {nav_bg};
+                border: 1px solid {border};
+                border-radius: 999px;
+                padding: 6px 12px;
+            }}
+            QPushButton[nav="true"][navCurrent="true"] {{
+                background: {primary};
+                border-color: {primary};
+                color: #ffffff;
+            }}
+            QTabWidget::pane {{
+                border: 0;
+            }}
+            QTabBar::tab {{
+                background: {surface_alt};
+                border: 1px solid {border};
+                border-bottom: 0;
+                border-top-left-radius: 10px;
+                border-top-right-radius: 10px;
+                color: {muted};
+                padding: 8px 14px;
+                margin-right: 4px;
+            }}
+            QTabBar::tab:selected {{
+                background: {surface};
+                color: {text};
+            }}
+            #heroFrame,
+            #surfacePanel,
+            #workspaceCard,
+            #detailCard {{
+                background: {surface};
+                border: 1px solid {border};
+                border-radius: 14px;
+            }}
+            #surfacePanel[panelVariant="secondary"],
+            #workspaceCard[cardVariant="secondary"],
+            #detailCard[cardVariant="secondary"] {{
+                background: {surface_alt};
+            }}
+            #screenEyebrow {{
+                color: {muted};
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+            }}
+            #screenTitle {{
+                color: {text};
+                font-size: 26px;
+                font-weight: 700;
+            }}
+            #screenSubtitle,
+            #surfacePanelBody,
+            #sectionHint,
+            #dialogSummary,
+            #sessionBody {{
+                color: {muted};
+            }}
+            #surfacePanelTitle,
+            #sectionTitle {{
+                color: {text};
+                font-size: 15px;
+                font-weight: 700;
+            }}
+            #fieldLabel {{
+                color: {text};
+                font-size: 12px;
+                font-weight: 700;
+            }}
+            #statePill {{
+                background: {badge_bg};
+                border: 1px solid {border};
+                border-radius: 999px;
+                color: {text};
+                font-size: 12px;
+                font-weight: 700;
+                padding: 7px 12px;
+            }}
+            #statePill[statusLevel="success"] {{
+                color: {success};
+                border-color: {success};
+            }}
+            #statePill[statusLevel="warning"] {{
+                color: {warning};
+                border-color: {warning};
+            }}
+            #statePill[statusLevel="error"] {{
+                color: {danger};
+                border-color: {danger};
+            }}
+            #statePill[statusLevel="info"] {{
+                color: {info};
+                border-color: {info};
+            }}
+            #technicalMeta,
+            #monoValue {{
+                color: {muted};
+                background: {mono_bg};
+                border: 1px solid {border};
+                border-radius: 10px;
+                font-family: monospace;
+                padding: 8px 10px;
+            }}
+            #activityLog {{
+                background: {input};
+                border: 1px solid {border};
+                border-radius: 10px;
+                padding: 6px;
+                font-family: monospace;
+            }}
+        """.format(**palette)
+
+    def _apply_theme(self) -> None:
+        self.setStyleSheet(self._build_stylesheet())
+        if hasattr(self, "theme_toggle_button"):
+            self.theme_toggle_button.setText(
+                "Theme: Dark" if self.current_theme == "dark" else "Theme: Light"
+            )
+
+    def run_toggle_theme(self) -> None:
+        self.current_theme = "dark" if self.current_theme == "light" else "light"
+        self._apply_theme()
+        self._save_ui_preferences()
+        self.status_label.setText(
+            f"{'Dark' if self.current_theme == 'dark' else 'Light'} theme enabled."
+        )
+
     def _save_ui_preferences(self) -> None:
         self.local_settings_store.save(
             PersistedUiSettings(
@@ -817,6 +1407,7 @@ class MainWindow(QMainWindow):
                 device_name=self.device_name_input.text().strip() or "vault-desktop-dev",
                 platform=self.platform_input.text().strip() or "linux",
                 last_tab_index=self.tabs.currentIndex(),
+                theme=self.current_theme,
             )
         )
 
@@ -873,6 +1464,7 @@ class MainWindow(QMainWindow):
         thread.start()
 
     def _handle_probe_result(self, result) -> None:
+        self._last_probe_result = result
         if result.error:
             self.status_label.setText(
                 "Backend probe failed.\n"
@@ -906,20 +1498,14 @@ class MainWindow(QMainWindow):
         session = self.desktop_service.current_session()
         assert session is not None
 
-        access_preview = (
-            session.access_token[:24] + "..."
-            if len(session.access_token) > 24
-            else session.access_token
-        )
-
         self.status_label.setText(
             "Login succeeded.\n"
             f"User ID: {session.user_id}\n"
             f"Device ID: {session.device_id}\n"
             f"Session ID: {session.session_id}\n"
-            f"Token type: {session.token_type}\n"
-            f"Access token preview: {access_preview}"
+            f"Token type: {session.token_type}"
         )
+        self.current_screen = "vault"
         self.recovery_key_b64_input.clear()
         self.refresh_session_label()
         if not self._is_vault_unlocked():
@@ -939,6 +1525,7 @@ class MainWindow(QMainWindow):
         if dialog.exec():
             self.identifier_input.setText(dialog.registered_identifier)
             self.password_input.clear()
+            self.current_screen = "system"
             self.status_label.setText(
                 "Registration complete. Recovery key was shown once. "
                 "Save it somewhere safe, then log in."
@@ -1026,6 +1613,105 @@ class MainWindow(QMainWindow):
         clipboard.setText(password)
         self.status_label.setText("Generated password copied to clipboard.")
 
+    def _reset_credential_editor_defaults(self) -> tuple[str, str]:
+        metadata_text = json.dumps({"label": "Personal"}, indent=2)
+        payload_text = json.dumps(
+            {
+                "username": "alice",
+                "secret": "s3cr3t",
+                "url": "https://example.com",
+            },
+            indent=2,
+        )
+        return metadata_text, payload_text
+
+    def _reset_note_editor_defaults(self) -> tuple[str, str, str]:
+        metadata_text = json.dumps({"tags": ["todo"]}, indent=2)
+        payload_text = json.dumps(
+            {
+                "title": "todo",
+                "content": "buy milk",
+            },
+            indent=2,
+        )
+        return "note", metadata_text, payload_text
+
+    def run_open_create_credential_dialog(self) -> None:
+        metadata_text, payload_text = self._reset_credential_editor_defaults()
+        dialog = JsonItemEditorDialog(
+            title="New Credential",
+            summary="Create a new encrypted credential. Labels stay human-readable in the list, while payload content is encrypted before upload.",
+            action_text="Create Credential",
+            metadata_text=metadata_text,
+            payload_text=payload_text,
+            header_text=self.credential_header_input.toPlainText(),
+            reset_callback=lambda: (*self._reset_credential_editor_defaults(), None),
+            parent=self,
+        )
+        if dialog.exec():
+            self.credential_metadata_input.setPlainText(dialog.metadata_text())
+            self.credential_payload_input.setPlainText(dialog.payload_text())
+            self.run_create_credential()
+
+    def run_open_update_credential_dialog(self) -> None:
+        if not self.selected_credential_id:
+            self.status_label.setText("Load a credential detail first.")
+            return
+        dialog = JsonItemEditorDialog(
+            title="Edit Credential",
+            summary="Review the current decrypted draft, make changes, then save a new encrypted version.",
+            action_text="Save Credential",
+            metadata_text=self.credential_metadata_input.toPlainText(),
+            payload_text=self.credential_payload_input.toPlainText(),
+            header_text=self.credential_header_input.toPlainText(),
+            reset_callback=lambda: (*self._reset_credential_editor_defaults(), None),
+            parent=self,
+        )
+        if dialog.exec():
+            self.credential_metadata_input.setPlainText(dialog.metadata_text())
+            self.credential_payload_input.setPlainText(dialog.payload_text())
+            self.run_update_credential()
+
+    def run_open_create_note_dialog(self) -> None:
+        note_type, metadata_text, payload_text = self._reset_note_editor_defaults()
+        dialog = JsonItemEditorDialog(
+            title="New Note",
+            summary="Create a new encrypted note. The note title remains readable in the list while the note body is encrypted.",
+            action_text="Create Note",
+            metadata_text=metadata_text,
+            payload_text=payload_text,
+            header_text=self.note_header_input.toPlainText(),
+            note_type=note_type,
+            reset_callback=self._reset_note_editor_defaults,
+            parent=self,
+        )
+        if dialog.exec():
+            self.note_type_input.setText(dialog.note_type_text() or "note")
+            self.note_metadata_input.setPlainText(dialog.metadata_text())
+            self.note_payload_input.setPlainText(dialog.payload_text())
+            self.run_create_note()
+
+    def run_open_update_note_dialog(self) -> None:
+        if not self.selected_note_id:
+            self.status_label.setText("Load a note detail first.")
+            return
+        dialog = JsonItemEditorDialog(
+            title="Edit Note",
+            summary="Review the current decrypted draft, make changes, then save a new encrypted version of the note.",
+            action_text="Save Note",
+            metadata_text=self.note_metadata_input.toPlainText(),
+            payload_text=self.note_payload_input.toPlainText(),
+            header_text=self.note_header_input.toPlainText(),
+            note_type=self.note_type_input.text().strip() or "note",
+            reset_callback=self._reset_note_editor_defaults,
+            parent=self,
+        )
+        if dialog.exec():
+            self.note_type_input.setText(dialog.note_type_text() or "note")
+            self.note_metadata_input.setPlainText(dialog.metadata_text())
+            self.note_payload_input.setPlainText(dialog.payload_text())
+            self.run_update_note()
+
     def run_create_credential(self) -> None:
         device_name = self.device_name_input.text().strip()
         if not device_name:
@@ -1060,6 +1746,11 @@ class MainWindow(QMainWindow):
                 f"Error: {exc}"
             )
             return
+
+        plaintext_app_name, plaintext_username = self._extract_credential_listing_fields(
+            plaintext_metadata,
+            plaintext_payload,
+        )
 
         prepare_result = self.desktop_service.prepare_credential(device_name=device_name)
         if prepare_result.error:
@@ -1110,6 +1801,8 @@ class MainWindow(QMainWindow):
             device_name=device_name,
             credential_id=credential_id,
             credential_version=credential_version,
+            plaintext_app_name=plaintext_app_name,
+            plaintext_username=plaintext_username,
             encrypted_metadata=encrypted.encrypted_metadata,
             encrypted_payload=encrypted.encrypted_payload,
             encryption_header=encrypted.encryption_header,
@@ -1164,6 +1857,11 @@ class MainWindow(QMainWindow):
             )
             return
 
+        plaintext_title = self._extract_note_listing_title(
+            plaintext_metadata,
+            plaintext_payload,
+        )
+
         prepare_result = self.desktop_service.prepare_note(
             device_name=device_name,
             note_type=note_type,
@@ -1216,6 +1914,7 @@ class MainWindow(QMainWindow):
             device_name=device_name,
             note_id=note_id,
             note_version=note_version,
+            plaintext_title=plaintext_title,
             encrypted_metadata=encrypted.encrypted_metadata,
             encrypted_payload=encrypted.encrypted_payload,
             encryption_header=encrypted.encryption_header,
@@ -1277,6 +1976,11 @@ class MainWindow(QMainWindow):
             )
             return
 
+        plaintext_app_name, plaintext_username = self._extract_credential_listing_fields(
+            plaintext_metadata,
+            plaintext_payload,
+        )
+
         next_version = current_version + 1
 
         try:
@@ -1303,6 +2007,8 @@ class MainWindow(QMainWindow):
             credential_id=credential_id,
             device_name=device_name,
             expected_current_version=current_version,
+            plaintext_app_name=plaintext_app_name,
+            plaintext_username=plaintext_username,
             encrypted_metadata=encrypted.encrypted_metadata,
             encrypted_payload=encrypted.encrypted_payload,
             encryption_header=encrypted.encryption_header,
@@ -1364,6 +2070,11 @@ class MainWindow(QMainWindow):
             )
             return
 
+        plaintext_title = self._extract_note_listing_title(
+            plaintext_metadata,
+            plaintext_payload,
+        )
+
         next_version = current_version + 1
 
         try:
@@ -1390,6 +2101,7 @@ class MainWindow(QMainWindow):
             note_id=note_id,
             device_name=device_name,
             expected_current_version=current_version,
+            plaintext_title=plaintext_title,
             encrypted_metadata=encrypted.encrypted_metadata,
             encrypted_payload=encrypted.encrypted_payload,
             encryption_header=encrypted.encryption_header,
@@ -1494,6 +2206,7 @@ class MainWindow(QMainWindow):
             return
 
         self.vault_pin_input.clear()
+        self.current_screen = "vault"
         self.status_label.setText(
             "Vault unlocked with PIN.\n"
             "Credentials, notes, and files can now use the shared session vault state."
@@ -1653,6 +2366,7 @@ class MainWindow(QMainWindow):
             return
 
         self.recovery_key_b64_input.clear()
+        self.current_screen = "vault"
         self.status_label.setText(
             "Vault unlocked with recovery key.\n"
             "The app fetched wrapped bootstrap material from the API and unwrapped the session vault key locally."
@@ -1676,6 +2390,7 @@ class MainWindow(QMainWindow):
 
         self.desktop_service.clear_session_vault_master_key()
         self.recovery_key_b64_input.clear()
+        self.current_screen = "vault"
         self._clear_sensitive_views_for_locked_vault()
         self.status_label.setText(
             "Vault locked.\n"
@@ -1873,35 +2588,16 @@ class MainWindow(QMainWindow):
         self.file_download_worker.request_cancel()
 
     def reset_credential_create_fields(self) -> None:
-        self.credential_metadata_input.setPlainText(
-            json.dumps({"label": "Personal"}, indent=2)
-        )
-        self.credential_payload_input.setPlainText(
-            json.dumps(
-                {
-                    "username": "alice",
-                    "secret": "s3cr3t",
-                    "url": "https://example.com",
-                },
-                indent=2,
-            )
-        )
+        metadata_text, payload_text = self._reset_credential_editor_defaults()
+        self.credential_metadata_input.setPlainText(metadata_text)
+        self.credential_payload_input.setPlainText(payload_text)
         self.credential_header_input.clear()
 
     def reset_note_create_fields(self) -> None:
-        self.note_type_input.setText("note")
-        self.note_metadata_input.setPlainText(
-            json.dumps({"tags": ["todo"]}, indent=2)
-        )
-        self.note_payload_input.setPlainText(
-            json.dumps(
-                {
-                    "title": "todo",
-                    "content": "buy milk",
-                },
-                indent=2,
-            )
-        )
+        note_type, metadata_text, payload_text = self._reset_note_editor_defaults()
+        self.note_type_input.setText(note_type)
+        self.note_metadata_input.setPlainText(metadata_text)
+        self.note_payload_input.setPlainText(payload_text)
         self.note_header_input.clear()
 
     def reset_file_create_fields(self) -> None:
@@ -2014,6 +2710,23 @@ class MainWindow(QMainWindow):
                 "Vault is unlocked. Sensitive create, update, and decrypt actions are available for this session."
             )
 
+        if hasattr(self, "vault_home_summary_label") and not authenticated:
+            self.vault_home_summary_label.setText(
+                "Log in, then unlock the vault to browse credentials, notes, and files."
+            )
+        elif hasattr(self, "vault_home_summary_label") and not vault_unlocked:
+            self.vault_home_summary_label.setText(
+                "Vault access is still visible while locked. Load lists if needed, then unlock to reveal decrypted detail and enable create, update, upload, and download actions."
+            )
+        elif hasattr(self, "vault_home_summary_label") and unlock_method == "recovery_key":
+            self.vault_home_summary_label.setText(
+                "Vault is open. You unlocked with recovery, so this is a good time to enroll a local PIN for the next session."
+            )
+        elif hasattr(self, "vault_home_summary_label"):
+            self.vault_home_summary_label.setText(
+                "Vault is open. Choose a section, load the latest items, and inspect or edit the selected detail on the right."
+            )
+
         if pin_bootstrap_status == "other_account" and identifier_hint:
             self.device_pin_scope_label.setText(
                 "Device PIN scope: local to this desktop only, not synced to other devices, "
@@ -2070,11 +2783,24 @@ class MainWindow(QMainWindow):
             self.enroll_vault_pin_button.setText("Replace PIN for Current Account")
         else:
             self.enroll_vault_pin_button.setText("Enroll PIN on This Device")
+        if authenticated and not vault_unlocked and pin_bootstrap_status == "current_account":
+            self._set_button_tone(self.unlock_vault_pin_button, "primary")
+            self._set_button_tone(self.enroll_vault_pin_button, "secondary")
+            self._set_button_tone(self.unlock_with_recovery_key_button, "secondary")
+        elif authenticated and not vault_unlocked:
+            self._set_button_tone(self.unlock_vault_pin_button, "secondary")
+            self._set_button_tone(self.enroll_vault_pin_button, "secondary")
+            self._set_button_tone(self.unlock_with_recovery_key_button, "primary")
+        else:
+            self._set_button_tone(self.unlock_vault_pin_button, "secondary")
+            self._set_button_tone(self.enroll_vault_pin_button, "primary")
+            self._set_button_tone(self.unlock_with_recovery_key_button, "secondary")
 
         self.remove_vault_pin_button.setEnabled(
             authenticated and pin_bootstrap_available and confirmation_ready
         )
         self.lock_now_button.setEnabled(authenticated and vault_unlocked)
+        self.vault_logout_button.setEnabled(authenticated and not self._is_file_job_running())
         self.toggle_advanced_recovery_button.setEnabled(authenticated)
         self.recovery_key_b64_input.setEnabled(
             authenticated and not vault_unlocked and recovery_visible
@@ -2114,6 +2840,7 @@ class MainWindow(QMainWindow):
         self.download_file_button.setEnabled(
             file_jobs_idle and vault_unlocked and file_item_selected and file_target_ready
         )
+        self._apply_screen_state()
 
     def _is_vault_unlocked(self) -> bool:
         return self.desktop_service.has_session_vault_master_key()
@@ -2246,6 +2973,7 @@ class MainWindow(QMainWindow):
 
         self.desktop_service.clear_session_vault_master_key()
         self.recovery_key_b64_input.clear()
+        self.current_screen = "vault"
         self._clear_sensitive_views_for_locked_vault()
         self.refresh_session_label()
         self.status_label.setText(
@@ -2272,6 +3000,7 @@ class MainWindow(QMainWindow):
         self.selected_credential_current_version = None
         self.selected_note_id = None
         self.selected_note_current_version = None
+        self.current_screen = "system"
         self._stop_idle_timers()
         self.refresh_session_label()
         self._refresh_action_states()
@@ -2631,6 +3360,7 @@ class MainWindow(QMainWindow):
             self.probe_button,
             self.login_button,
             self.logout_button,
+            self.vault_logout_button,
             self.close_button,
             self.load_credentials_button,
             self.load_notes_button,
@@ -3012,6 +3742,51 @@ class MainWindow(QMainWindow):
 
         return parsed
 
+    def _first_non_empty_string(self, *values: object) -> str | None:
+        for value in values:
+            if isinstance(value, str):
+                stripped = value.strip()
+                if stripped:
+                    return stripped
+        return None
+
+    def _extract_credential_listing_fields(
+        self,
+        plaintext_metadata: dict | None,
+        plaintext_payload: dict,
+    ) -> tuple[str | None, str | None]:
+        metadata = plaintext_metadata or {}
+        payload = plaintext_payload or {}
+        app_name = self._first_non_empty_string(
+            metadata.get("label"),
+            metadata.get("name"),
+            payload.get("app_name"),
+            payload.get("service"),
+            payload.get("site"),
+            payload.get("title"),
+        )
+        username = self._first_non_empty_string(
+            payload.get("username"),
+            payload.get("login"),
+            payload.get("email"),
+            payload.get("account"),
+        )
+        return app_name, username
+
+    def _extract_note_listing_title(
+        self,
+        plaintext_metadata: dict | None,
+        plaintext_payload: dict,
+    ) -> str | None:
+        metadata = plaintext_metadata or {}
+        payload = plaintext_payload or {}
+        return self._first_non_empty_string(
+            payload.get("title"),
+            metadata.get("title"),
+            payload.get("name"),
+            metadata.get("label"),
+        )
+
     def _parse_json_array_text(
         self,
         widget: QTextEdit,
@@ -3069,6 +3844,7 @@ class MainWindow(QMainWindow):
     def refresh_session_label(self) -> None:
         if not self.desktop_service.is_authenticated():
             self.session_label.setText("No active session.")
+            self._refresh_system_state_indicators()
             return
 
         session = self.desktop_service.current_session()
@@ -3082,3 +3858,4 @@ class MainWindow(QMainWindow):
             f"Session ID: {session.session_id}\n"
             f"Vault key: {'loaded' if self.desktop_service.has_session_vault_master_key() else 'not loaded'}"
         )
+        self._refresh_system_state_indicators()

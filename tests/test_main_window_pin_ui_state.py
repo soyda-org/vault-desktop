@@ -17,6 +17,14 @@ from vault_crypto.vault_setup import bootstrap_new_vault
 VALID_MASTER_KEY_B64 = "S0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0s="
 
 
+class FakeStack:
+    def __init__(self) -> None:
+        self.current_index = -1
+
+    def setCurrentIndex(self, index: int) -> None:
+        self.current_index = index
+
+
 class FakeApiClient:
     def __init__(self, *, user_id: str, vault_profile_result=None) -> None:
         self.user_id = user_id
@@ -154,6 +162,7 @@ def make_window_harness(
     window.pin_bootstrap_status_label = QLabel()
     window.vault_unlock_source_label = QLabel()
     window.vault_next_step_label = QLabel()
+    window.vault_home_summary_label = QLabel()
     window.device_pin_scope_label = QLabel()
     window.pin_confirmation_label = QLabel()
 
@@ -161,6 +170,7 @@ def make_window_harness(
     window.enroll_vault_pin_button = QPushButton()
     window.remove_vault_pin_button = QPushButton()
     window.lock_now_button = QPushButton()
+    window.vault_logout_button = QPushButton()
     window.toggle_advanced_recovery_button = QPushButton()
     window.unlock_with_recovery_key_button = QPushButton()
     window.clear_vault_key_button = QPushButton()
@@ -186,6 +196,15 @@ def make_window_harness(
     window.advanced_recovery_widget = QWidget()
     window.advanced_recovery_widget.setVisible(False)
 
+    window.current_screen = "system"
+    window.screen_stack = FakeStack()
+    window.screen_eyebrow_label = QLabel()
+    window.screen_title_label = QLabel()
+    window.screen_subtitle_label = QLabel()
+    window.nav_system_button = QPushButton()
+    window.nav_vault_button = QPushButton()
+    window.theme_toggle_button = QPushButton()
+
     window.selected_credential_id = None
     window.selected_credential_current_version = None
     window.selected_note_id = None
@@ -196,6 +215,9 @@ def make_window_harness(
     )
     window._is_file_job_running = lambda: False
     window._refresh_action_states = lambda: MainWindow._refresh_action_states(window)
+    window._resolve_active_screen = lambda: MainWindow._resolve_active_screen(window)
+    window._screen_index = lambda screen: MainWindow._screen_index(window, screen)
+    window._apply_screen_state = lambda: MainWindow._apply_screen_state(window)
     window._locked_detail_text = lambda kind, item: MainWindow._locked_detail_text(window, kind, item)
     window._locked_placeholder_text = lambda kind: MainWindow._locked_placeholder_text(window, kind)
     window._clear_sensitive_views_for_locked_vault = lambda: MainWindow._clear_sensitive_views_for_locked_vault(window)
@@ -203,6 +225,9 @@ def make_window_harness(
     window._refresh_after_vault_unlock = lambda: None
     window._refresh_idle_policy = lambda: None
     window._stop_idle_timers = lambda: None
+    window._set_button_tone = lambda button, tone: None
+    window._set_badge_state = lambda label, level: None
+    window._repolish = lambda widget: None
     window.reset_credential_create_fields = lambda: None
     window.reset_note_create_fields = lambda: None
     window._save_ui_preferences = lambda: None
@@ -272,6 +297,51 @@ def test_other_account_pin_disables_unlock_and_requires_confirm(qapp, tmp_path: 
 
     assert window.enroll_vault_pin_button.isEnabled() is False
     assert window.remove_vault_pin_button.isEnabled() is True
+
+
+def test_logged_out_routes_to_welcome_screen(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.desktop_service.logout()
+
+    MainWindow._refresh_action_states(window)
+
+    assert window.screen_stack.current_index == 0
+    assert window.screen_title_label.text() == "Probe, connect, and review session state"
+    assert window.nav_vault_button.isHidden() is True
+
+
+def test_locked_session_routes_to_unlock_screen(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.current_screen = "vault"
+
+    MainWindow._refresh_action_states(window)
+
+    assert window.screen_stack.current_index == 1
+    assert window.screen_title_label.text() == "Unlock, manage access, and work in the vault"
+    assert window.nav_vault_button.isHidden() is False
+
+
+def test_unlocked_session_routes_to_vault_home(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.current_screen = "vault"
+    window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+
+    MainWindow._refresh_action_states(window)
+
+    assert window.screen_stack.current_index == 1
+    assert window.screen_title_label.text() == "Unlock, manage access, and work in the vault"
+    assert "Choose a section" in window.vault_home_summary_label.text()
+
+
+def test_settings_screen_remains_available_while_authenticated(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.current_screen = "system"
+
+    MainWindow._refresh_action_states(window)
+
+    assert window.screen_stack.current_index == 0
+    assert window.screen_title_label.text() == "Probe, connect, and review session state"
+    assert window.nav_vault_button.isHidden() is False
 
 
 def test_unlock_source_label_tracks_recovery_then_pin(qapp, tmp_path: Path) -> None:

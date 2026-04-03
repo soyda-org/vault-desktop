@@ -130,11 +130,11 @@ class FakeGatewayApiClient:
     def __init__(self) -> None:
         self.calls = []
 
-    def update_credential(self, *, credential_id, device_name, expected_current_version, encrypted_metadata, encrypted_payload, encryption_header, access_token=None):
+    def update_credential(self, *, credential_id, device_name, expected_current_version, plaintext_app_name=None, plaintext_username=None, encrypted_metadata, encrypted_payload, encryption_header, access_token=None):
         self.calls.append(("update_credential", credential_id, device_name, expected_current_version, access_token))
         return ObjectCreateResult(item={"credential_id": credential_id, "current_version": expected_current_version + 1}, error=None, status_code=201)
 
-    def update_note(self, *, note_id, device_name, expected_current_version, encrypted_metadata, encrypted_payload, encryption_header, access_token=None):
+    def update_note(self, *, note_id, device_name, expected_current_version, plaintext_title=None, encrypted_metadata, encrypted_payload, encryption_header, access_token=None):
         self.calls.append(("update_note", note_id, device_name, expected_current_version, access_token))
         return ObjectCreateResult(item={"note_id": note_id, "current_version": expected_current_version + 1}, error=None, status_code=201)
 
@@ -148,6 +148,8 @@ def test_authenticated_gateway_update_credential_uses_access_token() -> None:
         credential_id="cred_001",
         device_name="desktop-dev",
         expected_current_version=1,
+        plaintext_app_name="Personal",
+        plaintext_username="alice",
         encrypted_metadata={"header": {}, "ciphertext_b64": "YWJj"},
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -168,6 +170,7 @@ def test_authenticated_gateway_update_note_uses_access_token() -> None:
         note_id="note_001",
         device_name="desktop-dev",
         expected_current_version=1,
+        plaintext_title="todo",
         encrypted_metadata=None,
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -216,7 +219,7 @@ class FakeUpdateGateway:
     def __init__(self) -> None:
         self.calls = []
 
-    def update_credential(self, session, *, credential_id, device_name, expected_current_version, encrypted_metadata, encrypted_payload, encryption_header):
+    def update_credential(self, session, *, credential_id, device_name, expected_current_version, plaintext_app_name=None, plaintext_username=None, encrypted_metadata, encrypted_payload, encryption_header):
         self.calls.append(("update_credential", credential_id, device_name, expected_current_version, session.access_token))
         return ObjectCreateResult(
             item={"credential_id": credential_id, "current_version": expected_current_version + 1},
@@ -224,7 +227,7 @@ class FakeUpdateGateway:
             status_code=201,
         )
 
-    def update_note(self, session, *, note_id, device_name, expected_current_version, encrypted_metadata, encrypted_payload, encryption_header):
+    def update_note(self, session, *, note_id, device_name, expected_current_version, plaintext_title=None, encrypted_metadata, encrypted_payload, encryption_header):
         self.calls.append(("update_note", note_id, device_name, expected_current_version, session.access_token))
         return ObjectCreateResult(
             item={"note_id": note_id, "current_version": expected_current_version + 1},
@@ -238,7 +241,7 @@ class OneUpdateCredential401ThenSuccessGateway(FakeUpdateGateway):
         super().__init__()
         self.first = True
 
-    def update_credential(self, session, *, credential_id, device_name, expected_current_version, encrypted_metadata, encrypted_payload, encryption_header):
+    def update_credential(self, session, *, credential_id, device_name, expected_current_version, plaintext_app_name=None, plaintext_username=None, encrypted_metadata, encrypted_payload, encryption_header):
         self.calls.append(("update_credential", credential_id, device_name, expected_current_version, session.access_token))
         if self.first:
             self.first = False
@@ -255,7 +258,7 @@ class OneUpdateNote401ThenSuccessGateway(FakeUpdateGateway):
         super().__init__()
         self.first = True
 
-    def update_note(self, session, *, note_id, device_name, expected_current_version, encrypted_metadata, encrypted_payload, encryption_header):
+    def update_note(self, session, *, note_id, device_name, expected_current_version, plaintext_title=None, encrypted_metadata, encrypted_payload, encryption_header):
         self.calls.append(("update_note", note_id, device_name, expected_current_version, session.access_token))
         if self.first:
             self.first = False
@@ -274,6 +277,8 @@ def test_desktop_service_update_credential_requires_session() -> None:
         credential_id="cred_001",
         device_name="desktop-dev",
         expected_current_version=1,
+        plaintext_app_name="Personal",
+        plaintext_username="alice",
         encrypted_metadata={"header": {}, "ciphertext_b64": "YWJj"},
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -293,6 +298,8 @@ def test_desktop_service_update_credential_uses_gateway_with_current_session() -
         credential_id="cred_001",
         device_name="desktop-dev",
         expected_current_version=1,
+        plaintext_app_name="Personal",
+        plaintext_username="alice",
         encrypted_metadata={"header": {}, "ciphertext_b64": "YWJj"},
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -314,6 +321,8 @@ def test_desktop_service_update_credential_refreshes_and_retries_once_after_401(
         credential_id="cred_001",
         device_name="desktop-dev",
         expected_current_version=1,
+        plaintext_app_name="Personal",
+        plaintext_username="alice",
         encrypted_metadata={"header": {}, "ciphertext_b64": "YWJj"},
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -336,6 +345,7 @@ def test_desktop_service_update_note_uses_gateway_with_current_session() -> None
         note_id="note_001",
         device_name="desktop-dev",
         expected_current_version=1,
+        plaintext_title="todo",
         encrypted_metadata=None,
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},
@@ -357,6 +367,7 @@ def test_desktop_service_update_note_refreshes_and_retries_once_after_401() -> N
         note_id="note_001",
         device_name="desktop-dev",
         expected_current_version=1,
+        plaintext_title="todo",
         encrypted_metadata=None,
         encrypted_payload={"header": {}, "ciphertext_b64": "ZGVm"},
         encryption_header={"nonce_b64": "bm9uY2U="},

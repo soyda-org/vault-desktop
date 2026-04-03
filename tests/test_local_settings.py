@@ -14,6 +14,7 @@ def test_load_returns_defaults_when_file_missing(tmp_path: Path) -> None:
     assert settings.device_name == "vault-desktop-dev"
     assert settings.platform == "linux"
     assert settings.last_tab_index == 0
+    assert settings.theme == "light"
 
 
 def test_save_then_load_round_trip(tmp_path: Path) -> None:
@@ -26,6 +27,7 @@ def test_save_then_load_round_trip(tmp_path: Path) -> None:
         device_name="workstation",
         platform="linux",
         last_tab_index=2,
+        theme="dark",
     )
     store.save(saved)
 

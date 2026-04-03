@@ -12,6 +12,7 @@ class PersistedUiSettings:
     device_name: str = "vault-desktop-dev"
     platform: str = "linux"
     last_tab_index: int = 0
+    theme: str = "light"
 
 
 class LocalSettingsStore:
@@ -31,6 +32,7 @@ class LocalSettingsStore:
             device_name=data.get("device_name", "vault-desktop-dev"),
             platform=data.get("platform", "linux"),
             last_tab_index=int(data.get("last_tab_index", 0)),
+            theme=data.get("theme", "light"),
         )
 
     def save(self, settings: PersistedUiSettings) -> None:

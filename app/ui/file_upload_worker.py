@@ -137,6 +137,8 @@ class FileUploadWorker(QObject):
                 device_name=self.device_name,
                 file_id=finalize_payload.file_id,
                 file_version=finalize_payload.file_version,
+                plaintext_filename=finalize_payload.plaintext_filename,
+                plaintext_size_bytes=finalize_payload.total_plaintext_size,
                 encrypted_manifest=finalize_payload.encrypted_manifest,
                 encryption_header=finalize_payload.encryption_header,
                 chunks=finalize_payload.chunks,
