@@ -1310,11 +1310,11 @@ class MainWindow(QMainWindow):
             }}
             QLineEdit[ghostField="true"] {{
                 background: transparent;
-                border: 1px solid rgba(148, 163, 184, 0.18);
+                border: 0;
             }}
             QLineEdit[ghostField="true"]:focus {{
                 background: transparent;
-                border: 1px solid {primary};
+                border: 0;
             }}
             QLineEdit[ghostField="true"]::placeholder {{
                 color: {muted};
