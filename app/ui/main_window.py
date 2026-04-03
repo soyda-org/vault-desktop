@@ -652,20 +652,6 @@ class MainWindow(QMainWindow):
         self.screen_stack.addWidget(self.system_workspace_view)
         self.screen_stack.addWidget(self.vault_workspace_view)
 
-        hero_layout = QVBoxLayout()
-        hero_layout.setContentsMargins(0, 0, 0, 0)
-        hero_layout.setSpacing(4)
-        hero_layout.addWidget(self.screen_eyebrow_label)
-        hero_layout.addWidget(self.screen_title_label)
-        hero_layout.addWidget(self.screen_subtitle_label)
-
-        hero_frame = QFrame()
-        hero_frame.setObjectName("heroFrame")
-        hero_frame_layout = QVBoxLayout(hero_frame)
-        hero_frame_layout.setContentsMargins(18, 16, 18, 16)
-        hero_frame_layout.setSpacing(10)
-        hero_frame_layout.addLayout(hero_layout)
-
         toolbar_frame = QFrame()
         toolbar_frame.setObjectName("toolbarFrame")
         toolbar_layout = QHBoxLayout(toolbar_frame)
@@ -681,8 +667,7 @@ class MainWindow(QMainWindow):
 
         layout = QVBoxLayout()
         layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
-        layout.addWidget(hero_frame)
+        layout.setSpacing(10)
         layout.addWidget(toolbar_frame)
         layout.addWidget(self.screen_stack, 1)
 
