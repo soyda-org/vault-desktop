@@ -121,14 +121,19 @@ class SystemWorkspaceView(QWidget):
         connect_layout.addLayout(content_wrapper)
         connect_layout.addStretch(1)
 
+        meta_row = QHBoxLayout()
+        meta_row.setContentsMargins(0, 0, 0, 0)
+        meta_row.setSpacing(0)
+        meta_row.addWidget(api_details_label, 0)
+        meta_row.addStretch(1)
+        connect_layout.addLayout(meta_row)
+
         messages_panel, messages_layout = _panel(
             title="System messages",
             description=(
                 "Keep recent diagnostics and local system activity in one place."
             ),
         )
-
-        messages_layout.addWidget(api_details_label)
 
         log_intro = QLabel(
             "Recent network progress and security actions appear here in time order."
