@@ -307,7 +307,8 @@ def test_logged_out_routes_to_welcome_screen(qapp, tmp_path: Path) -> None:
 
     assert window.screen_stack.current_index == 0
     assert window.screen_title_label.text() == "Probe, connect, and review session state"
-    assert window.nav_vault_button.isHidden() is True
+    assert window.nav_vault_button.isHidden() is False
+    assert window.nav_vault_button.isEnabled() is False
 
 
 def test_locked_session_routes_to_unlock_screen(qapp, tmp_path: Path) -> None:
@@ -319,6 +320,7 @@ def test_locked_session_routes_to_unlock_screen(qapp, tmp_path: Path) -> None:
     assert window.screen_stack.current_index == 1
     assert window.screen_title_label.text() == "Unlock, manage access, and work in the vault"
     assert window.nav_vault_button.isHidden() is False
+    assert window.nav_vault_button.isEnabled() is True
 
 
 def test_unlocked_session_routes_to_vault_home(qapp, tmp_path: Path) -> None:
@@ -342,6 +344,7 @@ def test_settings_screen_remains_available_while_authenticated(qapp, tmp_path: P
     assert window.screen_stack.current_index == 0
     assert window.screen_title_label.text() == "Probe, connect, and review session state"
     assert window.nav_vault_button.isHidden() is False
+    assert window.nav_vault_button.isEnabled() is True
 
 
 def test_unlock_source_label_tracks_recovery_then_pin(qapp, tmp_path: Path) -> None:

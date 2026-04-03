@@ -32,6 +32,15 @@ def _panel(*, title: str, description: str | None = None) -> tuple[QWidget, QVBo
     return frame, layout
 
 
+def _divider() -> QFrame:
+    frame = QFrame()
+    frame.setFrameShape(QFrame.Shape.HLine)
+    frame.setFrameShadow(QFrame.Shadow.Plain)
+    frame.setObjectName("surfaceDivider")
+    frame.setFixedHeight(1)
+    return frame
+
+
 class SystemWorkspaceView(QWidget):
     def __init__(
         self,
@@ -97,6 +106,11 @@ class SystemWorkspaceView(QWidget):
         utility_row.addWidget(utility_buttons["close"])
         utility_row.addStretch(1)
         operations_layout.addLayout(utility_row)
+        operations_layout.addWidget(_divider())
+
+        messages_title = QLabel("System messages")
+        messages_title.setObjectName("sectionTitle")
+        operations_layout.addWidget(messages_title)
 
         log_intro = QLabel(
             "Recent network progress, validation errors, and local security actions "

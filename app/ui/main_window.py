@@ -1065,7 +1065,7 @@ class MainWindow(QMainWindow):
 
         authenticated = self.desktop_service.is_authenticated()
         self.nav_system_button.setVisible(True)
-        self.nav_vault_button.setVisible(authenticated)
+        self.nav_vault_button.setVisible(True)
         self.nav_system_button.setEnabled(True)
         self.nav_vault_button.setEnabled(authenticated)
         self.nav_system_button.setProperty("navCurrent", screen == "system")
@@ -1281,6 +1281,10 @@ class MainWindow(QMainWindow):
                 background: {primary};
                 border-color: {primary};
                 color: #ffffff;
+            }}
+            #surfaceDivider {{
+                background: {border};
+                border: 0;
             }}
             QTabWidget::pane {{
                 border: 0;
