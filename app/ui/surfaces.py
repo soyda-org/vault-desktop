@@ -80,8 +80,9 @@ class SystemWorkspaceView(QWidget):
 
         connection_row = QHBoxLayout()
         connection_row.setContentsMargins(0, 0, 0, 0)
-        connection_row.setSpacing(20)
+        connection_row.setSpacing(12)
         connection_row.addStretch(1)
+        connection_row.addWidget(auth_buttons["probe"], 0)
         connection_row.addWidget(connection_label, 0)
         connection_row.addWidget(session_state_label, 0)
         connection_row.addWidget(vault_state_label, 0)
@@ -97,7 +98,6 @@ class SystemWorkspaceView(QWidget):
         primary_row.setContentsMargins(0, 4, 0, 0)
         primary_row.setSpacing(6)
         primary_row.addStretch(1)
-        primary_row.addWidget(auth_buttons["probe"])
         primary_row.addWidget(auth_buttons["login"])
         primary_row.addWidget(auth_buttons["signup"])
         primary_row.addStretch(1)
