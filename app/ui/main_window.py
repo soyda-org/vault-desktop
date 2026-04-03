@@ -1594,6 +1594,29 @@ class MainWindow(QMainWindow):
                 padding: 6px;
                 font-family: monospace;
             }}
+            #activityLog QScrollBar:vertical {{
+                background: transparent;
+                border: 0;
+                margin: 6px 4px 6px 0;
+                width: 8px;
+            }}
+            #activityLog QScrollBar::handle:vertical {{
+                background: {muted};
+                border: 0;
+                border-radius: 999px;
+                min-height: 28px;
+            }}
+            #activityLog QScrollBar::handle:vertical:hover {{
+                background: {text};
+            }}
+            #activityLog QScrollBar::add-line:vertical,
+            #activityLog QScrollBar::sub-line:vertical,
+            #activityLog QScrollBar::add-page:vertical,
+            #activityLog QScrollBar::sub-page:vertical {{
+                background: transparent;
+                border: 0;
+                height: 0;
+            }}
         """.format(font_family=self.ui_font_family, **palette)
 
     def _apply_theme(self) -> None:
