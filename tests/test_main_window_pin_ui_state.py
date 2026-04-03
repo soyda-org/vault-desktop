@@ -197,13 +197,18 @@ def make_window_harness(
     window.advanced_recovery_widget.setVisible(False)
 
     window.current_screen = "system"
+    window.current_system_panel = "service"
     window.screen_stack = FakeStack()
     window.screen_eyebrow_label = QLabel()
     window.screen_title_label = QLabel()
     window.screen_subtitle_label = QLabel()
+    window.shell_toolbar_frame = QWidget()
+    window.system_service_tab_button = QPushButton()
+    window.system_messages_tab_button = QPushButton()
     window.nav_system_button = QPushButton()
     window.nav_vault_button = QPushButton()
     window.theme_toggle_button = QPushButton()
+    window.system_workspace_view = SimpleNamespace(set_current_panel=lambda panel: None)
 
     window.selected_credential_id = None
     window.selected_credential_current_version = None

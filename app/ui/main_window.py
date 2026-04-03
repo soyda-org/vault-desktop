@@ -560,6 +560,13 @@ class MainWindow(QMainWindow):
         self.theme_toggle_button = QPushButton("Theme: Light")
         self.theme_toggle_button.setProperty("nav", "true")
         self.theme_toggle_button.clicked.connect(self.run_toggle_theme)
+        self.system_service_tab_button = QPushButton("Service access")
+        self.system_service_tab_button.setProperty("segment", "true")
+        self.system_service_tab_button.clicked.connect(lambda: self._switch_system_panel("service"))
+        self.system_messages_tab_button = QPushButton("System messages")
+        self.system_messages_tab_button.setProperty("segment", "true")
+        self.system_messages_tab_button.clicked.connect(lambda: self._switch_system_panel("messages"))
+        self.current_system_panel = "service"
 
         self.nav_system_button = QPushButton("System")
         self.nav_system_button.setProperty("nav", "true")
@@ -652,26 +659,31 @@ class MainWindow(QMainWindow):
         hero_layout.addWidget(self.screen_title_label)
         hero_layout.addWidget(self.screen_subtitle_label)
 
-        nav_layout = QHBoxLayout()
-        nav_layout.setContentsMargins(0, 0, 0, 0)
-        nav_layout.setSpacing(8)
-        nav_layout.addStretch(1)
-        nav_layout.addWidget(self.theme_toggle_button)
-        nav_layout.addWidget(self.nav_system_button)
-        nav_layout.addWidget(self.nav_vault_button)
-
         hero_frame = QFrame()
         hero_frame.setObjectName("heroFrame")
-        hero_frame_layout = QHBoxLayout(hero_frame)
+        hero_frame_layout = QVBoxLayout(hero_frame)
         hero_frame_layout.setContentsMargins(18, 16, 18, 16)
-        hero_frame_layout.setSpacing(16)
-        hero_frame_layout.addLayout(hero_layout, 1)
-        hero_frame_layout.addLayout(nav_layout)
+        hero_frame_layout.setSpacing(10)
+        hero_frame_layout.addLayout(hero_layout)
+
+        toolbar_frame = QFrame()
+        toolbar_frame.setObjectName("toolbarFrame")
+        toolbar_layout = QHBoxLayout(toolbar_frame)
+        toolbar_layout.setContentsMargins(18, 12, 18, 12)
+        toolbar_layout.setSpacing(8)
+        toolbar_layout.addWidget(self.system_service_tab_button)
+        toolbar_layout.addWidget(self.system_messages_tab_button)
+        toolbar_layout.addStretch(1)
+        toolbar_layout.addWidget(self.theme_toggle_button)
+        toolbar_layout.addWidget(self.nav_system_button)
+        toolbar_layout.addWidget(self.nav_vault_button)
+        self.shell_toolbar_frame = toolbar_frame
 
         layout = QVBoxLayout()
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
         layout.addWidget(hero_frame)
+        layout.addWidget(toolbar_frame)
         layout.addWidget(self.screen_stack, 1)
 
         container = QWidget()
@@ -1069,6 +1081,26 @@ class MainWindow(QMainWindow):
         self.nav_vault_button.setVisible(True)
         self.nav_system_button.setEnabled(True)
         self.nav_vault_button.setEnabled(authenticated)
+        if hasattr(self, "shell_toolbar_frame"):
+            self.shell_toolbar_frame.setVisible(True)
+        if hasattr(self, "system_service_tab_button"):
+            show_system_segments = screen == "system"
+            self.system_service_tab_button.setVisible(show_system_segments)
+            self.system_messages_tab_button.setVisible(show_system_segments)
+            self.system_service_tab_button.setProperty(
+                "segmentCurrent",
+                show_system_segments and self.current_system_panel == "service",
+            )
+            self.system_messages_tab_button.setProperty(
+                "segmentCurrent",
+                show_system_segments and self.current_system_panel == "messages",
+            )
+            self._repolish(self.system_service_tab_button)
+            self._repolish(self.system_messages_tab_button)
+        if screen == "system" and hasattr(self, "system_workspace_view"):
+            self.system_workspace_view.set_current_panel(
+                getattr(self, "current_system_panel", "service")
+            )
         self.nav_system_button.setProperty("navCurrent", screen == "system")
         self.nav_vault_button.setProperty("navCurrent", screen == "vault")
         self._repolish(self.nav_system_button)
@@ -1076,6 +1108,12 @@ class MainWindow(QMainWindow):
 
     def _switch_to_screen(self, screen: str) -> None:
         self.current_screen = screen
+        self._apply_screen_state()
+
+    def _switch_system_panel(self, panel: str) -> None:
+        self.current_system_panel = panel
+        if hasattr(self, "system_workspace_view"):
+            self.system_workspace_view.set_current_panel(panel)
         self._apply_screen_state()
 
     def _infer_status_severity(self, message: str) -> str:
@@ -1278,6 +1316,19 @@ class MainWindow(QMainWindow):
                 border-radius: 999px;
                 padding: 6px 12px;
             }}
+            QPushButton[segment="true"] {{
+                background: {surface_alt};
+                border: 1px solid {border};
+                border-radius: 999px;
+                color: {text};
+                font-weight: 600;
+                padding: 6px 12px;
+            }}
+            QPushButton[segment="true"][segmentCurrent="true"] {{
+                background: {primary};
+                border-color: {primary};
+                color: #ffffff;
+            }}
             QPushButton[nav="true"][navCurrent="true"] {{
                 background: {primary};
                 border-color: {primary};
@@ -1313,6 +1364,7 @@ class MainWindow(QMainWindow):
                 color: {text};
             }}
             #heroFrame,
+            #toolbarFrame,
             #surfacePanel,
             #workspaceCard,
             #detailCard {{

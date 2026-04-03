@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QTabWidget,
+    QStackedWidget,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -58,6 +58,7 @@ class SystemWorkspaceView(QWidget):
         log_widgets: dict[str, QWidget],
     ) -> None:
         super().__init__()
+        self.panel_stack = QStackedWidget()
 
         connect_panel, connect_layout = _panel(
             title="Service access",
@@ -124,15 +125,16 @@ class SystemWorkspaceView(QWidget):
         messages_layout.addLayout(log_toolbar)
         messages_layout.addWidget(log_widgets["list"], 1)
 
-        tabs = QTabWidget()
-        tabs.addTab(connect_panel, "Service access")
-        tabs.addTab(messages_panel, "System messages")
-        tabs.setDocumentMode(True)
+        self.panel_stack.addWidget(connect_panel)
+        self.panel_stack.addWidget(messages_panel)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addWidget(tabs, 1)
+        layout.addWidget(self.panel_stack, 1)
+
+    def set_current_panel(self, name: str) -> None:
+        self.panel_stack.setCurrentIndex(0 if name == "service" else 1)
 
 
 class VaultWorkspaceView(QWidget):
