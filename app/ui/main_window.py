@@ -1601,6 +1601,11 @@ class MainWindow(QMainWindow):
                 margin: 6px 4px 6px 0;
                 width: 8px;
             }}
+            #activityLog QScrollBar::groove:vertical {{
+                background: {input};
+                border: 0;
+                border-radius: 999px;
+            }}
             #activityLog QScrollBar::handle:vertical {{
                 background: {muted};
                 border: 0;
