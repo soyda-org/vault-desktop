@@ -1338,7 +1338,7 @@ class MainWindow(QMainWindow):
                 padding: 1px 7px;
             }}
             QPushButton:hover {{
-                border-color: {primary};
+                border-color: #ffffff;
             }}
             QPushButton:pressed {{
                 background: {nav_bg};
@@ -1365,6 +1365,10 @@ class MainWindow(QMainWindow):
                 background: {danger_bg};
                 border-color: {danger};
                 color: {danger};
+            }}
+            QPushButton[tone="danger"]:hover {{
+                border-color: {danger};
+                color: #ff8a8a;
             }}
             QPushButton[nav="true"] {{
                 background: {nav_bg};
@@ -1395,8 +1399,8 @@ class MainWindow(QMainWindow):
             }}
             QPushButton[statusRowButton="true"][tone="primary"]:hover {{
                 background: {nav_bg};
-                border-color: {primary};
-                color: {primary};
+                border-color: #ffffff;
+                color: #ffffff;
             }}
             QPushButton[segment="true"][segmentCurrent="true"] {{
                 background: {primary};
