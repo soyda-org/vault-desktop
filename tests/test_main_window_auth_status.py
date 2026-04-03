@@ -137,6 +137,9 @@ def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) ->
     app_fixture.processEvents()
 
     window._refresh_action_states()
+    window._apply_screen_state()
+    assert window.system_service_tab_button.text() == "Access"
+    assert window.system_service_tab_button.property("segmentLevel") == "warning"
     assert not window.login_button.isHidden()
     assert not window.sign_up_button.isHidden()
     assert window.logout_button.isHidden()
@@ -151,11 +154,13 @@ def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) ->
         token_type="bearer",
     )
     window._refresh_action_states()
+    window._apply_screen_state()
     app_fixture.processEvents()
 
     assert window.login_button.isHidden()
     assert window.sign_up_button.isHidden()
     assert not window.logout_button.isHidden()
+    assert window.system_service_tab_button.property("segmentLevel") == "success"
 
 
 def test_append_activity_log_keeps_newest_first_and_dedupes(app_fixture) -> None:

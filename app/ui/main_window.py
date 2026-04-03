@@ -616,7 +616,7 @@ class MainWindow(QMainWindow):
         self.theme_toggle_button = QPushButton("Theme: Light")
         self.theme_toggle_button.setProperty("nav", "true")
         self.theme_toggle_button.clicked.connect(self.run_toggle_theme)
-        self.system_service_tab_button = QPushButton("Service access")
+        self.system_service_tab_button = QPushButton("Access")
         self.system_service_tab_button.setProperty("segment", "true")
         self.system_service_tab_button.clicked.connect(lambda: self._switch_system_panel("service"))
         self.system_messages_tab_button = QPushButton("System messages")
@@ -1126,6 +1126,12 @@ class MainWindow(QMainWindow):
             show_system_segments = screen == "system"
             self.system_service_tab_button.setVisible(show_system_segments)
             self.system_messages_tab_button.setVisible(show_system_segments)
+            service_level = "success" if authenticated else "warning"
+            if hasattr(self, "status_label"):
+                status_level = self.status_label.property("statusLevel")
+                if not authenticated and status_level == "error":
+                    service_level = "error"
+            self.system_service_tab_button.setProperty("segmentLevel", service_level)
             self.system_service_tab_button.setProperty(
                 "segmentCurrent",
                 show_system_segments and self.current_system_panel == "service",
@@ -1399,6 +1405,18 @@ class MainWindow(QMainWindow):
                 font-weight: 600;
                 padding: 2px 8px;
             }}
+            QPushButton[segment="true"][segmentLevel="success"] {{
+                border-color: {success};
+                color: {success};
+            }}
+            QPushButton[segment="true"][segmentLevel="warning"] {{
+                border-color: {warning};
+                color: {warning};
+            }}
+            QPushButton[segment="true"][segmentLevel="error"] {{
+                border-color: {danger};
+                color: {danger};
+            }}
             QPushButton[statusRowButton="true"] {{
                 font-size: 8px;
                 min-height: 16px;
@@ -1420,6 +1438,21 @@ class MainWindow(QMainWindow):
             QPushButton[segment="true"][segmentCurrent="true"] {{
                 background: {primary};
                 border-color: {primary};
+                color: #ffffff;
+            }}
+            QPushButton[segment="true"][segmentCurrent="true"][segmentLevel="success"] {{
+                background: {success};
+                border-color: {success};
+                color: #ffffff;
+            }}
+            QPushButton[segment="true"][segmentCurrent="true"][segmentLevel="warning"] {{
+                background: {warning};
+                border-color: {warning};
+                color: #0f172a;
+            }}
+            QPushButton[segment="true"][segmentCurrent="true"][segmentLevel="error"] {{
+                background: {danger};
+                border-color: {danger};
                 color: #ffffff;
             }}
             QPushButton[nav="true"][navCurrent="true"] {{
