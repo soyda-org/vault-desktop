@@ -104,6 +104,7 @@ class SystemWorkspaceView(QWidget):
         primary_row.addWidget(utility_buttons["close"])
         primary_row.addStretch(1)
         content_column.addLayout(primary_row)
+        content_column.addWidget(status_label, 0)
 
         content_container = QWidget()
         content_container.setObjectName("contentContainer")
@@ -128,7 +129,6 @@ class SystemWorkspaceView(QWidget):
         )
 
         messages_layout.addWidget(api_details_label)
-        messages_layout.addWidget(status_label)
 
         log_intro = QLabel(
             "Recent network progress and security actions appear here in time order."

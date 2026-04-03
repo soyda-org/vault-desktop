@@ -187,6 +187,8 @@ class MainWindow(QMainWindow):
             "Press 'Probe API' or login.",
         )
         self.status_label.setWordWrap(True)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setObjectName("inlineStatusText")
 
         self.session_label = QLabel("No active session.")
         self.session_label.setWordWrap(True)
@@ -1188,6 +1190,11 @@ class MainWindow(QMainWindow):
     def _handle_status_text_change(self, message: str) -> None:
         if not hasattr(self, "activity_log_list"):
             return
+        if hasattr(self, "status_label"):
+            self.status_label.setProperty(
+                "statusLevel", self._infer_status_severity(message)
+            )
+            self._repolish(self.status_label)
         self._append_activity_log(message)
         self._refresh_system_state_indicators()
 
@@ -1474,6 +1481,24 @@ class MainWindow(QMainWindow):
             #sectionHint,
             #dialogSummary,
             #sessionBody {{
+                color: {muted};
+            }}
+            #inlineStatusText {{
+                background: transparent;
+                color: {muted};
+                font-size: 11px;
+                padding: 0;
+            }}
+            #inlineStatusText[statusLevel="success"] {{
+                color: {success};
+            }}
+            #inlineStatusText[statusLevel="warning"] {{
+                color: {warning};
+            }}
+            #inlineStatusText[statusLevel="error"] {{
+                color: {danger};
+            }}
+            #inlineStatusText[statusLevel="info"] {{
                 color: {muted};
             }}
             #surfacePanelTitle,
