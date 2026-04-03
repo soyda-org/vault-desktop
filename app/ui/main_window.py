@@ -248,14 +248,17 @@ class MainWindow(QMainWindow):
 
         self.probe_button = QPushButton("Probe API")
         self.probe_button.setProperty("tone", "primary")
+        self.probe_button.setProperty("hoverGlow", "light")
         self.probe_button.clicked.connect(self.run_probe)
 
         self.login_button = QPushButton("Login")
         self.login_button.setProperty("tone", "secondary")
+        self.login_button.setProperty("hoverGlow", "light")
         self.login_button.clicked.connect(self.run_login)
 
         self.sign_up_button = QPushButton("Sign Up")
         self.sign_up_button.setProperty("tone", "secondary")
+        self.sign_up_button.setProperty("hoverGlow", "light")
         self.sign_up_button.clicked.connect(self.run_open_signup_dialog)
 
         self.logout_button = QPushButton("Logout")
@@ -266,6 +269,7 @@ class MainWindow(QMainWindow):
         self.vault_logout_button.clicked.connect(self.run_logout)
 
         self.close_button = QPushButton("Close App")
+        self.close_button.setProperty("hoverGlow", "danger")
         self.close_button.clicked.connect(self.run_close)
 
         self.load_credentials_button = QPushButton("Load Credentials")
@@ -1338,7 +1342,7 @@ class MainWindow(QMainWindow):
                 padding: 1px 7px;
             }}
             QPushButton:hover {{
-                border-color: #ffffff;
+                border-color: {border};
             }}
             QPushButton:pressed {{
                 background: {nav_bg};
@@ -1367,6 +1371,13 @@ class MainWindow(QMainWindow):
                 color: {danger};
             }}
             QPushButton[tone="danger"]:hover {{
+                border-color: {danger};
+                color: #ff8a8a;
+            }}
+            QPushButton[hoverGlow="light"]:hover {{
+                border-color: #ffffff;
+            }}
+            QPushButton[hoverGlow="danger"]:hover {{
                 border-color: {danger};
                 color: #ff8a8a;
             }}
