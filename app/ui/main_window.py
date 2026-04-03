@@ -1220,7 +1220,8 @@ class MainWindow(QMainWindow):
                 background: {window};
                 color: {text};
                 font-size: 13px;
-                font-family: "IBM Plex Sans", "Aptos", "Segoe UI", "Helvetica Neue", sans-serif;
+                font-family: "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
+                font-weight: 500;
             }}
             QLabel {{
                 background: transparent;
@@ -1403,8 +1404,8 @@ class MainWindow(QMainWindow):
                 border: 0;
                 color: {text};
                 font-size: 18px;
-                font-family: "IBM Plex Mono", "Cascadia Mono", "Consolas", monospace;
-                font-weight: 600;
+                font-family: "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
+                font-weight: 700;
                 padding: 0;
             }}
             #connectionStateText[statusLevel="success"] {{
