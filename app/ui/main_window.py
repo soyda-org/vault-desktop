@@ -726,7 +726,6 @@ class MainWindow(QMainWindow):
 
         left_widget = QWidget()
         left_widget.setLayout(left_layout)
-        left_widget.setMaximumWidth(460)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
@@ -734,7 +733,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(output)
         splitter.setStretchFactor(0, 2)
         splitter.setStretchFactor(1, 3)
-        splitter.setSizes([360, 700])
+        splitter.setSizes([300, 720])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -787,7 +786,6 @@ class MainWindow(QMainWindow):
             hint="Browse apps and usernames first, then load the selected item to inspect or revise it.",
             content_layout=list_content,
         )
-        left_card.setMaximumWidth(420)
 
         detail_actions = QHBoxLayout()
         detail_actions.setContentsMargins(0, 0, 0, 0)
@@ -817,7 +815,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(detail_card)
         splitter.setStretchFactor(0, 2)
         splitter.setStretchFactor(1, 3)
-        splitter.setSizes([380, 760])
+        splitter.setSizes([320, 760])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -847,7 +845,6 @@ class MainWindow(QMainWindow):
             hint="Browse note titles first, then load the selected item to review or revise it.",
             content_layout=list_content,
         )
-        left_card.setMaximumWidth(420)
 
         detail_actions = QHBoxLayout()
         detail_actions.setContentsMargins(0, 0, 0, 0)
@@ -877,7 +874,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(detail_card)
         splitter.setStretchFactor(0, 2)
         splitter.setStretchFactor(1, 3)
-        splitter.setSizes([380, 760])
+        splitter.setSizes([320, 760])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1000,7 +997,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(file_detail_card)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 4)
-        splitter.setSizes([560, 640])
+        splitter.setSizes([460, 700])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
