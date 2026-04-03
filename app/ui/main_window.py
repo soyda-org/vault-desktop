@@ -2800,6 +2800,13 @@ class MainWindow(QMainWindow):
         confirmation_ready = self.pin_confirmation_input.text().strip() == "CONFIRM"
         identifier_hint = self.desktop_service.local_pin_bootstrap_identifier_hint()
 
+        if hasattr(self, "login_button"):
+            self.login_button.setVisible(not authenticated)
+        if hasattr(self, "sign_up_button"):
+            self.sign_up_button.setVisible(not authenticated)
+        if hasattr(self, "logout_button"):
+            self.logout_button.setVisible(authenticated)
+
         if not authenticated:
             self.pin_bootstrap_status_label.setText(
                 "PIN unlock is available after login. No local PIN can be used while logged out."

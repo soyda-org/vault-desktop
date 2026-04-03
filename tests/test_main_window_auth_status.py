@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton
 
 from app.core.config import get_settings
+from app.core.session import DesktopSession
 from app.ui.main_window import MainWindow
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -104,6 +105,33 @@ def test_main_window_device_fields_are_read_only(app_fixture) -> None:
     assert window.password_input.alignment() == Qt.AlignmentFlag.AlignCenter
     assert window.device_name_input.alignment() == Qt.AlignmentFlag.AlignCenter
     assert window.platform_input.alignment() == Qt.AlignmentFlag.AlignCenter
+
+
+def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) -> None:
+    window = MainWindow(get_settings())
+    window.show()
+    app_fixture.processEvents()
+
+    window._refresh_action_states()
+    assert not window.login_button.isHidden()
+    assert not window.sign_up_button.isHidden()
+    assert window.logout_button.isHidden()
+
+    window.desktop_service.session_store.current = DesktopSession(
+        identifier="alice",
+        user_id="user_1",
+        device_id="device_1",
+        session_id="session_1",
+        access_token="token",
+        refresh_token="refresh-token",
+        token_type="bearer",
+    )
+    window._refresh_action_states()
+    app_fixture.processEvents()
+
+    assert window.login_button.isHidden()
+    assert window.sign_up_button.isHidden()
+    assert not window.logout_button.isHidden()
 
 
 def test_append_activity_log_keeps_newest_first_and_dedupes(app_fixture) -> None:
