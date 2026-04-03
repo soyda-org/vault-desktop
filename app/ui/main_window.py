@@ -148,7 +148,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle(settings.app_name)
         self.resize(1180, 780)
-        self.setMinimumSize(960, 640)
+        self.setMinimumSize(720, 480)
         self._apply_theme()
 
         self._last_activity_message = ""
