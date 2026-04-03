@@ -1385,6 +1385,16 @@ class MainWindow(QMainWindow):
                 background: {surface};
                 color: {text};
             }}
+            QToolTip {{
+                background: {surface_alt};
+                border: 1px solid {border};
+                border-radius: 8px;
+                color: {text};
+                font-family: "{font_family}", "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
+                font-size: 12px;
+                font-weight: 400;
+                padding: 6px 8px;
+            }}
             QLineEdit[autoFilled="true"] {{
                 color: #7d8392;
             }}
