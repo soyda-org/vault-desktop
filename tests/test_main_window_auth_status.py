@@ -66,6 +66,7 @@ def test_refresh_system_state_indicators_reflect_probe_and_session(app_fixture) 
         ),
         connection_state_label=QLabel(),
         session_state_label=QLabel(),
+        vault_state_label=QLabel(),
         api_details_label=QLabel(),
         api_client=SimpleNamespace(base_url="http://127.0.0.1:8000"),
         _is_vault_unlocked=lambda: False,
@@ -78,7 +79,8 @@ def test_refresh_system_state_indicators_reflect_probe_and_session(app_fixture) 
     MainWindow._refresh_system_state_indicators(window)
 
     assert window.connection_state_label.text() == "API ok."
-    assert window.session_state_label.text() == "Session active, vault locked"
+    assert window.session_state_label.text() == "Session active."
+    assert window.vault_state_label.text() == "Vault locked."
     assert "Project: vault-api" in window.api_details_label.text()
     assert "API: http://127.0.0.1:8000" in window.api_details_label.text()
 

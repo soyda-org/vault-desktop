@@ -59,6 +59,7 @@ class SystemWorkspaceView(QWidget):
         session_label: QLabel,
         connection_label: QLabel,
         session_state_label: QLabel,
+        vault_state_label: QLabel,
         api_details_label: QLabel,
         form_widgets: dict[str, QWidget],
         auth_buttons: dict[str, QWidget],
@@ -70,6 +71,8 @@ class SystemWorkspaceView(QWidget):
 
         connect_panel, connect_layout = _panel_shell()
         connection_label.setObjectName("connectionStateText")
+        session_state_label.setObjectName("connectionStateText")
+        vault_state_label.setObjectName("connectionStateText")
 
         content_column = QVBoxLayout()
         content_column.setContentsMargins(0, 0, 0, 0)
@@ -77,9 +80,11 @@ class SystemWorkspaceView(QWidget):
 
         connection_row = QHBoxLayout()
         connection_row.setContentsMargins(0, 0, 0, 0)
-        connection_row.setSpacing(0)
+        connection_row.setSpacing(20)
         connection_row.addStretch(1)
         connection_row.addWidget(connection_label, 0)
+        connection_row.addWidget(session_state_label, 0)
+        connection_row.addWidget(vault_state_label, 0)
         connection_row.addStretch(1)
         content_column.addLayout(connection_row)
 

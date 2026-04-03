@@ -196,6 +196,8 @@ class MainWindow(QMainWindow):
         self.connection_state_label.setObjectName("statePill")
         self.session_state_label = QLabel()
         self.session_state_label.setObjectName("statePill")
+        self.vault_state_label = QLabel()
+        self.vault_state_label.setObjectName("statePill")
         self.api_details_label = QLabel()
         self.api_details_label.setObjectName("technicalMeta")
         self.api_details_label.setWordWrap(False)
@@ -632,6 +634,7 @@ class MainWindow(QMainWindow):
             session_label=self.session_label,
             connection_label=self.connection_state_label,
             session_state_label=self.session_state_label,
+            vault_state_label=self.vault_state_label,
             api_details_label=self.api_details_label,
             form_widgets={
                 "identifier": self.identifier_input,
@@ -1203,14 +1206,20 @@ class MainWindow(QMainWindow):
             self._set_badge_state(self.connection_state_label, "success")
 
         if not self.desktop_service.is_authenticated():
-            self.session_state_label.setText("No session")
+            self.session_state_label.setText("Session inactive.")
             self._set_badge_state(self.session_state_label, "warning")
+            self.vault_state_label.setText("Vault locked.")
+            self._set_badge_state(self.vault_state_label, "warning")
         elif self._is_vault_unlocked():
-            self.session_state_label.setText("Session active, vault unlocked")
+            self.session_state_label.setText("Session active.")
             self._set_badge_state(self.session_state_label, "success")
+            self.vault_state_label.setText("Vault open.")
+            self._set_badge_state(self.vault_state_label, "success")
         else:
-            self.session_state_label.setText("Session active, vault locked")
+            self.session_state_label.setText("Session active.")
             self._set_badge_state(self.session_state_label, "info")
+            self.vault_state_label.setText("Vault locked.")
+            self._set_badge_state(self.vault_state_label, "warning")
 
         probe_meta = []
         if self._last_probe_result is not None and not getattr(self._last_probe_result, "error", None):
