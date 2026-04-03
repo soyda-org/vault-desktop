@@ -176,7 +176,7 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle(settings.app_name)
         self.resize(1180, 780)
-        self.setMinimumSize(720, 480)
+        self.setMinimumSize(600, 400)
         self._apply_theme()
 
         self._last_activity_message = ""
@@ -213,18 +213,21 @@ class MainWindow(QMainWindow):
         self.identifier_input.setText(self.persisted_ui_settings.identifier)
         self.identifier_input.setPlaceholderText("username")
         self.identifier_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.identifier_input.setProperty("ghostField", True)
 
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_input.setText("strong-password")
         self.password_input.setPlaceholderText("........")
         self.password_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.password_input.setProperty("ghostField", True)
 
         self.device_name_input = QLineEdit()
         self.device_name_input.setText(self.persisted_ui_settings.device_name)
         self.device_name_input.setPlaceholderText("device name - automatically filled")
         self.device_name_input.setToolTip("Automatically filled from this device.")
         self.device_name_input.setProperty("autoFilled", True)
+        self.device_name_input.setProperty("ghostField", True)
         self.device_name_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.device_name_input.setReadOnly(True)
         self.device_name_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -234,6 +237,7 @@ class MainWindow(QMainWindow):
         self.platform_input.setPlaceholderText("platform - automatically filled")
         self.platform_input.setToolTip("Automatically filled from this device.")
         self.platform_input.setProperty("autoFilled", True)
+        self.platform_input.setProperty("ghostField", True)
         self.platform_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.platform_input.setReadOnly(True)
         self.platform_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -1303,6 +1307,17 @@ class MainWindow(QMainWindow):
             QListWidget:focus,
             QSpinBox:focus {{
                 border: 1px solid {primary};
+            }}
+            QLineEdit[ghostField="true"] {{
+                background: transparent;
+                border: 1px solid rgba(148, 163, 184, 0.18);
+            }}
+            QLineEdit[ghostField="true"]:focus {{
+                background: transparent;
+                border: 1px solid {primary};
+            }}
+            QLineEdit[ghostField="true"]::placeholder {{
+                color: {muted};
             }}
             QPushButton {{
                 background: {surface_alt};

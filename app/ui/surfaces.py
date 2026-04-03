@@ -84,7 +84,7 @@ class SystemWorkspaceView(QWidget):
         content_column.addLayout(connection_row)
 
         for key in ("identifier", "password", "device_name", "platform"):
-            form_widgets[key].setMinimumWidth(320)
+            form_widgets[key].setMinimumWidth(260)
             form_widgets[key].setMaximumWidth(560)
             content_column.addWidget(form_widgets[key], 0)
 

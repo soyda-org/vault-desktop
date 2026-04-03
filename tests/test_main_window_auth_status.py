@@ -86,12 +86,18 @@ def test_refresh_system_state_indicators_reflect_probe_and_session(app_fixture) 
 def test_main_window_device_fields_are_read_only(app_fixture) -> None:
     window = MainWindow(get_settings())
 
+    assert window.minimumWidth() == 600
+    assert window.minimumHeight() == 400
+    assert window.identifier_input.property("ghostField") is True
+    assert window.password_input.property("ghostField") is True
     assert window.device_name_input.isReadOnly()
     assert window.platform_input.isReadOnly()
     assert window.device_name_input.placeholderText() == "device name - automatically filled"
     assert window.platform_input.placeholderText() == "platform - automatically filled"
     assert window.device_name_input.property("autoFilled") is True
     assert window.platform_input.property("autoFilled") is True
+    assert window.device_name_input.property("ghostField") is True
+    assert window.platform_input.property("ghostField") is True
     assert window.identifier_input.alignment() == Qt.AlignmentFlag.AlignCenter
     assert window.password_input.alignment() == Qt.AlignmentFlag.AlignCenter
     assert window.device_name_input.alignment() == Qt.AlignmentFlag.AlignCenter
