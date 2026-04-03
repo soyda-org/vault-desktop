@@ -1391,6 +1391,7 @@ class MainWindow(QMainWindow):
                 font-size: 8px;
                 min-height: 14px;
                 padding: 0px 4px;
+                border-radius: 999px;
             }}
             QPushButton[segment="true"][segmentCurrent="true"] {{
                 background: {primary};
@@ -1559,12 +1560,12 @@ class MainWindow(QMainWindow):
             #technicalMeta,
             #monoValue {{
                 color: {muted};
-                background: {mono_bg};
-                border: 1px solid {border};
-                border-radius: 10px;
+                background: transparent;
+                border: 0;
+                border-radius: 0;
                 font-family: monospace;
                 font-size: 8px;
-                padding: 4px 6px;
+                padding: 0;
             }}
             #activityLog {{
                 background: {input};

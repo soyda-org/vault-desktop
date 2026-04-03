@@ -124,8 +124,7 @@ class SystemWorkspaceView(QWidget):
         meta_row = QHBoxLayout()
         meta_row.setContentsMargins(0, 0, 0, 0)
         meta_row.setSpacing(0)
-        meta_row.addWidget(api_details_label, 0)
-        meta_row.addStretch(1)
+        meta_row.addWidget(api_details_label, 1)
         connect_layout.addLayout(meta_row)
 
         messages_panel, messages_layout = _panel(
