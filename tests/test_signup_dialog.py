@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from app.ui.signup_dialog import SignupDialog
@@ -77,3 +78,8 @@ def test_signup_dialog_prefills_detected_device_defaults(monkeypatch, app_fixtur
     assert dialog.platform_input.placeholderText() == "platform - automatically filled"
     assert dialog.device_name_input.property("autoFilled") is True
     assert dialog.platform_input.property("autoFilled") is True
+    assert dialog.identifier_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert dialog.password_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert dialog.password_confirm_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert dialog.device_name_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert dialog.platform_input.alignment() == Qt.AlignmentFlag.AlignCenter

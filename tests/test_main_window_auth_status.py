@@ -4,6 +4,7 @@ import os
 from types import SimpleNamespace
 
 import pytest
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton
 
 from app.core.config import get_settings
@@ -91,6 +92,10 @@ def test_main_window_device_fields_are_read_only(app_fixture) -> None:
     assert window.platform_input.placeholderText() == "platform - automatically filled"
     assert window.device_name_input.property("autoFilled") is True
     assert window.platform_input.property("autoFilled") is True
+    assert window.identifier_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.password_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.device_name_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.platform_input.alignment() == Qt.AlignmentFlag.AlignCenter
 
 
 def test_append_activity_log_keeps_newest_first_and_dedupes(app_fixture) -> None:

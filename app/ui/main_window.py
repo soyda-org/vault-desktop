@@ -210,17 +210,20 @@ class MainWindow(QMainWindow):
         self.identifier_input = QLineEdit()
         self.identifier_input.setText(self.persisted_ui_settings.identifier)
         self.identifier_input.setPlaceholderText("username")
+        self.identifier_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_input.setText("strong-password")
         self.password_input.setPlaceholderText("........")
+        self.password_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.device_name_input = QLineEdit()
         self.device_name_input.setText(self.persisted_ui_settings.device_name)
         self.device_name_input.setPlaceholderText("device name - automatically filled")
         self.device_name_input.setToolTip("Automatically filled from this device.")
         self.device_name_input.setProperty("autoFilled", True)
+        self.device_name_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.device_name_input.setReadOnly(True)
         self.device_name_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
@@ -229,6 +232,7 @@ class MainWindow(QMainWindow):
         self.platform_input.setPlaceholderText("platform - automatically filled")
         self.platform_input.setToolTip("Automatically filled from this device.")
         self.platform_input.setProperty("autoFilled", True)
+        self.platform_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.platform_input.setReadOnly(True)
         self.platform_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 

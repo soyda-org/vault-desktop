@@ -42,14 +42,17 @@ class SignupDialog(QDialog):
 
         self.identifier_input = QLineEdit()
         self.identifier_input.setText(identifier)
+        self.identifier_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         form.addRow("Identifier", self.identifier_input)
 
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.Password)
+        self.password_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         form.addRow("Password", self.password_input)
 
         self.password_confirm_input = QLineEdit()
         self.password_confirm_input.setEchoMode(QLineEdit.Password)
+        self.password_confirm_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         form.addRow("Confirm password", self.password_confirm_input)
 
         self.device_name_input = QLineEdit()
@@ -57,6 +60,7 @@ class SignupDialog(QDialog):
         self.device_name_input.setPlaceholderText("device name - automatically filled")
         self.device_name_input.setToolTip("Automatically filled from this device.")
         self.device_name_input.setProperty("autoFilled", True)
+        self.device_name_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.device_name_input.setReadOnly(True)
         self.device_name_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         form.addRow("Device name", self.device_name_input)
@@ -66,6 +70,7 @@ class SignupDialog(QDialog):
         self.platform_input.setPlaceholderText("platform - automatically filled")
         self.platform_input.setToolTip("Automatically filled from this device.")
         self.platform_input.setProperty("autoFilled", True)
+        self.platform_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.platform_input.setReadOnly(True)
         self.platform_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         form.addRow("Platform", self.platform_input)
