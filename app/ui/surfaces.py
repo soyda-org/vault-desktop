@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
-    QFormLayout,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -84,19 +83,15 @@ class SystemWorkspaceView(QWidget):
         connection_row.addStretch(1)
         content_column.addLayout(connection_row)
 
-        form_layout = QFormLayout()
-        form_layout.setContentsMargins(0, 2, 0, 0)
-        form_layout.setHorizontalSpacing(10)
-        form_layout.setVerticalSpacing(8)
-        form_layout.addRow("Identifier", form_widgets["identifier"])
-        form_layout.addRow("Password", form_widgets["password"])
-        form_layout.addRow("Device name", form_widgets["device_name"])
-        form_layout.addRow("Platform", form_widgets["platform"])
-        content_column.addLayout(form_layout)
+        for key in ("identifier", "password", "device_name", "platform"):
+            form_widgets[key].setMinimumWidth(320)
+            form_widgets[key].setMaximumWidth(560)
+            content_column.addWidget(form_widgets[key], 0)
 
         primary_row = QHBoxLayout()
         primary_row.setContentsMargins(0, 8, 0, 0)
         primary_row.setSpacing(8)
+        primary_row.addStretch(1)
         primary_row.addWidget(auth_buttons["probe"])
         primary_row.addWidget(auth_buttons["login"])
         primary_row.addWidget(auth_buttons["signup"])

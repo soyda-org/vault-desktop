@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
     QFrame,
-    QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -206,16 +205,20 @@ class MainWindow(QMainWindow):
 
         self.identifier_input = QLineEdit()
         self.identifier_input.setText(self.persisted_ui_settings.identifier)
+        self.identifier_input.setPlaceholderText("username")
 
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_input.setText("strong-password")
+        self.password_input.setPlaceholderText("........")
 
         self.device_name_input = QLineEdit()
         self.device_name_input.setText(self.persisted_ui_settings.device_name)
+        self.device_name_input.setPlaceholderText("device name")
 
         self.platform_input = QLineEdit()
         self.platform_input.setText(self.persisted_ui_settings.platform)
+        self.platform_input.setPlaceholderText("platform")
 
         self.probe_button = QPushButton("Probe API")
         self.probe_button.setProperty("tone", "primary")
@@ -1168,13 +1171,13 @@ class MainWindow(QMainWindow):
             return
 
         if self._last_probe_result is None:
-            self.connection_state_label.setText("API not tested")
+            self.connection_state_label.setText("API not tested...")
             self._set_badge_state(self.connection_state_label, "warning")
         elif getattr(self._last_probe_result, "error", None):
-            self.connection_state_label.setText("API KO")
+            self.connection_state_label.setText("API ko.")
             self._set_badge_state(self.connection_state_label, "error")
         else:
-            self.connection_state_label.setText("API ok")
+            self.connection_state_label.setText("API ok.")
             self._set_badge_state(self.connection_state_label, "success")
 
         if not self.desktop_service.is_authenticated():
@@ -1428,7 +1431,7 @@ class MainWindow(QMainWindow):
                 color: {text};
                 font-size: 18px;
                 font-family: "{font_family}", "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
-                font-weight: 700;
+                font-weight: 500;
                 padding: 0;
             }}
             #connectionStateText[statusLevel="success"] {{
