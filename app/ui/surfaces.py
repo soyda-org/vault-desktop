@@ -99,6 +99,7 @@ class SystemWorkspaceView(QWidget):
         content_column.addLayout(primary_row)
 
         content_container = QWidget()
+        content_container.setObjectName("contentContainer")
         content_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         content_container.setLayout(content_column)
 

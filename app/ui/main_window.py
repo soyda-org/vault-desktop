@@ -1270,6 +1270,10 @@ class MainWindow(QMainWindow):
             QLabel {{
                 background: transparent;
             }}
+            #contentContainer {{
+                background: transparent;
+                border: 0;
+            }}
             QPushButton,
             QLineEdit,
             QTextEdit,
