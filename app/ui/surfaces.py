@@ -41,6 +41,16 @@ def _divider() -> QFrame:
     return frame
 
 
+def _subpanel(*, variant: str = "default") -> tuple[QFrame, QVBoxLayout]:
+    frame = QFrame()
+    frame.setObjectName("subPanel")
+    frame.setProperty("variant", variant)
+    layout = QVBoxLayout(frame)
+    layout.setContentsMargins(14, 14, 14, 14)
+    layout.setSpacing(10)
+    return frame, layout
+
+
 class SystemWorkspaceView(QWidget):
     def __init__(
         self,
@@ -92,42 +102,44 @@ class SystemWorkspaceView(QWidget):
         operations_panel, operations_layout = _panel(
             title="Session and messages",
             description=(
-                "Review the current desktop session, use local-only controls, and keep "
-                "recent system activity in one place."
+                "Review the current desktop session and keep recent system activity in one place."
             ),
         )
-        operations_layout.addWidget(session_state_label)
-        operations_layout.addWidget(session_label)
+        session_box, session_box_layout = _subpanel()
+        session_box_layout.addWidget(session_state_label)
+        session_box_layout.addWidget(session_label)
 
         utility_row = QHBoxLayout()
-        utility_row.setContentsMargins(0, 8, 0, 0)
+        utility_row.setContentsMargins(0, 4, 0, 0)
         utility_row.setSpacing(8)
         utility_row.addWidget(utility_buttons["logout"])
         utility_row.addWidget(utility_buttons["close"])
         utility_row.addStretch(1)
-        operations_layout.addLayout(utility_row)
-        operations_layout.addWidget(_divider())
+        session_box_layout.addLayout(utility_row)
+        operations_layout.addWidget(session_box)
+
+        messages_box, messages_box_layout = _subpanel(variant="secondary")
 
         messages_title = QLabel("System messages")
         messages_title.setObjectName("sectionTitle")
-        operations_layout.addWidget(messages_title)
+        messages_box_layout.addWidget(messages_title)
 
         log_intro = QLabel(
-            "Recent network progress, validation errors, and local security actions "
-            "appear here in time order."
+            "Recent network progress and security actions appear here in time order."
         )
         log_intro.setObjectName("surfacePanelBody")
         log_intro.setWordWrap(True)
-        operations_layout.addWidget(log_intro)
+        messages_box_layout.addWidget(log_intro)
 
         log_toolbar = QHBoxLayout()
-        log_toolbar.setContentsMargins(0, 4, 0, 0)
+        log_toolbar.setContentsMargins(0, 0, 0, 0)
         log_toolbar.setSpacing(8)
         log_toolbar.addWidget(log_widgets["copy"])
         log_toolbar.addWidget(log_widgets["clear"])
         log_toolbar.addStretch(1)
-        operations_layout.addLayout(log_toolbar)
-        operations_layout.addWidget(log_widgets["list"], 1)
+        messages_box_layout.addLayout(log_toolbar)
+        messages_box_layout.addWidget(log_widgets["list"], 1)
+        operations_layout.addWidget(messages_box, 1)
 
         left = QVBoxLayout()
         left.setContentsMargins(0, 0, 0, 0)

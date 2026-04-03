@@ -162,6 +162,7 @@ class MainWindow(QMainWindow):
 
         self.session_label = QLabel("No active session.")
         self.session_label.setWordWrap(True)
+        self.session_label.setObjectName("sessionBody")
 
         self.connection_state_label = QLabel()
         self.connection_state_label.setObjectName("statePill")
@@ -1285,6 +1286,14 @@ class MainWindow(QMainWindow):
             #surfaceDivider {{
                 background: {border};
                 border: 0;
+            }}
+            #subPanel {{
+                background: {surface_alt};
+                border: 1px solid {border};
+                border-radius: 12px;
+            }}
+            #subPanel[variant="secondary"] {{
+                background: {input};
             }}
             QTabWidget::pane {{
                 border: 0;
