@@ -1381,9 +1381,9 @@ class MainWindow(QMainWindow):
                 padding: 2px 8px;
             }}
             QPushButton[statusRowButton="true"] {{
-                font-size: 12px;
-                min-height: 20px;
-                padding: 1px 6px;
+                font-size: 11px;
+                min-height: 18px;
+                padding: 0px 5px;
             }}
             QPushButton[segment="true"][segmentCurrent="true"] {{
                 background: {primary};
@@ -1500,7 +1500,7 @@ class MainWindow(QMainWindow):
                 background: transparent;
                 border: 0;
                 color: {text};
-                font-size: 12px;
+                font-size: 11px;
                 font-family: "{font_family}", "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
                 font-weight: 400;
                 letter-spacing: 0.5px;
