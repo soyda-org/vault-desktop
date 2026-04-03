@@ -1233,11 +1233,15 @@ class MainWindow(QMainWindow):
             self._set_badge_state(self.vault_state_label, "warning")
 
         probe_meta = []
-        if self._last_probe_result is not None and not getattr(self._last_probe_result, "error", None):
+        probe_succeeded = self._last_probe_result is not None and not getattr(
+            self._last_probe_result, "error", None
+        )
+        if probe_succeeded:
             probe_meta.append(f"Project: {self._last_probe_result.project_name or '-'}")
             probe_meta.append(f"Version: {self._last_probe_result.version or '-'}")
             probe_meta.append(f"Env: {self._last_probe_result.environment or '-'}")
-        probe_meta.append(f"API: {self.api_client.base_url}")
+        if probe_succeeded or self.desktop_service.is_authenticated():
+            probe_meta.append(f"API: {self.api_client.base_url}")
         self.api_details_label.setText(" | ".join(probe_meta))
 
         self._set_button_tone(self.probe_button, "secondary")

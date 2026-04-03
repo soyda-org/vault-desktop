@@ -86,6 +86,30 @@ def test_refresh_system_state_indicators_reflect_probe_and_session(app_fixture) 
     assert "API: http://127.0.0.1:8000" in window.api_details_label.text()
 
 
+def test_refresh_system_state_indicators_hides_api_before_probe_or_login(app_fixture) -> None:
+    desktop_service = SimpleNamespace(
+        is_authenticated=lambda: False,
+    )
+    window = SimpleNamespace(
+        desktop_service=desktop_service,
+        _last_probe_result=None,
+        connection_state_label=QLabel(),
+        session_state_label=QLabel(),
+        vault_state_label=QLabel(),
+        api_details_label=QLabel(),
+        api_client=SimpleNamespace(base_url="http://127.0.0.1:8000"),
+        _is_vault_unlocked=lambda: False,
+        probe_button=QPushButton(),
+        login_button=QPushButton(),
+        _set_badge_state=lambda label, level: None,
+        _set_button_tone=lambda button, tone: None,
+    )
+
+    MainWindow._refresh_system_state_indicators(window)
+
+    assert window.api_details_label.text() == ""
+
+
 def test_main_window_device_fields_are_read_only(app_fixture) -> None:
     window = MainWindow(get_settings())
 
