@@ -1595,8 +1595,9 @@ class MainWindow(QMainWindow):
                 font-family: monospace;
             }}
             #activityLog QScrollBar:vertical {{
-                background: transparent;
+                background: {input};
                 border: 0;
+                border-radius: 999px;
                 margin: 6px 4px 6px 0;
                 width: 8px;
             }}
