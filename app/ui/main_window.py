@@ -3,9 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 import json
 import os
+from pathlib import Path
 
 from PySide6.QtCore import QThread, Qt, QEvent, QTimer
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QFontDatabase
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -128,6 +129,27 @@ def _theme_palette(theme: str) -> dict[str, str]:
     }
 
 
+def _load_embedded_font_family() -> str:
+    fonts_dir = Path(__file__).resolve().parents[1] / "assets" / "fonts"
+    preferred_family = "Courier Code"
+    for font_name in (
+        "CourierCode-Roman.ttf",
+        "CourierCode-Bold.ttf",
+        "CourierCode-Italic.ttf",
+        "CourierCode-BoldItalic.ttf",
+    ):
+        font_path = fonts_dir / font_name
+        if not font_path.exists():
+            continue
+        font_id = QFontDatabase.addApplicationFont(str(font_path))
+        if font_id == -1:
+            continue
+        families = QFontDatabase.applicationFontFamilies(font_id)
+        if families:
+            preferred_family = families[0]
+    return preferred_family
+
+
 class MainWindow(QMainWindow):
     def __init__(self, settings: DesktopSettings) -> None:
         super().__init__()
@@ -145,6 +167,7 @@ class MainWindow(QMainWindow):
             if self.persisted_ui_settings.theme in {"light", "dark"}
             else "light"
         )
+        self.ui_font_family = _load_embedded_font_family()
 
         self.setWindowTitle(settings.app_name)
         self.resize(1180, 780)
@@ -1220,7 +1243,7 @@ class MainWindow(QMainWindow):
                 background: {window};
                 color: {text};
                 font-size: 13px;
-                font-family: "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
+                font-family: "{font_family}", "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
                 font-weight: 500;
             }}
             QLabel {{
@@ -1404,7 +1427,7 @@ class MainWindow(QMainWindow):
                 border: 0;
                 color: {text};
                 font-size: 18px;
-                font-family: "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
+                font-family: "{font_family}", "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
                 font-weight: 700;
                 padding: 0;
             }}
@@ -1449,7 +1472,7 @@ class MainWindow(QMainWindow):
                 padding: 6px;
                 font-family: monospace;
             }}
-        """.format(**palette)
+        """.format(font_family=self.ui_font_family, **palette)
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(self._build_stylesheet())
