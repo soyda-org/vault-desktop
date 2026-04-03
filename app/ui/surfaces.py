@@ -70,14 +70,19 @@ class SystemWorkspaceView(QWidget):
         self.panel_stack = QStackedWidget()
 
         connect_panel, connect_layout = _panel_shell()
+        connection_label.setObjectName("connectionStateText")
+
+        content_column = QVBoxLayout()
+        content_column.setContentsMargins(0, 0, 0, 0)
+        content_column.setSpacing(14)
 
         connection_row = QHBoxLayout()
         connection_row.setContentsMargins(0, 0, 0, 0)
-        connection_row.setSpacing(10)
-        connection_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        connection_row.setSpacing(0)
+        connection_row.addStretch(1)
         connection_row.addWidget(connection_label, 0)
         connection_row.addStretch(1)
-        connect_layout.addLayout(connection_row)
+        content_column.addLayout(connection_row)
 
         form_layout = QFormLayout()
         form_layout.setContentsMargins(0, 2, 0, 0)
@@ -87,7 +92,7 @@ class SystemWorkspaceView(QWidget):
         form_layout.addRow("Password", form_widgets["password"])
         form_layout.addRow("Device name", form_widgets["device_name"])
         form_layout.addRow("Platform", form_widgets["platform"])
-        connect_layout.addLayout(form_layout)
+        content_column.addLayout(form_layout)
 
         primary_row = QHBoxLayout()
         primary_row.setContentsMargins(0, 8, 0, 0)
@@ -96,7 +101,16 @@ class SystemWorkspaceView(QWidget):
         primary_row.addWidget(auth_buttons["login"])
         primary_row.addWidget(auth_buttons["signup"])
         primary_row.addStretch(1)
-        connect_layout.addLayout(primary_row)
+        content_column.addLayout(primary_row)
+
+        content_wrapper = QHBoxLayout()
+        content_wrapper.setContentsMargins(0, 0, 0, 0)
+        content_wrapper.setSpacing(0)
+        content_wrapper.addStretch(1)
+        content_wrapper.addLayout(content_column, 3)
+        content_wrapper.addStretch(1)
+        connect_layout.addLayout(content_wrapper)
+        connect_layout.addStretch(1)
 
         messages_panel, messages_layout = _panel(
             title="System messages",

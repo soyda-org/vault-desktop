@@ -1220,6 +1220,7 @@ class MainWindow(QMainWindow):
                 background: {window};
                 color: {text};
                 font-size: 13px;
+                font-family: "IBM Plex Sans", "Aptos", "Segoe UI", "Helvetica Neue", sans-serif;
             }}
             QLabel {{
                 background: transparent;
@@ -1396,6 +1397,24 @@ class MainWindow(QMainWindow):
                 font-size: 12px;
                 font-weight: 700;
                 padding: 7px 12px;
+            }}
+            #connectionStateText {{
+                background: transparent;
+                border: 0;
+                color: {text};
+                font-size: 18px;
+                font-family: "IBM Plex Mono", "Cascadia Mono", "Consolas", monospace;
+                font-weight: 600;
+                padding: 0;
+            }}
+            #connectionStateText[statusLevel="success"] {{
+                color: {success};
+            }}
+            #connectionStateText[statusLevel="warning"] {{
+                color: {warning};
+            }}
+            #connectionStateText[statusLevel="error"] {{
+                color: {danger};
             }}
             #statePill[statusLevel="success"] {{
                 color: {success};
