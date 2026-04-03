@@ -59,3 +59,15 @@ def test_signup_dialog_shows_error_without_freezing(monkeypatch, app_fixture) ->
 
     assert "backend unavailable" in dialog.info_label.text()
     assert dialog.create_button.isEnabled()
+
+
+def test_signup_dialog_prefills_detected_device_defaults(monkeypatch, app_fixture) -> None:
+    monkeypatch.setattr(
+        "app.ui.signup_dialog.detect_local_device_defaults",
+        lambda: ("studio-box", "linux"),
+    )
+
+    dialog = SignupDialog(api_base_url="http://127.0.0.1:8000")
+
+    assert dialog.device_name_input.text() == "studio-box"
+    assert dialog.platform_input.text() == "linux"

@@ -33,7 +33,11 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.config import DesktopSettings
-from app.core.local_settings import LocalSettingsStore, PersistedUiSettings
+from app.core.local_settings import (
+    LocalSettingsStore,
+    PersistedUiSettings,
+    detect_local_device_defaults,
+)
 from app.services.api_client import (
     ObjectCreateResult,
     ObjectDetailResult,
@@ -1494,12 +1498,13 @@ class MainWindow(QMainWindow):
         )
 
     def _save_ui_preferences(self) -> None:
+        default_device_name, default_platform = detect_local_device_defaults()
         self.local_settings_store.save(
             PersistedUiSettings(
                 api_base_url=self.persisted_ui_settings.api_base_url,
                 identifier=self.identifier_input.text().strip() or "alice",
-                device_name=self.device_name_input.text().strip() or "vault-desktop-dev",
-                platform=self.platform_input.text().strip() or "linux",
+                device_name=self.device_name_input.text().strip() or default_device_name,
+                platform=self.platform_input.text().strip() or default_platform,
                 last_tab_index=self.tabs.currentIndex(),
                 theme=self.current_theme,
             )
@@ -1609,11 +1614,12 @@ class MainWindow(QMainWindow):
         self._save_ui_preferences()
 
     def run_open_signup_dialog(self) -> None:
+        default_device_name, default_platform = detect_local_device_defaults()
         dialog = SignupDialog(
             api_base_url=self.api_client.base_url,
             identifier=self.identifier_input.text().strip(),
-            device_name=self.device_name_input.text().strip() or "vault-desktop-dev",
-            platform=self.platform_input.text().strip() or "linux",
+            device_name=self.device_name_input.text().strip() or default_device_name,
+            platform=self.platform_input.text().strip() or default_platform,
             parent=self,
         )
         if dialog.exec():

@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from app.core.local_settings import detect_local_device_defaults
 from app.services.signup_with_recovery_api import SignupWithRecoveryError, register_with_recovery
 from app.ui.network_action_worker import NetworkActionWorker
 from app.ui.recovery_key_dialog import show_recovery_key_dialog
@@ -22,11 +23,12 @@ class SignupDialog(QDialog):
         *,
         api_base_url: str,
         identifier: str = "",
-        device_name: str = "vault-desktop-dev",
-        platform: str = "linux",
+        device_name: str | None = None,
+        platform: str | None = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
+        default_device_name, default_platform = detect_local_device_defaults()
         self.api_base_url = api_base_url
         self.registered_identifier = ""
         self._signup_thread: QThread | None = None
@@ -50,11 +52,11 @@ class SignupDialog(QDialog):
         form.addRow("Confirm password", self.password_confirm_input)
 
         self.device_name_input = QLineEdit()
-        self.device_name_input.setText(device_name)
+        self.device_name_input.setText(device_name or default_device_name)
         form.addRow("Device name", self.device_name_input)
 
         self.platform_input = QLineEdit()
-        self.platform_input.setText(platform)
+        self.platform_input.setText(platform or default_platform)
         form.addRow("Platform", self.platform_input)
 
         outer.addLayout(form)
@@ -154,6 +156,7 @@ class SignupDialog(QDialog):
         thread.start()
 
     def run_register(self) -> None:
+        default_device_name, default_platform = detect_local_device_defaults()
         error = self._validate_inputs()
         if error:
             self.info_label.setText(error)
@@ -163,8 +166,8 @@ class SignupDialog(QDialog):
             self._start_signup_worker(
                 identifier=self.identifier_input.text().strip(),
                 password=self.password_input.text(),
-                device_name=self.device_name_input.text().strip() or "vault-desktop-dev",
-                platform=self.platform_input.text().strip() or "linux",
+                device_name=self.device_name_input.text().strip() or default_device_name,
+                platform=self.platform_input.text().strip() or default_platform,
             )
         except SignupWithRecoveryError as exc:
             self.info_label.setText(str(exc))
