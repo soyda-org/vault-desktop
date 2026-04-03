@@ -1341,8 +1341,8 @@ class MainWindow(QMainWindow):
                 border-radius: 10px;
                 color: {text};
                 font-weight: 600;
-                min-height: 22px;
-                padding: 2px 8px;
+                min-height: 20px;
+                padding: 1px 7px;
             }}
             QPushButton:hover {{
                 border-color: {primary};

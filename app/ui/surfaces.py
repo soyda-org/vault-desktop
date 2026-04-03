@@ -76,7 +76,7 @@ class SystemWorkspaceView(QWidget):
 
         content_column = QVBoxLayout()
         content_column.setContentsMargins(0, 0, 0, 0)
-        content_column.setSpacing(10)
+        content_column.setSpacing(6)
 
         connection_row = QHBoxLayout()
         connection_row.setContentsMargins(0, 0, 0, 0)
@@ -95,8 +95,8 @@ class SystemWorkspaceView(QWidget):
             content_column.addWidget(form_widgets[key], 0)
 
         primary_row = QHBoxLayout()
-        primary_row.setContentsMargins(0, 4, 0, 0)
-        primary_row.setSpacing(6)
+        primary_row.setContentsMargins(0, 2, 0, 0)
+        primary_row.setSpacing(4)
         primary_row.addStretch(1)
         primary_row.addWidget(auth_buttons["login"])
         primary_row.addWidget(auth_buttons["signup"])
