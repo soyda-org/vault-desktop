@@ -73,13 +73,15 @@ class SystemWorkspaceView(QWidget):
 
         connection_row = QHBoxLayout()
         connection_row.setContentsMargins(0, 0, 0, 0)
-        connection_row.setSpacing(8)
-        connection_row.addWidget(connection_label)
+        connection_row.setSpacing(10)
+        connection_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        api_details_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        connection_row.addWidget(connection_label, 0)
         connection_row.addWidget(api_details_label, 1)
         connect_layout.addLayout(connection_row)
 
         form_layout = QFormLayout()
-        form_layout.setContentsMargins(0, 6, 0, 0)
+        form_layout.setContentsMargins(0, 2, 0, 0)
         form_layout.setHorizontalSpacing(10)
         form_layout.setVerticalSpacing(8)
         form_layout.addRow("Identifier", form_widgets["identifier"])

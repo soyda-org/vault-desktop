@@ -170,7 +170,7 @@ class MainWindow(QMainWindow):
         self.session_state_label.setObjectName("statePill")
         self.api_details_label = QLabel()
         self.api_details_label.setObjectName("technicalMeta")
-        self.api_details_label.setWordWrap(True)
+        self.api_details_label.setWordWrap(False)
 
         self.activity_log_list = QListWidget()
         self.activity_log_list.setObjectName("activityLog")
