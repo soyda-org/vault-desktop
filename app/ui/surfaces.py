@@ -41,16 +41,6 @@ def _divider() -> QFrame:
     return frame
 
 
-def _subpanel(*, variant: str = "default") -> tuple[QFrame, QVBoxLayout]:
-    frame = QFrame()
-    frame.setObjectName("subPanel")
-    frame.setProperty("variant", variant)
-    layout = QVBoxLayout(frame)
-    layout.setContentsMargins(14, 14, 14, 14)
-    layout.setSpacing(10)
-    return frame, layout
-
-
 class SystemWorkspaceView(QWidget):
     def __init__(
         self,
@@ -97,17 +87,15 @@ class SystemWorkspaceView(QWidget):
         primary_row.addWidget(auth_buttons["signup"])
         primary_row.addStretch(1)
         connect_layout.addLayout(primary_row)
-        connect_layout.addWidget(status_label)
 
-        operations_panel, operations_layout = _panel(
-            title="Session and messages",
+        messages_panel, messages_layout = _panel(
+            title="System messages",
             description=(
                 "Review the current desktop session and keep recent system activity in one place."
             ),
         )
-        session_box, session_box_layout = _subpanel()
-        session_box_layout.addWidget(session_state_label)
-        session_box_layout.addWidget(session_label)
+        messages_layout.addWidget(session_state_label)
+        messages_layout.addWidget(session_label)
 
         utility_row = QHBoxLayout()
         utility_row.setContentsMargins(0, 4, 0, 0)
@@ -115,21 +103,16 @@ class SystemWorkspaceView(QWidget):
         utility_row.addWidget(utility_buttons["logout"])
         utility_row.addWidget(utility_buttons["close"])
         utility_row.addStretch(1)
-        session_box_layout.addLayout(utility_row)
-        operations_layout.addWidget(session_box)
-
-        messages_box, messages_box_layout = _subpanel(variant="secondary")
-
-        messages_title = QLabel("System messages")
-        messages_title.setObjectName("sectionTitle")
-        messages_box_layout.addWidget(messages_title)
+        messages_layout.addLayout(utility_row)
+        messages_layout.addWidget(_divider())
+        messages_layout.addWidget(status_label)
 
         log_intro = QLabel(
             "Recent network progress and security actions appear here in time order."
         )
         log_intro.setObjectName("surfacePanelBody")
         log_intro.setWordWrap(True)
-        messages_box_layout.addWidget(log_intro)
+        messages_layout.addWidget(log_intro)
 
         log_toolbar = QHBoxLayout()
         log_toolbar.setContentsMargins(0, 0, 0, 0)
@@ -137,9 +120,8 @@ class SystemWorkspaceView(QWidget):
         log_toolbar.addWidget(log_widgets["copy"])
         log_toolbar.addWidget(log_widgets["clear"])
         log_toolbar.addStretch(1)
-        messages_box_layout.addLayout(log_toolbar)
-        messages_box_layout.addWidget(log_widgets["list"], 1)
-        operations_layout.addWidget(messages_box, 1)
+        messages_layout.addLayout(log_toolbar)
+        messages_layout.addWidget(log_widgets["list"], 1)
 
         left = QVBoxLayout()
         left.setContentsMargins(0, 0, 0, 0)
@@ -150,7 +132,7 @@ class SystemWorkspaceView(QWidget):
         right = QVBoxLayout()
         right.setContentsMargins(0, 0, 0, 0)
         right.setSpacing(16)
-        right.addWidget(operations_panel, 1)
+        right.addWidget(messages_panel, 1)
 
         body = QHBoxLayout()
         body.setContentsMargins(0, 0, 0, 0)
