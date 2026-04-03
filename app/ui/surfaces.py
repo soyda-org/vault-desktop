@@ -104,6 +104,7 @@ class SystemWorkspaceView(QWidget):
         content_wrapper.addStretch(1)
         content_wrapper.addLayout(content_column, 3)
         content_wrapper.addStretch(1)
+        connect_layout.addStretch(1)
         connect_layout.addLayout(content_wrapper)
         connect_layout.addStretch(1)
 
