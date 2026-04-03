@@ -54,12 +54,18 @@ class SignupDialog(QDialog):
 
         self.device_name_input = QLineEdit()
         self.device_name_input.setText(device_name or default_device_name)
+        self.device_name_input.setPlaceholderText("device name - automatically filled")
+        self.device_name_input.setToolTip("Automatically filled from this device.")
+        self.device_name_input.setProperty("autoFilled", True)
         self.device_name_input.setReadOnly(True)
         self.device_name_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         form.addRow("Device name", self.device_name_input)
 
         self.platform_input = QLineEdit()
         self.platform_input.setText(platform or default_platform)
+        self.platform_input.setPlaceholderText("platform - automatically filled")
+        self.platform_input.setToolTip("Automatically filled from this device.")
+        self.platform_input.setProperty("autoFilled", True)
         self.platform_input.setReadOnly(True)
         self.platform_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         form.addRow("Platform", self.platform_input)

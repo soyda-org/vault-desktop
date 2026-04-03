@@ -87,6 +87,10 @@ def test_main_window_device_fields_are_read_only(app_fixture) -> None:
 
     assert window.device_name_input.isReadOnly()
     assert window.platform_input.isReadOnly()
+    assert window.device_name_input.placeholderText() == "device name - automatically filled"
+    assert window.platform_input.placeholderText() == "platform - automatically filled"
+    assert window.device_name_input.property("autoFilled") is True
+    assert window.platform_input.property("autoFilled") is True
 
 
 def test_append_activity_log_keeps_newest_first_and_dedupes(app_fixture) -> None:

@@ -218,13 +218,17 @@ class MainWindow(QMainWindow):
 
         self.device_name_input = QLineEdit()
         self.device_name_input.setText(self.persisted_ui_settings.device_name)
-        self.device_name_input.setPlaceholderText("device name")
+        self.device_name_input.setPlaceholderText("device name - automatically filled")
+        self.device_name_input.setToolTip("Automatically filled from this device.")
+        self.device_name_input.setProperty("autoFilled", True)
         self.device_name_input.setReadOnly(True)
         self.device_name_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.platform_input = QLineEdit()
         self.platform_input.setText(self.persisted_ui_settings.platform)
-        self.platform_input.setPlaceholderText("platform")
+        self.platform_input.setPlaceholderText("platform - automatically filled")
+        self.platform_input.setToolTip("Automatically filled from this device.")
+        self.platform_input.setProperty("autoFilled", True)
         self.platform_input.setReadOnly(True)
         self.platform_input.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
@@ -1380,6 +1384,12 @@ class MainWindow(QMainWindow):
             QTabBar::tab:selected {{
                 background: {surface};
                 color: {text};
+            }}
+            QLineEdit[autoFilled="true"] {{
+                color: #7d8392;
+            }}
+            QLineEdit[autoFilled="true"]::placeholder {{
+                color: #6f7584;
             }}
             #heroFrame,
             #toolbarFrame,

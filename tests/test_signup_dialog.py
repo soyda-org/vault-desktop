@@ -73,3 +73,7 @@ def test_signup_dialog_prefills_detected_device_defaults(monkeypatch, app_fixtur
     assert dialog.platform_input.text() == "linux"
     assert dialog.device_name_input.isReadOnly()
     assert dialog.platform_input.isReadOnly()
+    assert dialog.device_name_input.placeholderText() == "device name - automatically filled"
+    assert dialog.platform_input.placeholderText() == "platform - automatically filled"
+    assert dialog.device_name_input.property("autoFilled") is True
+    assert dialog.platform_input.property("autoFilled") is True
