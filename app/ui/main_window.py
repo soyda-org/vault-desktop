@@ -1614,8 +1614,14 @@ class MainWindow(QMainWindow):
             #activityLog QScrollBar::sub-line:vertical,
             #activityLog QScrollBar::add-page:vertical,
             #activityLog QScrollBar::sub-page:vertical {{
+                background: {input};
+                border: 0;
+            }}
+            #activityLog QScrollBar::up-arrow:vertical,
+            #activityLog QScrollBar::down-arrow:vertical {{
                 background: transparent;
                 border: 0;
+                width: 0;
                 height: 0;
             }}
         """.format(font_family=self.ui_font_family, **palette)
