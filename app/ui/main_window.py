@@ -1389,9 +1389,21 @@ class MainWindow(QMainWindow):
             }}
             QPushButton[statusRowButton="true"] {{
                 font-size: 8px;
-                min-height: 14px;
-                padding: 0px 4px;
+                min-height: 16px;
+                padding: 1px 6px;
+                background: transparent;
+                border: 1px solid {border};
                 border-radius: 999px;
+            }}
+            QPushButton[statusRowButton="true"][tone="primary"] {{
+                background: transparent;
+                border-color: {primary};
+                color: {primary};
+            }}
+            QPushButton[statusRowButton="true"][tone="primary"]:hover {{
+                background: {nav_bg};
+                border-color: {primary};
+                color: {primary};
             }}
             QPushButton[segment="true"][segmentCurrent="true"] {{
                 background: {primary};
