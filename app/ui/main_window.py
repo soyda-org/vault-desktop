@@ -551,10 +551,12 @@ class MainWindow(QMainWindow):
 
         self.generate_password_button = QPushButton("Generate Password")
         self.generate_password_button.setProperty("tone", "primary")
+        self.generate_password_button.setProperty("hoverGlow", "light")
         self.generate_password_button.clicked.connect(self.run_generate_password)
 
         self.copy_generated_password_button = QPushButton("Copy Generated Password")
         self.copy_generated_password_button.setProperty("tone", "secondary")
+        self.copy_generated_password_button.setProperty("hoverGlow", "light")
         self.copy_generated_password_button.clicked.connect(self.run_copy_generated_password)
 
         self.pin_bootstrap_status_label = QLabel()
