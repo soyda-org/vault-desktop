@@ -1429,19 +1429,20 @@ class MainWindow(QMainWindow):
                 background: transparent;
                 border: 0;
                 color: {text};
-                font-size: 18px;
+                font-size: 14px;
                 font-family: "{font_family}", "Courier New", "Liberation Mono", "Nimbus Mono PS", monospace;
-                font-weight: 500;
+                font-weight: 400;
+                letter-spacing: 0.5px;
                 padding: 0;
             }}
             #connectionStateText[statusLevel="success"] {{
-                color: {success};
+                color: #39ff88;
             }}
             #connectionStateText[statusLevel="warning"] {{
-                color: {warning};
+                color: #ffd84d;
             }}
             #connectionStateText[statusLevel="error"] {{
-                color: {danger};
+                color: #ff5f8a;
             }}
             #statePill[statusLevel="success"] {{
                 color: {success};
