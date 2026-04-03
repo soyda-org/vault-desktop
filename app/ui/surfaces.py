@@ -80,15 +80,15 @@ class SystemWorkspaceView(QWidget):
         connect_layout.addLayout(primary_row)
         connect_layout.addWidget(status_label)
 
-        session_panel, session_layout = _panel(
-            title="Session state",
+        operations_panel, operations_layout = _panel(
+            title="Session and messages",
             description=(
-                "Review the current desktop session and use local-only controls when you "
-                "need to end access or close the app."
+                "Review the current desktop session, use local-only controls, and keep "
+                "recent system activity in one place."
             ),
         )
-        session_layout.addWidget(session_state_label)
-        session_layout.addWidget(session_label)
+        operations_layout.addWidget(session_state_label)
+        operations_layout.addWidget(session_label)
 
         utility_row = QHBoxLayout()
         utility_row.setContentsMargins(0, 8, 0, 0)
@@ -96,35 +96,35 @@ class SystemWorkspaceView(QWidget):
         utility_row.addWidget(utility_buttons["logout"])
         utility_row.addWidget(utility_buttons["close"])
         utility_row.addStretch(1)
-        session_layout.addLayout(utility_row)
+        operations_layout.addLayout(utility_row)
 
-        status_panel, status_layout = _panel(
-            title="System messages",
-            description=(
-                "Recent network progress, validation errors, and local security actions "
-                "appear here in time order."
-            ),
+        log_intro = QLabel(
+            "Recent network progress, validation errors, and local security actions "
+            "appear here in time order."
         )
+        log_intro.setObjectName("surfacePanelBody")
+        log_intro.setWordWrap(True)
+        operations_layout.addWidget(log_intro)
+
         log_toolbar = QHBoxLayout()
         log_toolbar.setContentsMargins(0, 4, 0, 0)
         log_toolbar.setSpacing(8)
         log_toolbar.addWidget(log_widgets["copy"])
         log_toolbar.addWidget(log_widgets["clear"])
         log_toolbar.addStretch(1)
-        status_layout.addLayout(log_toolbar)
-        status_layout.addWidget(log_widgets["list"])
+        operations_layout.addLayout(log_toolbar)
+        operations_layout.addWidget(log_widgets["list"], 1)
 
         left = QVBoxLayout()
         left.setContentsMargins(0, 0, 0, 0)
         left.setSpacing(16)
         left.addWidget(connect_panel)
-        left.addWidget(status_panel, 1)
+        left.addStretch(1)
 
         right = QVBoxLayout()
         right.setContentsMargins(0, 0, 0, 0)
         right.setSpacing(16)
-        right.addWidget(session_panel)
-        right.addStretch(1)
+        right.addWidget(operations_panel, 1)
 
         body = QHBoxLayout()
         body.setContentsMargins(0, 0, 0, 0)
