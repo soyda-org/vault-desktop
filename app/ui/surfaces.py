@@ -98,11 +98,15 @@ class SystemWorkspaceView(QWidget):
         primary_row.addStretch(1)
         content_column.addLayout(primary_row)
 
+        content_container = QWidget()
+        content_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        content_container.setLayout(content_column)
+
         content_wrapper = QHBoxLayout()
         content_wrapper.setContentsMargins(0, 0, 0, 0)
         content_wrapper.setSpacing(0)
         content_wrapper.addStretch(1)
-        content_wrapper.addLayout(content_column, 3)
+        content_wrapper.addWidget(content_container, 0)
         content_wrapper.addStretch(1)
         connect_layout.addStretch(1)
         connect_layout.addLayout(content_wrapper)
