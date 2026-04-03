@@ -33,6 +33,15 @@ def _panel(*, title: str, description: str | None = None) -> tuple[QWidget, QVBo
     return frame, layout
 
 
+def _panel_shell() -> tuple[QWidget, QVBoxLayout]:
+    frame = QFrame()
+    frame.setObjectName("surfacePanel")
+    layout = QVBoxLayout(frame)
+    layout.setContentsMargins(20, 20, 20, 20)
+    layout.setSpacing(12)
+    return frame, layout
+
+
 def _divider() -> QFrame:
     frame = QFrame()
     frame.setFrameShape(QFrame.Shape.HLine)
@@ -60,16 +69,14 @@ class SystemWorkspaceView(QWidget):
         super().__init__()
         self.panel_stack = QStackedWidget()
 
-        connect_panel, connect_layout = _panel(
-            title="Service access",
-            description=(
-                "Probe the API, sign in, and prepare this desktop session before moving "
-                "into vault work. Account login stays separate from vault unlock."
-            ),
-        )
-        connect_layout.addWidget(header_label)
-        connect_layout.addWidget(connection_label)
-        connect_layout.addWidget(api_details_label)
+        connect_panel, connect_layout = _panel_shell()
+
+        connection_row = QHBoxLayout()
+        connection_row.setContentsMargins(0, 0, 0, 0)
+        connection_row.setSpacing(8)
+        connection_row.addWidget(connection_label)
+        connection_row.addWidget(api_details_label, 1)
+        connect_layout.addLayout(connection_row)
 
         form_layout = QFormLayout()
         form_layout.setContentsMargins(0, 6, 0, 0)
