@@ -81,6 +81,7 @@ class SystemWorkspaceView(QWidget):
         connection_row = QHBoxLayout()
         connection_row.setContentsMargins(0, 0, 0, 0)
         connection_row.setSpacing(12)
+        auth_buttons["probe"].setProperty("statusRowButton", True)
         connection_row.addWidget(auth_buttons["probe"], 0)
         connection_row.addWidget(connection_label, 0)
         connection_row.addWidget(session_state_label, 0)
