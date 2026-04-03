@@ -93,6 +93,7 @@ def _theme_palette(theme: str) -> dict[str, str]:
         return {
             "window": "#0b1220",
             "surface": "#0f172a",
+            "panel": "#101b31",
             "surface_alt": "#111c2e",
             "input": "#162235",
             "border": "#243247",
@@ -113,6 +114,7 @@ def _theme_palette(theme: str) -> dict[str, str]:
     return {
         "window": "#f6f7fb",
         "surface": "#ffffff",
+        "panel": "#f1f5fb",
         "surface_alt": "#f5f7fb",
         "input": "#fbfcfe",
         "border": "#d8e0ea",
@@ -1407,10 +1409,14 @@ class MainWindow(QMainWindow):
             }}
             #heroFrame,
             #toolbarFrame,
-            #surfacePanel,
             #workspaceCard,
             #detailCard {{
                 background: {surface};
+                border: 1px solid {border};
+                border-radius: 14px;
+            }}
+            #surfacePanel {{
+                background: {panel};
                 border: 1px solid {border};
                 border-radius: 14px;
             }}
