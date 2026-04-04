@@ -1556,7 +1556,7 @@ class MainWindow(QMainWindow):
                 font-size: 24px;
             }}
             QLineEdit[vaultPinField="true"]::placeholder {{
-                font-size: 24px;
+                font-size: 64px;
                 color: {muted};
             }}
             QPushButton {{
