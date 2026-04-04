@@ -1191,7 +1191,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, "shell_toolbar_frame"):
             self.shell_toolbar_frame.setVisible(True)
         if hasattr(self, "system_service_tab_button"):
-            show_system_segments = True
+            show_system_segments = screen == "system"
             self.system_service_tab_button.setVisible(True)
             self.system_messages_tab_button.setVisible(True)
             service_level = "success" if authenticated else "warning"
