@@ -653,8 +653,18 @@ class MainWindow(QMainWindow):
         )
         self.pin_confirmation_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        self.new_vault_pin_input = QLineEdit()
+        self.new_vault_pin_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.new_vault_pin_input.setPlaceholderText("new PIN")
+        self.new_vault_pin_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
         self.pin_confirmation_label = QLabel()
         self.pin_confirmation_label.setWordWrap(True)
+
+        advanced_new_pin_row = QHBoxLayout()
+        advanced_new_pin_row.setContentsMargins(0, 0, 0, 0)
+        advanced_new_pin_row.setSpacing(8)
+        advanced_new_pin_row.addWidget(self.new_vault_pin_input, 1)
 
         advanced_pin_manage_row = QHBoxLayout()
         advanced_pin_manage_row.setContentsMargins(0, 0, 0, 0)
@@ -673,6 +683,7 @@ class MainWindow(QMainWindow):
         advanced_recovery_row = QVBoxLayout()
         advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
         advanced_recovery_row.setSpacing(8)
+        advanced_recovery_row.addLayout(advanced_new_pin_row)
         advanced_recovery_row.addLayout(advanced_pin_manage_row)
         advanced_recovery_row.addLayout(advanced_recovery_input_row)
 
@@ -842,6 +853,7 @@ class MainWindow(QMainWindow):
         self.file_download_target_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_vault_pin_field_style())
+        self.new_vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.pin_confirmation_input.textChanged.connect(lambda *_: self._refresh_action_states())
 
         self.vault_auto_lock_timeout_ms = self._read_timeout_ms(
@@ -2895,11 +2907,11 @@ class MainWindow(QMainWindow):
             )
             return
 
-        pin_value = self.vault_pin_input.text().strip()
+        pin_value = self.new_vault_pin_input.text().strip()
         if not pin_value:
             self.status_label.setText(
                 "PIN enrollment failed.\n"
-                "Error: PIN input is empty."
+                "Error: New PIN input is empty."
             )
             return
 
@@ -2921,7 +2933,7 @@ class MainWindow(QMainWindow):
             )
             return
 
-        self.vault_pin_input.clear()
+        self.new_vault_pin_input.clear()
         self.pin_confirmation_input.clear()
         if prior_status == "current_account":
             self.status_label.setText(
@@ -2968,7 +2980,7 @@ class MainWindow(QMainWindow):
             return
 
         self.desktop_service.clear_local_pin_bootstrap()
-        self.vault_pin_input.clear()
+        self.new_vault_pin_input.clear()
         self.pin_confirmation_input.clear()
         if prior_status == "other_account" and identifier_hint:
             self.status_label.setText(
@@ -3450,12 +3462,14 @@ class MainWindow(QMainWindow):
             )
         
         self.pin_confirmation_input.setToolTip("")
+        self.new_vault_pin_input.setToolTip("")
         self.vault_pin_input.setToolTip("")
         self.toggle_advanced_recovery_button.setToolTip("")
         self.enroll_vault_pin_button.setToolTip("")
         self.remove_vault_pin_button.setToolTip("")
 
         self.vault_pin_input.setEnabled(authenticated)
+        self.new_vault_pin_input.setEnabled(authenticated and vault_unlocked)
         self.pin_confirmation_input.setEnabled(
             authenticated and pin_bootstrap_status in {"current_account", "other_account"}
         )
@@ -3465,10 +3479,11 @@ class MainWindow(QMainWindow):
             and pin_bootstrap_status == "current_account"
             and pin_text_present
         )
+        new_pin_text_present = bool(self.new_vault_pin_input.text().strip())
         if pin_bootstrap_status in {"current_account", "other_account"}:
-            enroll_allowed = authenticated and vault_unlocked and pin_text_present and confirmation_ready
+            enroll_allowed = authenticated and vault_unlocked and new_pin_text_present and confirmation_ready
         else:
-            enroll_allowed = authenticated and vault_unlocked and pin_text_present
+            enroll_allowed = authenticated and vault_unlocked and new_pin_text_present
         self.enroll_vault_pin_button.setEnabled(enroll_allowed)
         if pin_bootstrap_status == "current_account":
             self.enroll_vault_pin_button.setText("Change PIN on This Device")

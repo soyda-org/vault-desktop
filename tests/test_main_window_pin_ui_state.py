@@ -154,6 +154,7 @@ def make_window_harness(
     window.file_chunks_input = QTextEdit()
 
     window.vault_pin_input = QLineEdit()
+    window.new_vault_pin_input = QLineEdit()
     window.pin_confirmation_input = QLineEdit()
     window.recovery_key_b64_input = QLineEdit()
     window.file_path_input = QLineEdit()
@@ -243,7 +244,7 @@ def make_window_harness(
 def test_first_time_enroll_requires_no_confirmation(qapp, tmp_path: Path) -> None:
     window = make_window_harness(tmp_path)
     window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
-    window.vault_pin_input.setText("1234")
+    window.new_vault_pin_input.setText("1234")
 
     MainWindow._refresh_action_states(window)
 
@@ -260,7 +261,7 @@ def test_current_account_pin_requires_confirm_for_change_and_remove(qapp, tmp_pa
     window = make_window_harness(tmp_path)
     window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
     window.desktop_service.enroll_local_pin_bootstrap(pin="1234")
-    window.vault_pin_input.setText("5678")
+    window.new_vault_pin_input.setText("5678")
 
     MainWindow._refresh_action_states(window)
 
@@ -286,7 +287,7 @@ def test_other_account_pin_disables_unlock_and_requires_confirm(qapp, tmp_path: 
     first.logout()
 
     window = make_window_harness(tmp_path, user_id="user_2", identifier="bob")
-    window.vault_pin_input.setText("1234")
+    window.new_vault_pin_input.setText("1234")
 
     MainWindow._refresh_action_states(window)
 
@@ -298,6 +299,7 @@ def test_other_account_pin_disables_unlock_and_requires_confirm(qapp, tmp_path: 
     assert window.enroll_vault_pin_button.isEnabled() is False
 
     window.pin_confirmation_input.setText("CONFIRM")
+    window.new_vault_pin_input.setText("5678")
     MainWindow._refresh_action_states(window)
 
     assert window.enroll_vault_pin_button.isEnabled() is False
@@ -391,7 +393,7 @@ def test_unlock_source_label_tracks_recovery_then_pin(qapp, tmp_path: Path) -> N
 def test_run_enroll_vault_pin_first_time_sets_local_only_message(qapp, tmp_path: Path) -> None:
     window = make_window_harness(tmp_path)
     window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
-    window.vault_pin_input.setText("1234")
+    window.new_vault_pin_input.setText("1234")
 
     MainWindow.run_enroll_vault_pin(window)
 
@@ -404,7 +406,7 @@ def test_run_enroll_vault_pin_rejects_change_without_confirm(qapp, tmp_path: Pat
     window = make_window_harness(tmp_path)
     window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
     window.desktop_service.enroll_local_pin_bootstrap(pin="1234")
-    window.vault_pin_input.setText("5678")
+    window.new_vault_pin_input.setText("5678")
 
     MainWindow.run_enroll_vault_pin(window)
 
