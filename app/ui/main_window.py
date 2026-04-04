@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import QThread, Qt, QEvent, QTimer
-from PySide6.QtGui import QColor, QFontDatabase
+from PySide6.QtGui import QColor, QFont, QFontDatabase
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -828,6 +828,7 @@ class MainWindow(QMainWindow):
         self.file_path_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.file_download_target_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
+        self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_vault_pin_field_style())
         self.pin_confirmation_input.textChanged.connect(lambda *_: self._refresh_action_states())
 
         self.vault_auto_lock_timeout_ms = self._read_timeout_ms(
@@ -854,6 +855,7 @@ class MainWindow(QMainWindow):
             app.installEventFilter(self)
 
         self._apply_theme()
+        self._refresh_vault_pin_field_style()
         self._refresh_quick_crypto_method_state()
         self.refresh_session_label()
         self._refresh_system_state_indicators()
@@ -1552,11 +1554,7 @@ class MainWindow(QMainWindow):
             QLineEdit[ghostField="true"]::placeholder {{
                 color: {muted};
             }}
-            QLineEdit[vaultPinField="true"] {{
-                font-size: 24px;
-            }}
             QLineEdit[vaultPinField="true"]::placeholder {{
-                font-size: 64px;
                 color: {muted};
             }}
             QPushButton {{
@@ -1956,6 +1954,12 @@ class MainWindow(QMainWindow):
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(self._build_stylesheet())
+
+    def _refresh_vault_pin_field_style(self) -> None:
+        if not hasattr(self, "vault_pin_input"):
+            return
+        pixel_size = 64 if not self.vault_pin_input.text() else 24
+        self.vault_pin_input.setStyleSheet(f"font-size: {pixel_size}px;")
         if hasattr(self, "theme_toggle_button"):
             self.theme_toggle_button.setText(
                 "Theme: Dark" if self.current_theme == "dark" else "Theme: Light"

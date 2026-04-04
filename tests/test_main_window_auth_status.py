@@ -164,6 +164,18 @@ def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
     assert "authenticated encryption" in window.quick_crypto_help_button.toolTip().lower()
 
 
+def test_vault_pin_field_uses_large_empty_font_and_smaller_typed_font(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.vault_pin_input.clear()
+    window._refresh_vault_pin_field_style()
+    assert "font-size: 64px;" in window.vault_pin_input.styleSheet()
+
+    window.vault_pin_input.setText("1234")
+    window._refresh_vault_pin_field_style()
+    assert "font-size: 24px;" in window.vault_pin_input.styleSheet()
+
+
 def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.show()
