@@ -64,6 +64,7 @@ from app.services.quick_text_crypto import (
     available_method_labels,
     decrypt_text,
     encrypt_text,
+    passphrase_mode_for_method,
 )
 from app.services.vault_gateway import AuthenticatedVaultGateway
 from app.ui.file_download_worker import FileDownloadWorker
@@ -570,6 +571,9 @@ class MainWindow(QMainWindow):
         self.quick_crypto_method_select = QComboBox()
         for label, method_key in available_method_labels():
             self.quick_crypto_method_select.addItem(label, method_key)
+        self.quick_crypto_method_select.currentIndexChanged.connect(
+            self._refresh_quick_crypto_method_state
+        )
 
         self.quick_crypto_passphrase_input = QLineEdit()
         self.quick_crypto_passphrase_input.setPlaceholderText("Passphrase")
@@ -605,6 +609,11 @@ class MainWindow(QMainWindow):
         self.quick_decrypt_button.setProperty("tone", "secondary")
         self.quick_decrypt_button.setProperty("hoverGlow", "light")
         self.quick_decrypt_button.clicked.connect(self.run_quick_decrypt_text)
+
+        self.quick_copy_output_button = QPushButton("Copy Output")
+        self.quick_copy_output_button.setProperty("tone", "secondary")
+        self.quick_copy_output_button.setProperty("hoverGlow", "light")
+        self.quick_copy_output_button.clicked.connect(self.run_copy_quick_crypto_output)
 
         self.pin_bootstrap_status_label = QLabel()
         self.pin_bootstrap_status_label.setWordWrap(True)
@@ -761,6 +770,7 @@ class MainWindow(QMainWindow):
                 "quick_output": self.quick_crypto_output,
                 "encrypt": self.quick_encrypt_button,
                 "decrypt": self.quick_decrypt_button,
+                "copy_output": self.quick_copy_output_button,
             },
         )
 
@@ -823,6 +833,7 @@ class MainWindow(QMainWindow):
             app.installEventFilter(self)
 
         self._apply_theme()
+        self._refresh_quick_crypto_method_state()
         self.refresh_session_label()
         self._refresh_system_state_indicators()
         self._refresh_action_states()
@@ -2118,6 +2129,36 @@ class MainWindow(QMainWindow):
         clipboard = app.clipboard()
         clipboard.setText(password)
         self.status_label.setText("Generated password copied to clipboard.")
+
+    def _refresh_quick_crypto_method_state(self) -> None:
+        method_key = str(self.quick_crypto_method_select.currentData())
+        mode = passphrase_mode_for_method(method_key)
+        if mode == "none":
+            self.quick_crypto_passphrase_input.clear()
+            self.quick_crypto_passphrase_input.setReadOnly(True)
+            self.quick_crypto_passphrase_input.setPlaceholderText("No passphrase needed")
+        elif mode == "optional":
+            self.quick_crypto_passphrase_input.setReadOnly(False)
+            self.quick_crypto_passphrase_input.setPlaceholderText(
+                "Optional passphrase / shift seed"
+            )
+        else:
+            self.quick_crypto_passphrase_input.setReadOnly(False)
+            self.quick_crypto_passphrase_input.setPlaceholderText("Passphrase required")
+
+    def run_copy_quick_crypto_output(self) -> None:
+        output = self.quick_crypto_output.toPlainText().strip()
+        if not output:
+            self.status_label.setText("Quick crypto output is empty.")
+            return
+
+        app = QApplication.instance()
+        if app is None:
+            self.status_label.setText("Clipboard is unavailable.")
+            return
+
+        app.clipboard().setText(output)
+        self.status_label.setText("Quick crypto output copied to clipboard.")
 
     def run_quick_encrypt_text(self) -> None:
         try:

@@ -131,6 +131,34 @@ def test_main_window_device_fields_are_read_only(app_fixture) -> None:
     assert window.platform_input.alignment() == Qt.AlignmentFlag.AlignCenter
 
 
+def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.quick_crypto_method_select.setCurrentIndex(
+        window.quick_crypto_method_select.findData("base64")
+    )
+    window._refresh_quick_crypto_method_state()
+    assert window.quick_crypto_passphrase_input.isReadOnly()
+    assert window.quick_crypto_passphrase_input.placeholderText() == "No passphrase needed"
+
+    window.quick_crypto_method_select.setCurrentIndex(
+        window.quick_crypto_method_select.findData("caesar-shift")
+    )
+    window._refresh_quick_crypto_method_state()
+    assert not window.quick_crypto_passphrase_input.isReadOnly()
+    assert (
+        window.quick_crypto_passphrase_input.placeholderText()
+        == "Optional passphrase / shift seed"
+    )
+
+    window.quick_crypto_method_select.setCurrentIndex(
+        window.quick_crypto_method_select.findData("aes-256-gcm")
+    )
+    window._refresh_quick_crypto_method_state()
+    assert not window.quick_crypto_passphrase_input.isReadOnly()
+    assert window.quick_crypto_passphrase_input.placeholderText() == "Passphrase required"
+
+
 def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.show()

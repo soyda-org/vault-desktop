@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import codecs
 from dataclasses import dataclass
 import json
 import secrets
@@ -12,21 +14,29 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 PBKDF2_ITERATIONS = 600_000
 SALT_BYTES = 16
+DEFAULT_CAESAR_SHIFT = 13
 
 
 @dataclass(frozen=True)
 class QuickTextCryptoMethod:
     key: str
     label: str
-    key_length: int
-    nonce_length: int
+    passphrase_mode: str
+    family: str
+    key_length: int = 0
+    nonce_length: int = 0
 
 
 METHODS: tuple[QuickTextCryptoMethod, ...] = (
-    QuickTextCryptoMethod("aes-256-gcm", "AES-256-GCM", 32, 12),
-    QuickTextCryptoMethod("aes-128-gcm", "AES-128-GCM", 16, 12),
-    QuickTextCryptoMethod("chacha20-poly1305", "ChaCha20-Poly1305", 32, 12),
-    QuickTextCryptoMethod("aes-256-ccm", "AES-256-CCM", 32, 13),
+    QuickTextCryptoMethod("base64", "Base64", "none", "base64"),
+    QuickTextCryptoMethod("hex", "Hex", "none", "hex"),
+    QuickTextCryptoMethod("rot13", "ROT13", "none", "rot13"),
+    QuickTextCryptoMethod("caesar-shift", "Caesar Shift", "optional", "caesar"),
+    QuickTextCryptoMethod("xor-stream", "XOR Stream", "required", "xor"),
+    QuickTextCryptoMethod("aes-128-gcm", "AES-128-GCM", "required", "aead", 16, 12),
+    QuickTextCryptoMethod("aes-256-gcm", "AES-256-GCM", "required", "aead", 32, 12),
+    QuickTextCryptoMethod("chacha20-poly1305", "ChaCha20-Poly1305", "required", "aead", 32, 12),
+    QuickTextCryptoMethod("aes-256-ccm", "AES-256-CCM", "required", "aead", 32, 13),
 )
 
 METHODS_BY_KEY = {method.key: method for method in METHODS}
@@ -38,6 +48,10 @@ class QuickTextCryptoError(ValueError):
 
 def available_method_labels() -> tuple[tuple[str, str], ...]:
     return tuple((method.label, method.key) for method in METHODS)
+
+
+def passphrase_mode_for_method(method_key: str) -> str:
+    return _method_for_key(method_key).passphrase_mode
 
 
 def _method_for_key(method_key: str) -> QuickTextCryptoMethod:
@@ -58,6 +72,37 @@ def _derive_key(*, passphrase: str, salt: bytes, key_length: int) -> bytes:
         iterations=PBKDF2_ITERATIONS,
     )
     return kdf.derive(passphrase.encode("utf-8"))
+
+
+def _caesar_shift_from_passphrase(passphrase: str) -> int:
+    if not passphrase:
+        return DEFAULT_CAESAR_SHIFT
+    return sum(passphrase.encode("utf-8")) % 26 or DEFAULT_CAESAR_SHIFT
+
+
+def _apply_caesar(text: str, shift: int) -> str:
+    output: list[str] = []
+    for char in text:
+        if "a" <= char <= "z":
+            output.append(chr((ord(char) - ord("a") + shift) % 26 + ord("a")))
+        elif "A" <= char <= "Z":
+            output.append(chr((ord(char) - ord("A") + shift) % 26 + ord("A")))
+        else:
+            output.append(char)
+    return "".join(output)
+
+
+def _xor_bytes(data: bytes, key: bytes) -> bytes:
+    if not key:
+        raise QuickTextCryptoError("Passphrase is required.")
+    return bytes(value ^ key[index % len(key)] for index, value in enumerate(data))
+
+
+def _decode_utf8(data: bytes) -> str:
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise QuickTextCryptoError("Decrypted payload is not valid UTF-8 text.") from exc
 
 
 def _aead_encrypt(*, method: QuickTextCryptoMethod, key: bytes, nonce: bytes, plaintext: bytes) -> bytes:
@@ -88,33 +133,84 @@ def encrypt_text(*, plaintext: str, passphrase: str, method_key: str) -> str:
         raise QuickTextCryptoError("Input text is required.")
 
     method = _method_for_key(method_key)
-    salt = secrets.token_bytes(SALT_BYTES)
-    nonce = secrets.token_bytes(method.nonce_length)
-    key = _derive_key(passphrase=passphrase, salt=salt, key_length=method.key_length)
-    ciphertext = _aead_encrypt(
-        method=method,
-        key=key,
-        nonce=nonce,
-        plaintext=plaintext.encode("utf-8"),
-    )
-    envelope = {
-        "format": "quick-text-v1",
-        "method": method.key,
-        "kdf": "pbkdf2-sha256",
-        "iterations": PBKDF2_ITERATIONS,
-        "salt_hex": salt.hex(),
-        "nonce_hex": nonce.hex(),
-        "ciphertext_hex": ciphertext.hex(),
-    }
-    return json.dumps(envelope, indent=2)
+
+    if method.family == "base64":
+        return json.dumps(
+            {
+                "format": "quick-text-v1",
+                "method": method.key,
+                "payload_text": base64.b64encode(plaintext.encode("utf-8")).decode("ascii"),
+            },
+            indent=2,
+        )
+    if method.family == "hex":
+        return json.dumps(
+            {
+                "format": "quick-text-v1",
+                "method": method.key,
+                "payload_text": plaintext.encode("utf-8").hex(),
+            },
+            indent=2,
+        )
+    if method.family == "rot13":
+        return json.dumps(
+            {
+                "format": "quick-text-v1",
+                "method": method.key,
+                "payload_text": codecs.encode(plaintext, "rot_13"),
+            },
+            indent=2,
+        )
+    if method.family == "caesar":
+        shift = _caesar_shift_from_passphrase(passphrase)
+        return json.dumps(
+            {
+                "format": "quick-text-v1",
+                "method": method.key,
+                "shift": shift,
+                "payload_text": _apply_caesar(plaintext, shift),
+            },
+            indent=2,
+        )
+    if method.family == "xor":
+        ciphertext = _xor_bytes(plaintext.encode("utf-8"), passphrase.encode("utf-8"))
+        return json.dumps(
+            {
+                "format": "quick-text-v1",
+                "method": method.key,
+                "ciphertext_hex": ciphertext.hex(),
+            },
+            indent=2,
+        )
+    if method.family == "aead":
+        salt = secrets.token_bytes(SALT_BYTES)
+        nonce = secrets.token_bytes(method.nonce_length)
+        key = _derive_key(passphrase=passphrase, salt=salt, key_length=method.key_length)
+        ciphertext = _aead_encrypt(
+            method=method,
+            key=key,
+            nonce=nonce,
+            plaintext=plaintext.encode("utf-8"),
+        )
+        return json.dumps(
+            {
+                "format": "quick-text-v1",
+                "method": method.key,
+                "kdf": "pbkdf2-sha256",
+                "iterations": PBKDF2_ITERATIONS,
+                "salt_hex": salt.hex(),
+                "nonce_hex": nonce.hex(),
+                "ciphertext_hex": ciphertext.hex(),
+            },
+            indent=2,
+        )
+
+    raise QuickTextCryptoError(f"Unsupported method: {method.key}")
 
 
 def decrypt_text(*, envelope_text: str, passphrase: str) -> tuple[str, str]:
     if not envelope_text.strip():
         raise QuickTextCryptoError("Encrypted payload is required.")
-
-    if not passphrase:
-        raise QuickTextCryptoError("Passphrase is required.")
 
     try:
         envelope = json.loads(envelope_text)
@@ -123,24 +219,61 @@ def decrypt_text(*, envelope_text: str, passphrase: str) -> tuple[str, str]:
 
     if not isinstance(envelope, dict):
         raise QuickTextCryptoError("Encrypted payload must be a JSON object.")
-
     if envelope.get("format") != "quick-text-v1":
         raise QuickTextCryptoError("Unsupported encrypted payload format.")
-    if envelope.get("kdf") != "pbkdf2-sha256":
-        raise QuickTextCryptoError("Unsupported KDF in encrypted payload.")
 
     method = _method_for_key(str(envelope.get("method", "")))
-    try:
-        iterations = int(envelope["iterations"])
-        salt = bytes.fromhex(str(envelope["salt_hex"]))
-        nonce = bytes.fromhex(str(envelope["nonce_hex"]))
-        ciphertext = bytes.fromhex(str(envelope["ciphertext_hex"]))
-    except (KeyError, TypeError, ValueError) as exc:
-        raise QuickTextCryptoError("Encrypted payload is missing required fields.") from exc
 
-    if iterations != PBKDF2_ITERATIONS:
-        raise QuickTextCryptoError("Unsupported PBKDF2 iteration count in encrypted payload.")
+    if method.family == "base64":
+        try:
+            payload = base64.b64decode(str(envelope["payload_text"]))
+        except (KeyError, ValueError) as exc:
+            raise QuickTextCryptoError("Encrypted payload is missing required fields.") from exc
+        return _decode_utf8(payload), method.key
 
-    key = _derive_key(passphrase=passphrase, salt=salt, key_length=method.key_length)
-    plaintext = _aead_decrypt(method=method, key=key, nonce=nonce, ciphertext=ciphertext)
-    return plaintext.decode("utf-8"), method.key
+    if method.family == "hex":
+        try:
+            payload = bytes.fromhex(str(envelope["payload_text"]))
+        except (KeyError, ValueError) as exc:
+            raise QuickTextCryptoError("Encrypted payload is missing required fields.") from exc
+        return _decode_utf8(payload), method.key
+
+    if method.family == "rot13":
+        try:
+            payload_text = str(envelope["payload_text"])
+        except KeyError as exc:
+            raise QuickTextCryptoError("Encrypted payload is missing required fields.") from exc
+        return codecs.decode(payload_text, "rot_13"), method.key
+
+    if method.family == "caesar":
+        try:
+            shift = int(envelope["shift"])
+            payload_text = str(envelope["payload_text"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise QuickTextCryptoError("Encrypted payload is missing required fields.") from exc
+        return _apply_caesar(payload_text, -shift), method.key
+
+    if method.family == "xor":
+        try:
+            ciphertext = bytes.fromhex(str(envelope["ciphertext_hex"]))
+        except (KeyError, ValueError) as exc:
+            raise QuickTextCryptoError("Encrypted payload is missing required fields.") from exc
+        return _decode_utf8(_xor_bytes(ciphertext, passphrase.encode("utf-8"))), method.key
+
+    if method.family == "aead":
+        if envelope.get("kdf") != "pbkdf2-sha256":
+            raise QuickTextCryptoError("Unsupported KDF in encrypted payload.")
+        try:
+            iterations = int(envelope["iterations"])
+            salt = bytes.fromhex(str(envelope["salt_hex"]))
+            nonce = bytes.fromhex(str(envelope["nonce_hex"]))
+            ciphertext = bytes.fromhex(str(envelope["ciphertext_hex"]))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise QuickTextCryptoError("Encrypted payload is missing required fields.") from exc
+        if iterations != PBKDF2_ITERATIONS:
+            raise QuickTextCryptoError("Unsupported PBKDF2 iteration count in encrypted payload.")
+        key = _derive_key(passphrase=passphrase, salt=salt, key_length=method.key_length)
+        plaintext = _aead_decrypt(method=method, key=key, nonce=nonce, ciphertext=ciphertext)
+        return _decode_utf8(plaintext), method.key
+
+    raise QuickTextCryptoError(f"Unsupported method: {method.key}")

@@ -302,6 +302,7 @@ class GeneratorWorkspaceView(QWidget):
         method_row.addWidget(generator_widgets["passphrase"], 1)
         method_row.addWidget(generator_widgets["encrypt"], 0)
         method_row.addWidget(generator_widgets["decrypt"], 0)
+        method_row.addWidget(generator_widgets["copy_output"], 0)
         generator_layout.addLayout(method_row)
 
         quick_splitter = QSplitter(Qt.Orientation.Vertical)
