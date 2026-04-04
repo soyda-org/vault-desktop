@@ -268,7 +268,7 @@ def test_current_account_pin_requires_confirm_for_change_and_remove(qapp, tmp_pa
     assert "current account" in window.pin_bootstrap_status_label.text()
     assert "Vault is unlocked" in window.vault_next_step_label.text()
     assert "currently enrolled for this account" in window.device_pin_scope_label.text()
-    assert window.enroll_vault_pin_button.text() == "Change PIN on This Device"
+    assert window.enroll_vault_pin_button.text() == "Change PIN"
     assert window.enroll_vault_pin_button.isEnabled() is False
     assert window.remove_vault_pin_button.isEnabled() is False
 
@@ -418,10 +418,12 @@ def test_run_enroll_vault_pin_rejects_change_without_confirm(qapp, tmp_path: Pat
     window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
     window.desktop_service.enroll_local_pin_bootstrap(pin="1234")
     window.new_vault_pin_input.setText("5678")
+    window._blink_confirm_input = lambda *args, **kwargs: setattr(window.pin_confirmation_input, "_blink_called", True)
 
     MainWindow.run_enroll_vault_pin(window)
 
     assert "Type CONFIRM before changing or replacing the device PIN." in window.status_label.text()
+    assert getattr(window.pin_confirmation_input, "_blink_called", False) is True
 
 
 def test_run_remove_vault_pin_with_confirm_clears_local_bootstrap(qapp, tmp_path: Path) -> None:

@@ -500,7 +500,8 @@ class MainWindow(QMainWindow):
         self.unlock_vault_pin_button.setProperty("tone", "primary")
 
         self.enroll_vault_pin_button = QPushButton("Enroll PIN on This Device")
-        self.enroll_vault_pin_button.setProperty("tone", "primary")
+        self.enroll_vault_pin_button.setProperty("tone", "secondary")
+        self.enroll_vault_pin_button.setProperty("hoverGlow", "light")
         self.enroll_vault_pin_button.clicked.connect(self.run_enroll_vault_pin)
 
         self.remove_vault_pin_button = QPushButton("Remove PIN from This Device")
@@ -659,6 +660,7 @@ class MainWindow(QMainWindow):
         self.new_vault_pin_input.setPlaceholderText(
             f"new device PIN, min {MIN_PIN_LENGTH} chars, local to this device"
         )
+        self.new_vault_pin_input.setProperty("newVaultPinField", True)
         self.new_vault_pin_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.pin_confirmation_label = QLabel()
@@ -1587,6 +1589,9 @@ class MainWindow(QMainWindow):
             QLineEdit[vaultPinField="true"]::placeholder {{
                 color: {muted};
             }}
+            QLineEdit[newVaultPinField="true"] {{
+                font-size: 28px;
+            }}
             QLineEdit[pinValidity="invalid"] {{
                 border-color: #d84b4b;
             }}
@@ -1598,6 +1603,10 @@ class MainWindow(QMainWindow):
             }}
             QLineEdit[pinValidity="valid"]:focus {{
                 border-color: #1fdc78;
+            }}
+            QLineEdit[confirmBlink="true"],
+            QLineEdit[confirmBlink="true"]:focus {{
+                border-color: #d84b4b;
             }}
             QPushButton {{
                 background: {surface_alt};
@@ -2021,6 +2030,20 @@ class MainWindow(QMainWindow):
                 state = "valid"
         self.new_vault_pin_input.setProperty("pinValidity", state)
         self._repolish(self.new_vault_pin_input)
+
+    def _blink_confirm_input(self, remaining_toggles: int = 6, active: bool = True) -> None:
+        if not hasattr(self, "pin_confirmation_input"):
+            return
+        self.pin_confirmation_input.setProperty("confirmBlink", active)
+        self._repolish(self.pin_confirmation_input)
+        if remaining_toggles <= 1:
+            self.pin_confirmation_input.setProperty("confirmBlink", False)
+            self._repolish(self.pin_confirmation_input)
+            return
+        QTimer.singleShot(
+            120,
+            lambda: self._blink_confirm_input(remaining_toggles - 1, not active),
+        )
 
     def run_toggle_theme(self) -> None:
         self.current_theme = "dark" if self.current_theme == "light" else "light"
@@ -2954,6 +2977,7 @@ class MainWindow(QMainWindow):
                 "PIN enrollment failed.\n"
                 "Error: Type CONFIRM before changing or replacing the device PIN."
             )
+            self._blink_confirm_input()
             self._refresh_action_states()
             return
 
@@ -3010,6 +3034,7 @@ class MainWindow(QMainWindow):
                 "Remove PIN failed.\n"
                 "Error: Type CONFIRM before removing the device PIN."
             )
+            self._blink_confirm_input()
             self._refresh_action_states()
             return
 
@@ -3522,7 +3547,7 @@ class MainWindow(QMainWindow):
             enroll_allowed = authenticated and vault_unlocked and new_pin_text_present
         self.enroll_vault_pin_button.setEnabled(enroll_allowed)
         if pin_bootstrap_status == "current_account":
-            self.enroll_vault_pin_button.setText("Change PIN on This Device")
+            self.enroll_vault_pin_button.setText("Change PIN")
         elif pin_bootstrap_status == "other_account":
             self.enroll_vault_pin_button.setText("Replace PIN for Current Account")
         else:
@@ -3537,7 +3562,7 @@ class MainWindow(QMainWindow):
             self._set_button_tone(self.unlock_with_recovery_key_button, "primary")
         else:
             self._set_button_tone(self.unlock_vault_pin_button, "secondary")
-            self._set_button_tone(self.enroll_vault_pin_button, "primary")
+            self._set_button_tone(self.enroll_vault_pin_button, "secondary")
             self._set_button_tone(self.unlock_with_recovery_key_button, "secondary")
 
         self.remove_vault_pin_button.setEnabled(
