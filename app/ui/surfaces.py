@@ -175,10 +175,9 @@ class VaultWorkspaceView(QWidget):
     def __init__(
         self,
         *,
-        summary_label: QLabel,
         pin_widgets: dict[str, QWidget],
         recovery_widgets: dict[str, QWidget],
-        status_labels: dict[str, QLabel],
+        help_button: QWidget,
         load_buttons: dict[str, QWidget],
         session_actions: dict[str, QWidget],
         tabs: QWidget,
@@ -190,9 +189,12 @@ class VaultWorkspaceView(QWidget):
             title="Vault access",
             description=None,
         )
-        access_layout.addWidget(summary_label)
-        access_layout.addWidget(status_labels["unlock_source"])
-        access_layout.addWidget(status_labels["pin_status"])
+        help_row = QHBoxLayout()
+        help_row.setContentsMargins(0, 0, 0, 0)
+        help_row.setSpacing(0)
+        help_row.addStretch(1)
+        help_row.addWidget(help_button)
+        access_layout.addLayout(help_row)
 
         pin_row = QHBoxLayout()
         pin_row.setContentsMargins(0, 6, 0, 0)

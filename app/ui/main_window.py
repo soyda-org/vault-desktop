@@ -641,6 +641,11 @@ class MainWindow(QMainWindow):
         self.device_pin_scope_label = QLabel()
         self.device_pin_scope_label.setWordWrap(True)
 
+        self.vault_access_help_button = QPushButton("?")
+        self.vault_access_help_button.setProperty("tone", "secondary")
+        self.vault_access_help_button.setProperty("hoverGlow", "light")
+        self.vault_access_help_button.setToolTipDuration(0)
+
         self.pin_confirmation_input = QLineEdit()
         self.pin_confirmation_input.setPlaceholderText(
             "Type CONFIRM before changing, replacing, or removing the device PIN."
@@ -741,7 +746,6 @@ class MainWindow(QMainWindow):
             },
         )
         self.vault_workspace_view = VaultWorkspaceView(
-            summary_label=self.vault_home_summary_label,
             pin_widgets={
                 "input": self.vault_pin_input,
                 "unlock": self.unlock_vault_pin_button,
@@ -753,13 +757,7 @@ class MainWindow(QMainWindow):
                 "toggle": self.toggle_advanced_recovery_button,
                 "container": self.advanced_recovery_widget,
             },
-            status_labels={
-                "pin_status": self.pin_bootstrap_status_label,
-                "unlock_source": self.vault_unlock_source_label,
-                "next_step": self.vault_next_step_label,
-                "scope": self.device_pin_scope_label,
-                "confirmation": self.pin_confirmation_label,
-            },
+            help_button=self.vault_access_help_button,
             load_buttons={
                 "credentials": self.load_credentials_button,
                 "notes": self.load_notes_button,
@@ -3397,20 +3395,27 @@ class MainWindow(QMainWindow):
                 "No confirmation is required for first-time PIN enrollment on this device."
             )
 
-        self.vault_home_summary_label.setToolTip(self.vault_home_summary_label.text())
-        self.vault_unlock_source_label.setToolTip(self.vault_next_step_label.text())
-        self.pin_bootstrap_status_label.setToolTip(self.pin_bootstrap_status_label.text())
-        self.pin_confirmation_input.setToolTip(
-            f"{self.pin_confirmation_label.text()}\n\n{self.device_pin_scope_label.text()}"
-        )
-        self.vault_pin_input.setToolTip(
-            f"{self.vault_next_step_label.text()}\n\n{self.pin_bootstrap_status_label.text()}"
-        )
-        self.toggle_advanced_recovery_button.setToolTip(
-            "Use Advanced Recovery if no usable local PIN is available for this account on this device."
-        )
-        self.enroll_vault_pin_button.setToolTip(self.device_pin_scope_label.text())
-        self.remove_vault_pin_button.setToolTip(self.pin_confirmation_label.text())
+        if hasattr(self, "vault_access_help_button"):
+            self.vault_access_help_button.setToolTip(
+                "\n\n".join(
+                    text
+                    for text in (
+                        self.vault_home_summary_label.text(),
+                        self.vault_unlock_source_label.text(),
+                        self.vault_next_step_label.text(),
+                        self.pin_bootstrap_status_label.text(),
+                        self.device_pin_scope_label.text(),
+                        self.pin_confirmation_label.text(),
+                    )
+                    if text
+                )
+            )
+        
+        self.pin_confirmation_input.setToolTip("")
+        self.vault_pin_input.setToolTip("")
+        self.toggle_advanced_recovery_button.setToolTip("")
+        self.enroll_vault_pin_button.setToolTip("")
+        self.remove_vault_pin_button.setToolTip("")
 
         self.vault_pin_input.setEnabled(authenticated)
         self.pin_confirmation_input.setEnabled(
