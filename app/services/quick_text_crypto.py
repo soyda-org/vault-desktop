@@ -85,16 +85,16 @@ class QuickTextCryptoMethod:
 
 
 METHODS: tuple[QuickTextCryptoMethod, ...] = (
-    QuickTextCryptoMethod("base64", "Base64", "none", "base64", "Basic encoding. No secrecy, just text-to-text wrapping."),
-    QuickTextCryptoMethod("hex", "Hex", "none", "hex", "Basic byte-to-hex encoding. Readable, not secure."),
-    QuickTextCryptoMethod("rot13", "ROT13", "none", "rot13", "Classic letter rotation. Reversible and only obfuscation."),
-    QuickTextCryptoMethod("morse", "Morse", "none", "morse", "Converts supported text into Morse code and back."),
-    QuickTextCryptoMethod("caesar-shift", "Caesar Shift", "optional", "caesar", "Letter shift cipher. Optional passphrase changes the shift."),
-    QuickTextCryptoMethod("xor-stream", "XOR Stream", "required", "xor", "Simple byte-wise XOR with a passphrase-derived repeating key."),
-    QuickTextCryptoMethod("aes-128-gcm", "AES-128-GCM", "required", "aead", "Modern authenticated encryption with a required passphrase.", 16, 12),
-    QuickTextCryptoMethod("aes-256-gcm", "AES-256-GCM", "required", "aead", "Stronger AES-GCM variant with authenticated encryption.", 32, 12),
-    QuickTextCryptoMethod("chacha20-poly1305", "ChaCha20-Poly1305", "required", "aead", "Modern authenticated stream cipher with a required passphrase.", 32, 12),
-    QuickTextCryptoMethod("aes-256-ccm", "AES-256-CCM", "required", "aead", "Authenticated AES-CCM mode with a required passphrase.", 32, 13),
+    QuickTextCryptoMethod("base64", "Base64", "none", "base64", "Encodes plain text as Base64 text. It is reversible and gives no secrecy."),
+    QuickTextCryptoMethod("hex", "Hex", "none", "hex", "Converts bytes to hexadecimal text. Easy to inspect, but not secure."),
+    QuickTextCryptoMethod("rot13", "ROT13", "none", "rot13", "Rotates letters by 13 positions. It only obscures text and is trivially reversible."),
+    QuickTextCryptoMethod("morse", "Morse", "none", "morse", "Maps supported letters, digits, and punctuation into Morse code and back. This is a representation change, not encryption."),
+    QuickTextCryptoMethod("caesar-shift", "Caesar Shift", "optional", "caesar", "Shifts letters through the alphabet. With no passphrase it uses a default shift; with one, the shift changes. This is obfuscation, not strong encryption."),
+    QuickTextCryptoMethod("xor-stream", "XOR Stream", "required", "xor", "XORs each byte against a repeating passphrase-derived stream. It hides text, but is much weaker than modern authenticated encryption."),
+    QuickTextCryptoMethod("aes-128-gcm", "AES-128-GCM", "required", "aead", "Derives a key from the passphrase and encrypts with AES-GCM. This is real authenticated encryption and detects tampering.", 16, 12),
+    QuickTextCryptoMethod("aes-256-gcm", "AES-256-GCM", "required", "aead", "Derives a longer key from the passphrase and encrypts with AES-256-GCM. This is real authenticated encryption and detects tampering.", 32, 12),
+    QuickTextCryptoMethod("chacha20-poly1305", "ChaCha20-Poly1305", "required", "aead", "Derives a key from the passphrase and encrypts with ChaCha20-Poly1305. This is real authenticated encryption and detects tampering.", 32, 12),
+    QuickTextCryptoMethod("aes-256-ccm", "AES-256-CCM", "required", "aead", "Derives a key from the passphrase and encrypts with AES-256-CCM. This is real authenticated encryption and detects tampering.", 32, 13),
 )
 
 METHODS_BY_KEY = {method.key: method for method in METHODS}

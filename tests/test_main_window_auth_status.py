@@ -140,7 +140,7 @@ def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
     window._refresh_quick_crypto_method_state()
     assert window.quick_crypto_passphrase_input.isReadOnly()
     assert window.quick_crypto_passphrase_input.placeholderText() == "No passphrase needed"
-    assert "No secrecy" in window.quick_crypto_help_button.toolTip()
+    assert "no secrecy" in window.quick_crypto_help_button.toolTip().lower()
 
     window.quick_crypto_method_select.setCurrentIndex(
         window.quick_crypto_method_select.findData("caesar-shift")
@@ -151,7 +151,9 @@ def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
         window.quick_crypto_passphrase_input.placeholderText()
         == "Optional passphrase / shift seed"
     )
-    assert "Optional passphrase" in window.quick_crypto_help_button.toolTip()
+    caesar_tooltip = window.quick_crypto_help_button.toolTip().lower()
+    assert "default shift" in caesar_tooltip
+    assert "obfuscation" in caesar_tooltip
 
     window.quick_crypto_method_select.setCurrentIndex(
         window.quick_crypto_method_select.findData("aes-256-gcm")
@@ -159,7 +161,7 @@ def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
     window._refresh_quick_crypto_method_state()
     assert not window.quick_crypto_passphrase_input.isReadOnly()
     assert window.quick_crypto_passphrase_input.placeholderText() == "Passphrase required"
-    assert "authenticated encryption" in window.quick_crypto_help_button.toolTip()
+    assert "authenticated encryption" in window.quick_crypto_help_button.toolTip().lower()
 
 
 def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) -> None:
