@@ -858,6 +858,7 @@ class MainWindow(QMainWindow):
         self.file_download_target_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_vault_pin_field_style())
+        self.vault_pin_input.textChanged.connect(lambda *_: self._maybe_auto_unlock_with_pin())
         self.new_vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.new_vault_pin_input.textChanged.connect(lambda *_: self._refresh_new_vault_pin_field_state())
         self.pin_confirmation_input.textChanged.connect(lambda *_: self._refresh_action_states())
@@ -2953,6 +2954,36 @@ class MainWindow(QMainWindow):
             f"Planned chunks: {result.chunk_count}"
         )
 
+    def _handle_successful_vault_pin_unlock(self) -> None:
+        self.vault_pin_input.clear()
+        self.current_screen = "vault"
+        self.status_label.setText(
+            "Vault unlocked with PIN.\n"
+            "Credentials, notes, and files can now use the shared session vault state."
+        )
+        self.refresh_session_label()
+        self._refresh_after_vault_unlock()
+        self._refresh_idle_policy()
+        self._refresh_action_states()
+
+    def _maybe_auto_unlock_with_pin(self) -> None:
+        if not hasattr(self, "desktop_service"):
+            return
+        if not self.desktop_service.is_authenticated():
+            return
+        if self._is_vault_unlocked():
+            return
+        if self.desktop_service.local_pin_bootstrap_status() != "current_account":
+            return
+        pin_value = self.vault_pin_input.text().strip()
+        if len(pin_value) < MIN_PIN_LENGTH:
+            return
+        try:
+            self.desktop_service.unlock_session_vault_with_pin(pin_value)
+        except ValueError:
+            return
+        self._handle_successful_vault_pin_unlock()
+
     def run_unlock_vault_with_pin(self) -> None:
         if not self.desktop_service.is_authenticated():
             self.status_label.setText(
@@ -2979,16 +3010,7 @@ class MainWindow(QMainWindow):
             self._refresh_action_states()
             return
 
-        self.vault_pin_input.clear()
-        self.current_screen = "vault"
-        self.status_label.setText(
-            "Vault unlocked with PIN.\n"
-            "Credentials, notes, and files can now use the shared session vault state."
-        )
-        self.refresh_session_label()
-        self._refresh_after_vault_unlock()
-        self._refresh_idle_policy()
-        self._refresh_action_states()
+        self._handle_successful_vault_pin_unlock()
 
     def run_enroll_vault_pin(self) -> None:
         if not self.desktop_service.is_authenticated():
