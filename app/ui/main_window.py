@@ -3541,7 +3541,10 @@ class MainWindow(QMainWindow):
         )
         enroll_allowed = authenticated and vault_unlocked and new_pin_text_present
         self.enroll_vault_pin_button.setEnabled(enroll_allowed)
-        self.enroll_vault_pin_button.setText("Enroll PIN")
+        if pin_bootstrap_status in {"current_account", "other_account"}:
+            self.enroll_vault_pin_button.setText("Change PIN")
+        else:
+            self.enroll_vault_pin_button.setText("Enroll PIN")
         if authenticated and not vault_unlocked and pin_bootstrap_status == "current_account":
             self._set_button_tone(self.unlock_vault_pin_button, "primary")
             self._set_button_tone(self.enroll_vault_pin_button, "secondary")
