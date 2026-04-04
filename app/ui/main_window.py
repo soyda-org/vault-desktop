@@ -491,6 +491,7 @@ class MainWindow(QMainWindow):
         self.vault_pin_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.vault_pin_input.setPlaceholderText("....")
         self.vault_pin_input.setProperty("vaultPinField", True)
+        self.vault_pin_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.unlock_vault_pin_button = QPushButton("Unlock with PIN")
         self.unlock_vault_pin_button.clicked.connect(self.run_unlock_vault_with_pin)
@@ -649,6 +650,7 @@ class MainWindow(QMainWindow):
         self.pin_confirmation_input.setPlaceholderText(
             "Type CONFIRM before changing, replacing, or removing the device PIN."
         )
+        self.pin_confirmation_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.pin_confirmation_label = QLabel()
         self.pin_confirmation_label.setWordWrap(True)
@@ -1550,10 +1552,10 @@ class MainWindow(QMainWindow):
                 color: {muted};
             }}
             QLineEdit[vaultPinField="true"] {{
-                font-size: 20px;
+                font-size: 32px;
             }}
             QLineEdit[vaultPinField="true"]::placeholder {{
-                font-size: 20px;
+                font-size: 32px;
                 color: {muted};
             }}
             QPushButton {{
