@@ -656,6 +656,14 @@ class MainWindow(QMainWindow):
         self.pin_confirmation_label = QLabel()
         self.pin_confirmation_label.setWordWrap(True)
 
+        advanced_pin_manage_row = QHBoxLayout()
+        advanced_pin_manage_row.setContentsMargins(0, 0, 0, 0)
+        advanced_pin_manage_row.setSpacing(8)
+        advanced_pin_manage_row.addStretch(1)
+        advanced_pin_manage_row.addWidget(self.enroll_vault_pin_button)
+        advanced_pin_manage_row.addWidget(self.remove_vault_pin_button)
+        advanced_pin_manage_row.addStretch(1)
+
         advanced_recovery_input_row = QHBoxLayout()
         advanced_recovery_input_row.setContentsMargins(0, 0, 0, 0)
         advanced_recovery_input_row.setSpacing(8)
@@ -672,10 +680,13 @@ class MainWindow(QMainWindow):
         advanced_recovery_row = QVBoxLayout()
         advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
         advanced_recovery_row.setSpacing(8)
+        advanced_recovery_row.addLayout(advanced_pin_manage_row)
+        advanced_recovery_row.addWidget(self.pin_confirmation_input)
         advanced_recovery_row.addLayout(advanced_recovery_input_row)
         advanced_recovery_row.addLayout(advanced_recovery_action_row)
 
         self.advanced_recovery_widget = QWidget()
+        self.advanced_recovery_widget.setObjectName("contentContainer")
         self.advanced_recovery_widget.setLayout(advanced_recovery_row)
         self.advanced_recovery_widget.setVisible(False)
 

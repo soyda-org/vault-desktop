@@ -213,13 +213,10 @@ class VaultWorkspaceView(QWidget):
         manage_row.setContentsMargins(0, 0, 0, 0)
         manage_row.setSpacing(8)
         manage_row.addStretch(1)
-        manage_row.addWidget(pin_widgets["enroll"])
-        manage_row.addWidget(pin_widgets["remove"])
         manage_row.addWidget(session_actions["logout"])
         manage_row.addStretch(1)
         content_column.addLayout(manage_row)
 
-        content_column.addWidget(pin_widgets["confirm_input"])
         content_column.addWidget(recovery_widgets["toggle"])
         content_column.addWidget(recovery_widgets["container"])
 
