@@ -214,6 +214,26 @@ def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) ->
     assert window.nav_vault_button.property("navLevel") == "success"
 
 
+def test_run_login_rejects_empty_password_before_network(app_fixture) -> None:
+    window = MainWindow(get_settings())
+    window.identifier_input.setText("alice")
+    window.password_input.clear()
+    window.device_name_input.setText("device")
+    window.platform_input.setText("linux")
+
+    called = {"value": False}
+
+    def fake_start_network_action(**kwargs):
+        called["value"] = True
+
+    window._start_network_action = fake_start_network_action  # type: ignore[assignment]
+
+    window.run_login()
+
+    assert called["value"] is False
+    assert window.status_label.text() == "Login failed.\nError: Password is required."
+
+
 def test_append_activity_log_keeps_newest_first_and_dedupes(app_fixture) -> None:
     window = SimpleNamespace(
         activity_log_list=QListWidget(),

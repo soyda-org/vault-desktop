@@ -2111,6 +2111,19 @@ class MainWindow(QMainWindow):
         device_name = self.device_name_input.text().strip()
         platform = self.platform_input.text().strip()
 
+        if not identifier:
+            self.status_label.setText("Login failed.\nError: Username is required.")
+            return
+        if not password:
+            self.status_label.setText("Login failed.\nError: Password is required.")
+            return
+        if not device_name:
+            self.status_label.setText("Login failed.\nError: Device name is required.")
+            return
+        if not platform:
+            self.status_label.setText("Login failed.\nError: Platform is required.")
+            return
+
         self._start_network_action(
             status_text="Logging in...",
             action=lambda: self.desktop_service.login(
