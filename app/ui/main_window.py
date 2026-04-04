@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QWidget,
+    QSizePolicy,
 )
 
 from app.core.config import DesktopSettings
@@ -578,14 +579,22 @@ class MainWindow(QMainWindow):
         self.quick_crypto_input.setPlaceholderText(
             "Type plain text to encrypt, or paste an encrypted envelope to decrypt."
         )
-        self.quick_crypto_input.setFixedHeight(110)
+        self.quick_crypto_input.setMinimumHeight(96)
+        self.quick_crypto_input.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
 
         self.quick_crypto_output = QPlainTextEdit()
         self.quick_crypto_output.setReadOnly(True)
         self.quick_crypto_output.setPlaceholderText(
             "Encrypted output or decrypted plain text will appear here."
         )
-        self.quick_crypto_output.setFixedHeight(140)
+        self.quick_crypto_output.setMinimumHeight(96)
+        self.quick_crypto_output.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
 
         self.quick_encrypt_button = QPushButton("Encrypt")
         self.quick_encrypt_button.setProperty("tone", "secondary")

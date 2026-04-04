@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QSplitter,
     QStackedWidget,
     QSizePolicy,
     QVBoxLayout,
@@ -302,8 +304,13 @@ class GeneratorWorkspaceView(QWidget):
         method_row.addWidget(generator_widgets["decrypt"], 0)
         generator_layout.addLayout(method_row)
 
-        generator_layout.addWidget(generator_widgets["quick_input"], 0)
-        generator_layout.addWidget(generator_widgets["quick_output"], 1)
+        quick_splitter = QSplitter(Qt.Orientation.Vertical)
+        quick_splitter.setChildrenCollapsible(False)
+        quick_splitter.addWidget(generator_widgets["quick_input"])
+        quick_splitter.addWidget(generator_widgets["quick_output"])
+        quick_splitter.setStretchFactor(0, 1)
+        quick_splitter.setStretchFactor(1, 1)
+        generator_layout.addWidget(quick_splitter, 1)
         generator_layout.addStretch(1)
 
         layout = QVBoxLayout(self)
