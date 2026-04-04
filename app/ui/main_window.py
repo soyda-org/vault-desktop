@@ -506,6 +506,7 @@ class MainWindow(QMainWindow):
 
         self.remove_vault_pin_button = QPushButton("Remove PIN")
         self.remove_vault_pin_button.setProperty("tone", "danger")
+        self.remove_vault_pin_button.setProperty("hoverGlow", "danger")
         self.remove_vault_pin_button.clicked.connect(self.run_remove_vault_pin)
 
         self.lock_now_button = QPushButton("Lock Now")
