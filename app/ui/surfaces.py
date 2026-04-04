@@ -306,10 +306,12 @@ class GeneratorWorkspaceView(QWidget):
 
         quick_splitter = QSplitter(Qt.Orientation.Vertical)
         quick_splitter.setChildrenCollapsible(False)
+        quick_splitter.setHandleWidth(4)
         quick_splitter.addWidget(generator_widgets["quick_input"])
         quick_splitter.addWidget(generator_widgets["quick_output"])
         quick_splitter.setStretchFactor(0, 1)
         quick_splitter.setStretchFactor(1, 1)
+        quick_splitter.setSizes([1, 1])
         generator_layout.addWidget(quick_splitter, 1)
 
         layout = QVBoxLayout(self)
