@@ -1958,8 +1958,7 @@ class MainWindow(QMainWindow):
     def _refresh_vault_pin_field_style(self) -> None:
         if not hasattr(self, "vault_pin_input"):
             return
-        pixel_size = 64 if not self.vault_pin_input.text() else 24
-        self.vault_pin_input.setStyleSheet(f"font-size: {pixel_size}px;")
+        self.vault_pin_input.setStyleSheet("font-size: 64px;")
         if hasattr(self, "theme_toggle_button"):
             self.theme_toggle_button.setText(
                 "Theme: Dark" if self.current_theme == "dark" else "Theme: Light"
