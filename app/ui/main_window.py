@@ -3397,6 +3397,21 @@ class MainWindow(QMainWindow):
                 "No confirmation is required for first-time PIN enrollment on this device."
             )
 
+        self.vault_home_summary_label.setToolTip(self.vault_home_summary_label.text())
+        self.vault_unlock_source_label.setToolTip(self.vault_next_step_label.text())
+        self.pin_bootstrap_status_label.setToolTip(self.pin_bootstrap_status_label.text())
+        self.pin_confirmation_input.setToolTip(
+            f"{self.pin_confirmation_label.text()}\n\n{self.device_pin_scope_label.text()}"
+        )
+        self.vault_pin_input.setToolTip(
+            f"{self.vault_next_step_label.text()}\n\n{self.pin_bootstrap_status_label.text()}"
+        )
+        self.toggle_advanced_recovery_button.setToolTip(
+            "Use Advanced Recovery if no usable local PIN is available for this account on this device."
+        )
+        self.enroll_vault_pin_button.setToolTip(self.device_pin_scope_label.text())
+        self.remove_vault_pin_button.setToolTip(self.pin_confirmation_label.text())
+
         self.vault_pin_input.setEnabled(authenticated)
         self.pin_confirmation_input.setEnabled(
             authenticated and pin_bootstrap_status in {"current_account", "other_account"}

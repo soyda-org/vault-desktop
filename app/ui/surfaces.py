@@ -188,14 +188,10 @@ class VaultWorkspaceView(QWidget):
 
         access_panel, access_layout = _panel(
             title="Vault access",
-            description=(
-                "Use PIN for daily unlock on this desktop, keep recovery as fallback, "
-                "and lock the in-memory vault key when you are done."
-            ),
+            description=None,
         )
         access_layout.addWidget(summary_label)
         access_layout.addWidget(status_labels["unlock_source"])
-        access_layout.addWidget(status_labels["next_step"])
         access_layout.addWidget(status_labels["pin_status"])
 
         pin_row = QHBoxLayout()
@@ -216,8 +212,6 @@ class VaultWorkspaceView(QWidget):
         access_layout.addLayout(manage_row)
 
         access_layout.addWidget(pin_widgets["confirm_input"])
-        access_layout.addWidget(status_labels["scope"])
-        access_layout.addWidget(status_labels["confirmation"])
         access_layout.addWidget(recovery_widgets["toggle"])
         access_layout.addWidget(recovery_widgets["container"])
 
