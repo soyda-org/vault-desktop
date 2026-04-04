@@ -510,7 +510,7 @@ class MainWindow(QMainWindow):
         self.lock_now_button.setProperty("tone", "danger")
         self.lock_now_button.clicked.connect(self.run_lock_vault_now)
 
-        self.toggle_advanced_recovery_button = QPushButton("Show Advanced Recovery")
+        self.toggle_advanced_recovery_button = QPushButton("Show Settings")
         self.toggle_advanced_recovery_button.clicked.connect(
             self.toggle_advanced_recovery
         )
@@ -659,31 +659,22 @@ class MainWindow(QMainWindow):
         advanced_pin_manage_row = QHBoxLayout()
         advanced_pin_manage_row.setContentsMargins(0, 0, 0, 0)
         advanced_pin_manage_row.setSpacing(8)
-        advanced_pin_manage_row.addStretch(1)
+        advanced_pin_manage_row.addWidget(self.pin_confirmation_input, 1)
         advanced_pin_manage_row.addWidget(self.enroll_vault_pin_button)
         advanced_pin_manage_row.addWidget(self.remove_vault_pin_button)
-        advanced_pin_manage_row.addStretch(1)
 
         advanced_recovery_input_row = QHBoxLayout()
         advanced_recovery_input_row.setContentsMargins(0, 0, 0, 0)
         advanced_recovery_input_row.setSpacing(8)
         advanced_recovery_input_row.addWidget(self.recovery_key_b64_input, 1)
-
-        advanced_recovery_action_row = QHBoxLayout()
-        advanced_recovery_action_row.setContentsMargins(0, 0, 0, 0)
-        advanced_recovery_action_row.setSpacing(8)
-        advanced_recovery_action_row.addStretch(1)
-        advanced_recovery_action_row.addWidget(self.unlock_with_recovery_key_button)
-        advanced_recovery_action_row.addWidget(self.clear_vault_key_button)
-        advanced_recovery_action_row.addStretch(1)
+        advanced_recovery_input_row.addWidget(self.unlock_with_recovery_key_button)
+        advanced_recovery_input_row.addWidget(self.clear_vault_key_button)
 
         advanced_recovery_row = QVBoxLayout()
         advanced_recovery_row.setContentsMargins(0, 0, 0, 0)
         advanced_recovery_row.setSpacing(8)
         advanced_recovery_row.addLayout(advanced_pin_manage_row)
-        advanced_recovery_row.addWidget(self.pin_confirmation_input)
         advanced_recovery_row.addLayout(advanced_recovery_input_row)
-        advanced_recovery_row.addLayout(advanced_recovery_action_row)
 
         self.advanced_recovery_widget = QWidget()
         self.advanced_recovery_widget.setObjectName("contentContainer")
@@ -2999,7 +2990,7 @@ class MainWindow(QMainWindow):
         visible = not self.advanced_recovery_widget.isVisible()
         self.advanced_recovery_widget.setVisible(visible)
         self.toggle_advanced_recovery_button.setText(
-            "Hide Advanced Recovery" if visible else "Show Advanced Recovery"
+            "Hide Settings" if visible else "Show Settings"
         )
         self._refresh_action_states()
 
