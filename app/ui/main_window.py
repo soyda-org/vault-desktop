@@ -491,6 +491,7 @@ class MainWindow(QMainWindow):
         self.vault_pin_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.vault_pin_input.setPlaceholderText("....")
         self.vault_pin_input.setProperty("vaultPinField", True)
+        self.vault_pin_input.setProperty("ghostField", True)
         self.vault_pin_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.unlock_vault_pin_button = QPushButton("Unlock with PIN")
@@ -1552,10 +1553,10 @@ class MainWindow(QMainWindow):
                 color: {muted};
             }}
             QLineEdit[vaultPinField="true"] {{
-                font-size: 32px;
+                font-size: 64px;
             }}
             QLineEdit[vaultPinField="true"]::placeholder {{
-                font-size: 32px;
+                font-size: 64px;
                 color: {muted};
             }}
             QPushButton {{
