@@ -775,9 +775,9 @@ class MainWindow(QMainWindow):
         toolbar_layout.setSpacing(6)
         toolbar_layout.addWidget(self.system_service_tab_button)
         toolbar_layout.addWidget(self.system_messages_tab_button)
+        toolbar_layout.addWidget(self.theme_toggle_button)
         toolbar_layout.addStretch(1)
         toolbar_layout.addWidget(self.nav_generator_button)
-        toolbar_layout.addWidget(self.theme_toggle_button)
         toolbar_layout.addWidget(self.nav_vault_button)
         self.shell_toolbar_frame = toolbar_frame
 
@@ -1541,6 +1541,10 @@ class MainWindow(QMainWindow):
                 border-radius: 999px;
                 padding: 2px 8px;
             }}
+            QPushButton[nav="true"]:hover {{
+                border-color: #ffffff;
+                background: {surface_alt};
+            }}
             QPushButton[segment="true"] {{
                 background: {surface_alt};
                 border: 1px solid {border};
@@ -1548,6 +1552,10 @@ class MainWindow(QMainWindow):
                 color: {text};
                 font-weight: 600;
                 padding: 2px 8px;
+            }}
+            QPushButton[segment="true"]:hover {{
+                border-color: #ffffff;
+                background: {nav_bg};
             }}
             QPushButton[segment="true"][segmentLevel="success"] {{
                 border-color: {success};
