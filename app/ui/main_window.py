@@ -521,15 +521,13 @@ class MainWindow(QMainWindow):
 
         self.recovery_key_b64_input = QLineEdit()
         self.recovery_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.recovery_key_b64_input.setPlaceholderText(
-            "Paste the recovery key (base64 text). The app will fetch wrapped bootstrap material from the API and unwrap the vault key locally."
-        )
+        self.recovery_key_b64_input.setPlaceholderText("Paste Recovery Key here.")
 
-        self.unlock_with_recovery_key_button = QPushButton("Unlock with Recovery Key")
+        self.unlock_with_recovery_key_button = QPushButton("Unlock Vault")
         self.unlock_with_recovery_key_button.clicked.connect(self.run_unlock_with_recovery_key)
         self.unlock_with_recovery_key_button.setProperty("tone", "secondary")
 
-        self.clear_vault_key_button = QPushButton("Clear Vault Key")
+        self.clear_vault_key_button = QPushButton("Lock Vault")
         self.clear_vault_key_button.setProperty("tone", "danger")
         self.clear_vault_key_button.clicked.connect(self.run_clear_vault_key)
 
@@ -862,6 +860,7 @@ class MainWindow(QMainWindow):
         self.new_vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.new_vault_pin_input.textChanged.connect(lambda *_: self._refresh_new_vault_pin_field_state())
         self.pin_confirmation_input.textChanged.connect(lambda *_: self._refresh_action_states())
+        self.recovery_key_b64_input.textChanged.connect(lambda *_: self._refresh_recovery_key_field_state())
 
         self.vault_auto_lock_timeout_ms = self._read_timeout_ms(
             "VAULT_DESKTOP_AUTO_LOCK_SECONDS",
@@ -889,6 +888,7 @@ class MainWindow(QMainWindow):
         self._apply_theme()
         self._refresh_vault_pin_field_style()
         self._refresh_new_vault_pin_field_state()
+        self._refresh_recovery_key_field_state()
         self._refresh_quick_crypto_method_state()
         self.refresh_session_label()
         self._refresh_system_state_indicators()
@@ -1602,6 +1602,14 @@ class MainWindow(QMainWindow):
             QLineEdit[pinValidity="valid"]:focus {{
                 border-color: #1fdc78;
             }}
+            QLineEdit[recoveryValidity="invalid"],
+            QLineEdit[recoveryValidity="invalid"]:focus {{
+                border-color: #d84b4b;
+            }}
+            QLineEdit[recoveryValidity="valid"],
+            QLineEdit[recoveryValidity="valid"]:focus {{
+                border-color: #1fdc78;
+            }}
             QLineEdit[confirmBlink="true"],
             QLineEdit[confirmBlink="true"]:focus {{
                 border-color: #d84b4b;
@@ -2030,6 +2038,17 @@ class MainWindow(QMainWindow):
         self.new_vault_pin_input.setProperty("pinValidity", state)
         self._repolish(self.new_vault_pin_input)
 
+    def _refresh_recovery_key_field_state(self) -> None:
+        if not hasattr(self, "recovery_key_b64_input"):
+            return
+        if self.recovery_key_b64_input.text().strip():
+            self.recovery_key_b64_input.setProperty("recoveryValidity", "idle")
+            self.recovery_key_b64_input.setStyleSheet("")
+        else:
+            self.recovery_key_b64_input.setProperty("recoveryValidity", "idle")
+            self.recovery_key_b64_input.setStyleSheet("")
+        self._repolish(self.recovery_key_b64_input)
+
     def _blink_confirm_input(self, remaining_toggles: int = 6, active: bool = True) -> None:
         if not hasattr(self, "pin_confirmation_input"):
             return
@@ -2043,6 +2062,29 @@ class MainWindow(QMainWindow):
             120,
             lambda: self._blink_confirm_input(remaining_toggles - 1, not active),
         )
+
+    def _blink_recovery_key_input(self, remaining_toggles: int = 6, active: bool = True) -> None:
+        if not hasattr(self, "recovery_key_b64_input"):
+            return
+        self.recovery_key_b64_input.setStyleSheet(
+            "border: 1px solid #d84b4b;" if active else ""
+        )
+        if remaining_toggles <= 1:
+            self.recovery_key_b64_input.setProperty("recoveryValidity", "invalid")
+            self.recovery_key_b64_input.setStyleSheet("")
+            self._repolish(self.recovery_key_b64_input)
+            return
+        QTimer.singleShot(
+            120,
+            lambda: self._blink_recovery_key_input(remaining_toggles - 1, not active),
+        )
+
+    def _mark_recovery_key_valid(self) -> None:
+        if not hasattr(self, "recovery_key_b64_input"):
+            return
+        self.recovery_key_b64_input.setProperty("recoveryValidity", "valid")
+        self.recovery_key_b64_input.setStyleSheet("")
+        self._repolish(self.recovery_key_b64_input)
 
     def run_toggle_theme(self) -> None:
         self.current_theme = "dark" if self.current_theme == "light" else "light"
@@ -3085,6 +3127,7 @@ class MainWindow(QMainWindow):
                 "Recovery key unlock failed.\n"
                 "Error: Recovery key input is empty."
             )
+            self._blink_recovery_key_input()
             return
 
         try:
@@ -3096,10 +3139,12 @@ class MainWindow(QMainWindow):
                 "Recovery key unlock failed.\n"
                 f"Error: {exc}"
             )
+            self._blink_recovery_key_input()
             self._refresh_action_states()
             return
 
         self.recovery_key_b64_input.clear()
+        self._mark_recovery_key_valid()
         self.current_screen = "vault"
         self.status_label.setText(
             "Vault unlocked with recovery key.\n"

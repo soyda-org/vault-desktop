@@ -221,6 +221,9 @@ def make_window_harness(
     )
     window._is_file_job_running = lambda: False
     window._refresh_action_states = lambda: MainWindow._refresh_action_states(window)
+    window._refresh_recovery_key_field_state = lambda: MainWindow._refresh_recovery_key_field_state(window)
+    window._blink_recovery_key_input = lambda *args, **kwargs: setattr(window.recovery_key_b64_input, "_blink_called", True)
+    window._mark_recovery_key_valid = lambda: window.recovery_key_b64_input.setProperty("recoveryValidity", "valid")
     window._resolve_active_screen = lambda: MainWindow._resolve_active_screen(window)
     window._screen_index = lambda screen: MainWindow._screen_index(window, screen)
     window._apply_screen_state = lambda: MainWindow._apply_screen_state(window)

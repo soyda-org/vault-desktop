@@ -193,6 +193,21 @@ def test_new_vault_pin_field_tracks_validity_state(app_fixture) -> None:
     assert window.new_vault_pin_input.property("pinValidity") == "valid"
 
 
+def test_recovery_key_field_tracks_validity_state(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.recovery_key_b64_input.clear()
+    window._refresh_recovery_key_field_state()
+    assert window.recovery_key_b64_input.property("recoveryValidity") == "idle"
+
+    window.recovery_key_b64_input.setText("abcd")
+    window._refresh_recovery_key_field_state()
+    assert window.recovery_key_b64_input.property("recoveryValidity") == "idle"
+
+    window._mark_recovery_key_valid()
+    assert window.recovery_key_b64_input.property("recoveryValidity") == "valid"
+
+
 def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.new_vault_pin_input.clear()
