@@ -557,7 +557,7 @@ class MainWindow(QMainWindow):
         self.generated_password_output.setPlaceholderText("Generated password will appear here.")
 
         self.generate_password_button = QPushButton("Generate Password")
-        self.generate_password_button.setProperty("tone", "primary")
+        self.generate_password_button.setProperty("tone", "secondary")
         self.generate_password_button.setProperty("hoverGlow", "light")
         self.generate_password_button.clicked.connect(self.run_generate_password)
 
@@ -1774,6 +1774,7 @@ class MainWindow(QMainWindow):
                 padding: 6px;
                 font-family: monospace;
             }}
+            QPlainTextEdit QScrollBar:vertical,
             #activityLog QScrollBar:vertical {{
                 background: {input};
                 border: 0;
@@ -1781,24 +1782,32 @@ class MainWindow(QMainWindow):
                 margin: 0;
                 width: 8px;
             }}
+            QPlainTextEdit::corner,
             #activityLog::corner {{
                 background: {input};
                 border: 0;
             }}
+            QPlainTextEdit QScrollBar::groove:vertical,
             #activityLog QScrollBar::groove:vertical {{
                 background: {input};
                 border: 0;
                 border-radius: 999px;
             }}
+            QPlainTextEdit QScrollBar::handle:vertical,
             #activityLog QScrollBar::handle:vertical {{
                 background: {muted};
                 border: 0;
                 border-radius: 999px;
                 min-height: 28px;
             }}
+            QPlainTextEdit QScrollBar::handle:vertical:hover,
             #activityLog QScrollBar::handle:vertical:hover {{
                 background: {text};
             }}
+            QPlainTextEdit QScrollBar::add-line:vertical,
+            QPlainTextEdit QScrollBar::sub-line:vertical,
+            QPlainTextEdit QScrollBar::add-page:vertical,
+            QPlainTextEdit QScrollBar::sub-page:vertical,
             #activityLog QScrollBar::add-line:vertical,
             #activityLog QScrollBar::sub-line:vertical,
             #activityLog QScrollBar::add-page:vertical,
@@ -1809,14 +1818,18 @@ class MainWindow(QMainWindow):
                 width: 0;
                 margin: 0;
             }}
+            QPlainTextEdit QScrollBar::sub-line:vertical,
             #activityLog QScrollBar::sub-line:vertical {{
                 subcontrol-origin: margin;
                 subcontrol-position: top;
             }}
+            QPlainTextEdit QScrollBar::add-line:vertical,
             #activityLog QScrollBar::add-line:vertical {{
                 subcontrol-origin: margin;
                 subcontrol-position: bottom;
             }}
+            QPlainTextEdit QScrollBar::up-arrow:vertical,
+            QPlainTextEdit QScrollBar::down-arrow:vertical,
             #activityLog QScrollBar::up-arrow:vertical,
             #activityLog QScrollBar::down-arrow:vertical {{
                 background: transparent;
