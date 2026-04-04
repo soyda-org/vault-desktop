@@ -204,10 +204,11 @@ class VaultWorkspaceView(QWidget):
         pin_focus_area = QVBoxLayout()
         pin_focus_area.setContentsMargins(0, 0, 0, 0)
         pin_focus_area.setSpacing(0)
-        pin_focus_area.addStretch(3)
+        pin_focus_area.addStretch(1)
         pin_focus_area.addLayout(pin_row)
         pin_focus_area.addStretch(1)
         content_column.addLayout(pin_focus_area, 3)
+        content_column.addStretch(1)
 
         help_row = QHBoxLayout()
         help_row.setContentsMargins(0, 0, 0, 0)
