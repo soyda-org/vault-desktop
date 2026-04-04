@@ -3659,7 +3659,7 @@ class MainWindow(QMainWindow):
                 )
             else:
                 help_text = (
-                    "No PIN on this device yet. Unlock with your Recovery Key, then open PIN Settings to enroll one."
+                    "No PIN on this device yet. Open PIN Settings, then use your Recovery Key to unlock and enroll one."
                 )
             self.vault_access_help_button.setToolTip(help_text)
         
