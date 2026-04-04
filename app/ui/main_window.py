@@ -222,6 +222,7 @@ class MainWindow(QMainWindow):
         self.activity_log_list.setObjectName("activityLog")
         self.activity_log_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
         self.remember_session_checkbox = QCheckBox("Stay signed in on this device")
+        self.remember_session_checkbox.setObjectName("rememberSessionCheckbox")
         self.remember_session_checkbox.setChecked(
             self.persisted_ui_settings.remember_session
         )
@@ -1569,6 +1570,9 @@ class MainWindow(QMainWindow):
             QCheckBox {{
                 background: transparent;
                 spacing: 4px;
+            }}
+            #rememberSessionCheckbox:checked {{
+                color: {warning};
             }}
             QCheckBox::indicator {{
                 background: {surface};
