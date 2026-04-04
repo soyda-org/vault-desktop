@@ -489,9 +489,8 @@ class MainWindow(QMainWindow):
 
         self.vault_pin_input = QLineEdit()
         self.vault_pin_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.vault_pin_input.setPlaceholderText(
-            "Everyday use target: unlock with PIN (scaffold only for now)."
-        )
+        self.vault_pin_input.setPlaceholderText("....")
+        self.vault_pin_input.setProperty("vaultPinField", True)
 
         self.unlock_vault_pin_button = QPushButton("Unlock with PIN")
         self.unlock_vault_pin_button.clicked.connect(self.run_unlock_vault_with_pin)
@@ -1548,6 +1547,13 @@ class MainWindow(QMainWindow):
                 border: 0;
             }}
             QLineEdit[ghostField="true"]::placeholder {{
+                color: {muted};
+            }}
+            QLineEdit[vaultPinField="true"] {{
+                font-size: 20px;
+            }}
+            QLineEdit[vaultPinField="true"]::placeholder {{
+                font-size: 20px;
                 color: {muted};
             }}
             QPushButton {{
