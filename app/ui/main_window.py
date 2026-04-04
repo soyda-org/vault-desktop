@@ -3487,7 +3487,7 @@ class MainWindow(QMainWindow):
                 "Vault unlock source: vault is currently locked."
             )
             self.vault_next_step_label.setText(
-                "Next step: enter the local PIN for this device and click Unlock with PIN. Advanced Recovery remains available if needed."
+                "Next step: enter the local PIN for this device. The vault unlocks automatically when the PIN is correct, and Advanced Recovery remains available if needed."
             )
         elif not vault_unlocked and pin_bootstrap_status == "other_account":
             self.vault_unlock_source_label.setText(

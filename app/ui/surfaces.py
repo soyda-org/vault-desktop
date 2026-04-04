@@ -204,7 +204,6 @@ class VaultWorkspaceView(QWidget):
         help_row.setContentsMargins(0, 0, 0, 0)
         help_row.setSpacing(8)
         help_row.addStretch(1)
-        help_row.addWidget(pin_widgets["unlock"])
         help_row.addWidget(help_button)
         help_row.addStretch(1)
         content_column.addLayout(help_row)
