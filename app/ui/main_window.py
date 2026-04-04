@@ -1214,6 +1214,13 @@ class MainWindow(QMainWindow):
             self.system_workspace_view.set_current_panel(
                 getattr(self, "current_system_panel", "service")
             )
+        if not authenticated:
+            vault_level = "warning"
+        elif self._is_vault_unlocked():
+            vault_level = "success"
+        else:
+            vault_level = "warning"
+        self.nav_vault_button.setProperty("navLevel", vault_level)
         self.nav_generator_button.setProperty("navCurrent", screen == "generator")
         self.nav_vault_button.setProperty("navCurrent", screen == "vault")
         self._repolish(self.nav_generator_button)
@@ -1541,6 +1548,18 @@ class MainWindow(QMainWindow):
                 border-radius: 999px;
                 padding: 2px 8px;
             }}
+            QPushButton[nav="true"][navLevel="success"] {{
+                border-color: {success};
+                color: {success};
+            }}
+            QPushButton[nav="true"][navLevel="warning"] {{
+                border-color: {warning};
+                color: {warning};
+            }}
+            QPushButton[nav="true"][navLevel="error"] {{
+                border-color: {danger};
+                color: {danger};
+            }}
             QPushButton[nav="true"]:hover {{
                 border-color: #ffffff;
                 background: {surface_alt};
@@ -1610,6 +1629,21 @@ class MainWindow(QMainWindow):
             QPushButton[nav="true"][navCurrent="true"] {{
                 background: {primary};
                 border-color: {primary};
+                color: #ffffff;
+            }}
+            QPushButton[nav="true"][navCurrent="true"][navLevel="success"] {{
+                background: {success};
+                border-color: {success};
+                color: #ffffff;
+            }}
+            QPushButton[nav="true"][navCurrent="true"][navLevel="warning"] {{
+                background: {warning};
+                border-color: {warning};
+                color: #0f172a;
+            }}
+            QPushButton[nav="true"][navCurrent="true"][navLevel="error"] {{
+                background: {danger};
+                border-color: {danger};
                 color: #ffffff;
             }}
             #surfaceDivider {{

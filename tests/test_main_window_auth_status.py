@@ -140,6 +140,7 @@ def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) ->
     window._apply_screen_state()
     assert window.system_service_tab_button.text() == "Access"
     assert window.system_service_tab_button.property("segmentLevel") == "warning"
+    assert window.nav_vault_button.property("navLevel") == "warning"
     assert not window.login_button.isHidden()
     assert not window.sign_up_button.isHidden()
     assert window.logout_button.isHidden()
@@ -161,6 +162,23 @@ def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) ->
     assert window.sign_up_button.isHidden()
     assert not window.logout_button.isHidden()
     assert window.system_service_tab_button.property("segmentLevel") == "success"
+    assert window.nav_vault_button.property("navLevel") == "warning"
+
+    window.desktop_service.session_store.current = DesktopSession(
+        identifier="alice",
+        user_id="user_1",
+        device_id="device_1",
+        session_id="session_1",
+        access_token="token",
+        refresh_token="refresh-token",
+        token_type="bearer",
+        vault_master_key_b64="7U7C2e0z4A9Y2f1d9K8J3nS5mT6qP0wX1vB4cD7eF9g=",
+    )
+    window._refresh_action_states()
+    window._apply_screen_state()
+    app_fixture.processEvents()
+
+    assert window.nav_vault_button.property("navLevel") == "success"
 
 
 def test_append_activity_log_keeps_newest_first_and_dedupes(app_fixture) -> None:
