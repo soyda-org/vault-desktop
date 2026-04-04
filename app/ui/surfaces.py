@@ -48,7 +48,7 @@ def _divider() -> QFrame:
     frame.setFrameShape(QFrame.Shape.HLine)
     frame.setFrameShadow(QFrame.Shadow.Plain)
     frame.setObjectName("surfaceDivider")
-    frame.setFixedHeight(1)
+    frame.setFixedHeight(2)
     return frame
 
 
