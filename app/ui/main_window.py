@@ -579,7 +579,7 @@ class MainWindow(QMainWindow):
         self.quick_crypto_input.setPlaceholderText(
             "Type plain text to encrypt, or paste an encrypted envelope to decrypt."
         )
-        self.quick_crypto_input.setMinimumHeight(64)
+        self.quick_crypto_input.setMinimumHeight(48)
         self.quick_crypto_input.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding,
@@ -590,7 +590,7 @@ class MainWindow(QMainWindow):
         self.quick_crypto_output.setPlaceholderText(
             "Encrypted output or decrypted plain text will appear here."
         )
-        self.quick_crypto_output.setMinimumHeight(64)
+        self.quick_crypto_output.setMinimumHeight(48)
         self.quick_crypto_output.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding,
