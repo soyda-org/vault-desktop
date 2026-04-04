@@ -1310,6 +1310,7 @@ class MainWindow(QMainWindow):
 
     def _build_stylesheet(self) -> str:
         palette = _theme_palette(self.current_theme)
+        ui_assets_dir = (Path(__file__).resolve().parents[1] / "assets" / "ui").as_posix()
         return """
             QWidget {{
                 background: {window};
@@ -1364,6 +1365,35 @@ class MainWindow(QMainWindow):
             QSpinBox::up-button:hover,
             QSpinBox::down-button:hover {{
                 background: {surface_alt};
+            }}
+            QSpinBox::up-arrow {{
+                image: url({spin_up_icon});
+                width: 8px;
+                height: 6px;
+            }}
+            QSpinBox::down-arrow {{
+                image: url({spin_down_icon});
+                width: 8px;
+                height: 6px;
+            }}
+            QCheckBox {{
+                background: transparent;
+                spacing: 4px;
+            }}
+            QCheckBox::indicator {{
+                background: {surface};
+                border: 1px solid {border};
+                border-radius: 3px;
+                width: 12px;
+                height: 12px;
+            }}
+            QCheckBox::indicator:hover {{
+                border-color: #ffffff;
+            }}
+            QCheckBox::indicator:checked {{
+                background: {surface};
+                border-color: {text};
+                image: url({checkbox_check_icon});
             }}
             QLineEdit:focus,
             QTextEdit:focus,
@@ -1722,7 +1752,13 @@ class MainWindow(QMainWindow):
                 width: 0;
                 height: 0;
             }}
-        """.format(font_family=self.ui_font_family, **palette)
+        """.format(
+            font_family=self.ui_font_family,
+            spin_up_icon=f"{ui_assets_dir}/spin-up.svg",
+            spin_down_icon=f"{ui_assets_dir}/spin-down.svg",
+            checkbox_check_icon=f"{ui_assets_dir}/check-white.svg",
+            **palette,
+        )
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(self._build_stylesheet())
