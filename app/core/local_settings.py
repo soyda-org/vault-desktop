@@ -27,8 +27,8 @@ class PersistedUiSettings:
     platform: str = "unknown"
     last_tab_index: int = 0
     theme: str = "light"
-    persist_activity_log: bool = False
-    activity_log_entries: tuple[str, ...] = ()
+    remember_session: bool = False
+    remembered_session: dict[str, str] | None = None
 
 
 class LocalSettingsStore:
@@ -50,11 +50,21 @@ class LocalSettingsStore:
             platform=data.get("platform", defaults.platform),
             last_tab_index=int(data.get("last_tab_index", defaults.last_tab_index)),
             theme=data.get("theme", defaults.theme),
-            persist_activity_log=bool(
-                data.get("persist_activity_log", defaults.persist_activity_log)
+            remember_session=bool(
+                data.get("remember_session", defaults.remember_session)
             ),
-            activity_log_entries=tuple(
-                str(entry) for entry in data.get("activity_log_entries", defaults.activity_log_entries)
+            remembered_session=(
+                {
+                    "identifier": str(session_data.get("identifier", "")),
+                    "user_id": str(session_data.get("user_id", "")),
+                    "device_id": str(session_data.get("device_id", "")),
+                    "session_id": str(session_data.get("session_id", "")),
+                    "access_token": str(session_data.get("access_token", "")),
+                    "refresh_token": str(session_data.get("refresh_token", "")),
+                    "token_type": str(session_data.get("token_type", "bearer")),
+                }
+                if isinstance((session_data := data.get("remembered_session")), dict)
+                else None
             ),
         )
 

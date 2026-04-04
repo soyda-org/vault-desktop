@@ -41,6 +41,7 @@ from app.core.local_settings import (
     detect_local_device_defaults,
 )
 from app.core.pin_bootstrap import MIN_PIN_LENGTH, validate_pin
+from app.core.session import DesktopSession
 from app.services.api_client import (
     ObjectCreateResult,
     ObjectDetailResult,
@@ -179,6 +180,7 @@ class MainWindow(QMainWindow):
             api_client=self.api_client,
             vault_gateway=AuthenticatedVaultGateway(self.api_client),
         )
+        self._restore_persisted_session()
         self.current_theme = (
             self.persisted_ui_settings.theme
             if self.persisted_ui_settings.theme in {"light", "dark"}
@@ -219,20 +221,18 @@ class MainWindow(QMainWindow):
         self.activity_log_list = QListWidget()
         self.activity_log_list.setObjectName("activityLog")
         self.activity_log_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        self.persist_activity_log_checkbox = QCheckBox("Save logs for next launch")
-        self.persist_activity_log_checkbox.setChecked(
-            self.persisted_ui_settings.persist_activity_log
+        self.remember_session_checkbox = QCheckBox("Stay signed in on this device")
+        self.remember_session_checkbox.setChecked(
+            self.persisted_ui_settings.remember_session
         )
-        self.persist_activity_log_checkbox.toggled.connect(
-            lambda *_: self._handle_persist_activity_log_toggle()
+        self.remember_session_checkbox.toggled.connect(
+            lambda *_: self._handle_remember_session_toggle()
         )
 
         self.copy_activity_log_button = QPushButton("Copy Diagnostics")
         self.copy_activity_log_button.clicked.connect(self.run_copy_activity_log)
         self.clear_activity_log_button = QPushButton("Clear Log")
         self.clear_activity_log_button.clicked.connect(self.run_clear_activity_log)
-
-        self._restore_persisted_activity_log()
 
         self.identifier_input = QLineEdit()
         self.identifier_input.setText(self.persisted_ui_settings.identifier)
@@ -777,7 +777,7 @@ class MainWindow(QMainWindow):
                 "signup": self.sign_up_button,
             },
             preference_widgets={
-                "persist_logs": self.persist_activity_log_checkbox,
+                "persist_logs": self.remember_session_checkbox,
             },
             utility_buttons={
                 "logout": self.logout_button,
@@ -1381,8 +1381,6 @@ class MainWindow(QMainWindow):
         while self.activity_log_list.count() > 200:
             self.activity_log_list.takeItem(self.activity_log_list.count() - 1)
         self._last_activity_message = message
-        if hasattr(self, "_persist_activity_log_if_enabled"):
-            self._persist_activity_log_if_enabled()
 
     def _handle_status_text_change(self, message: str) -> None:
         if not hasattr(self, "activity_log_list"):
@@ -1456,43 +1454,9 @@ class MainWindow(QMainWindow):
     def run_clear_activity_log(self) -> None:
         self.activity_log_list.clear()
         self._last_activity_message = ""
-        self._persist_activity_log_if_enabled()
         self.status_label.setText("Activity log cleared.")
 
-    def _activity_log_entries(self) -> tuple[str, ...]:
-        return tuple(
-            self.activity_log_list.item(index).text()
-            for index in range(self.activity_log_list.count())
-            if self.activity_log_list.item(index) is not None
-        )
-
-    def _restore_persisted_activity_log(self) -> None:
-        if not getattr(self.persisted_ui_settings, "persist_activity_log", False):
-            return
-        for entry in self.persisted_ui_settings.activity_log_entries:
-            self.activity_log_list.addItem(QListWidgetItem(entry))
-        if self.activity_log_list.count():
-            first_item = self.activity_log_list.item(0)
-            if first_item is not None:
-                self._last_activity_message = first_item.text().split(" ", 2)[-1]
-
-    def _persist_activity_log_if_enabled(self) -> None:
-        if not hasattr(self, "persist_activity_log_checkbox"):
-            return
-        self._save_ui_preferences()
-
-    def _handle_persist_activity_log_toggle(self) -> None:
-        if not self.persist_activity_log_checkbox.isChecked():
-            self.persisted_ui_settings = PersistedUiSettings(
-                api_base_url=self.persisted_ui_settings.api_base_url,
-                identifier=self.persisted_ui_settings.identifier,
-                device_name=self.persisted_ui_settings.device_name,
-                platform=self.persisted_ui_settings.platform,
-                last_tab_index=self.persisted_ui_settings.last_tab_index,
-                theme=self.persisted_ui_settings.theme,
-                persist_activity_log=False,
-                activity_log_entries=(),
-            )
+    def _handle_remember_session_toggle(self) -> None:
         self._save_ui_preferences()
 
     def _repolish(self, widget: QWidget) -> None:
@@ -2148,14 +2112,55 @@ class MainWindow(QMainWindow):
             f"{'Dark' if self.current_theme == 'dark' else 'Light'} theme enabled."
         )
 
+    def _restore_persisted_session(self) -> None:
+        remembered = self.persisted_ui_settings.remembered_session
+        if not self.persisted_ui_settings.remember_session or not remembered:
+            return
+        if not all(
+            remembered.get(key)
+            for key in (
+                "identifier",
+                "user_id",
+                "device_id",
+                "session_id",
+                "access_token",
+                "refresh_token",
+                "token_type",
+            )
+        ):
+            return
+        self.desktop_service.session_store.set_session(
+            DesktopSession(
+                identifier=remembered["identifier"],
+                user_id=remembered["user_id"],
+                device_id=remembered["device_id"],
+                session_id=remembered["session_id"],
+                access_token=remembered["access_token"],
+                refresh_token=remembered["refresh_token"],
+                token_type=remembered["token_type"],
+            )
+        )
+
+    def _remembered_session_payload(self) -> dict[str, str] | None:
+        if not hasattr(self, "remember_session_checkbox"):
+            return None
+        if not self.remember_session_checkbox.isChecked():
+            return None
+        session = self.desktop_service.current_session()
+        if session is None:
+            return None
+        return {
+            "identifier": session.identifier,
+            "user_id": session.user_id,
+            "device_id": session.device_id,
+            "session_id": session.session_id,
+            "access_token": session.access_token,
+            "refresh_token": session.refresh_token,
+            "token_type": session.token_type,
+        }
+
     def _save_ui_preferences(self) -> None:
         default_device_name, default_platform = detect_local_device_defaults()
-        activity_log_entries = (
-            self._activity_log_entries()
-            if getattr(self, "persist_activity_log_checkbox", None) is not None
-            and self.persist_activity_log_checkbox.isChecked()
-            else ()
-        )
         updated_settings = PersistedUiSettings(
             api_base_url=self.persisted_ui_settings.api_base_url,
             identifier=self.identifier_input.text().strip() or "alice",
@@ -2163,12 +2168,12 @@ class MainWindow(QMainWindow):
             platform=self.platform_input.text().strip() or default_platform,
             last_tab_index=self.tabs.currentIndex(),
             theme=self.current_theme,
-            persist_activity_log=(
-                self.persist_activity_log_checkbox.isChecked()
-                if hasattr(self, "persist_activity_log_checkbox")
+            remember_session=(
+                self.remember_session_checkbox.isChecked()
+                if hasattr(self, "remember_session_checkbox")
                 else False
             ),
-            activity_log_entries=activity_log_entries,
+            remembered_session=self._remembered_session_payload(),
         )
         self.local_settings_store.save(updated_settings)
         self.persisted_ui_settings = updated_settings
@@ -3905,6 +3910,17 @@ class MainWindow(QMainWindow):
         self.refresh_session_label()
         self._refresh_action_states()
         self.status_label.setText(status_text)
+        if hasattr(self, "remember_session_checkbox") and self.remember_session_checkbox.isChecked():
+            self.persisted_ui_settings = PersistedUiSettings(
+                api_base_url=self.persisted_ui_settings.api_base_url,
+                identifier=self.persisted_ui_settings.identifier,
+                device_name=self.persisted_ui_settings.device_name,
+                platform=self.persisted_ui_settings.platform,
+                last_tab_index=self.persisted_ui_settings.last_tab_index,
+                theme=self.persisted_ui_settings.theme,
+                remember_session=True,
+                remembered_session=None,
+            )
         self._save_ui_preferences()
 
     def _handle_session_auto_logout_timeout(self) -> None:
