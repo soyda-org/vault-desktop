@@ -224,7 +224,9 @@ def make_window_harness(
     window._refresh_recovery_key_field_state = lambda: MainWindow._refresh_recovery_key_field_state(window)
     window._blink_recovery_key_input = lambda *args, **kwargs: setattr(window.recovery_key_b64_input, "_blink_called", True)
     window._mark_recovery_key_valid = lambda: window.recovery_key_b64_input.setProperty("recoveryValidity", "valid")
+    window.run_unlock_vault_with_pin = lambda: MainWindow.run_unlock_vault_with_pin(window)
     window._handle_successful_vault_pin_unlock = lambda: MainWindow._handle_successful_vault_pin_unlock(window)
+    window._handle_vault_pin_return_pressed = lambda: MainWindow._handle_vault_pin_return_pressed(window)
     window._maybe_auto_unlock_with_pin = lambda: MainWindow._maybe_auto_unlock_with_pin(window)
     window._resolve_active_screen = lambda: MainWindow._resolve_active_screen(window)
     window._screen_index = lambda screen: MainWindow._screen_index(window, screen)
@@ -503,6 +505,19 @@ def test_auto_unlock_with_pin_succeeds_when_correct_pin_is_entered(qapp, tmp_pat
     assert window.desktop_service.current_session_vault_master_key() == VALID_MASTER_KEY_B64
     assert "Vault unlocked with PIN." in window.status_label.text()
     assert window.current_screen == "vault"
+
+
+def test_enter_on_wrong_pin_clears_field_for_retry(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+    window.desktop_service.enroll_local_pin_bootstrap(pin="1234")
+    window.desktop_service.clear_session_vault_master_key()
+    window.vault_pin_input.setText("9999")
+
+    MainWindow._handle_vault_pin_return_pressed(window)
+
+    assert window.vault_pin_input.text() == ""
+    assert not window._is_vault_unlocked()
 
 
 def test_logged_out_guidance_prompts_login(qapp, tmp_path: Path) -> None:

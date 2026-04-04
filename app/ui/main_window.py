@@ -494,6 +494,7 @@ class MainWindow(QMainWindow):
         self.vault_pin_input.setProperty("vaultPinField", True)
         self.vault_pin_input.setProperty("ghostField", True)
         self.vault_pin_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.vault_pin_input.returnPressed.connect(self._handle_vault_pin_return_pressed)
 
         self.unlock_vault_pin_button = QPushButton("Unlock with PIN")
         self.unlock_vault_pin_button.clicked.connect(self.run_unlock_vault_with_pin)
@@ -2965,6 +2966,11 @@ class MainWindow(QMainWindow):
         self._refresh_after_vault_unlock()
         self._refresh_idle_policy()
         self._refresh_action_states()
+
+    def _handle_vault_pin_return_pressed(self) -> None:
+        self.run_unlock_vault_with_pin()
+        if not self._is_vault_unlocked():
+            self.vault_pin_input.clear()
 
     def _maybe_auto_unlock_with_pin(self) -> None:
         if not hasattr(self, "desktop_service"):
