@@ -194,7 +194,7 @@ class VaultWorkspaceView(QWidget):
         )
         content_column = QVBoxLayout()
         content_column.setContentsMargins(0, 0, 0, 0)
-        content_column.setSpacing(10)
+        content_column.setSpacing(6)
 
         pin_row = QHBoxLayout()
         pin_row.setContentsMargins(0, 6, 0, 0)
@@ -225,7 +225,7 @@ class VaultWorkspaceView(QWidget):
         manage_row.addWidget(session_actions["logout"])
         manage_row.addStretch(1)
         content_column.addLayout(manage_row)
-        content_column.addSpacing(8)
+        content_column.addSpacing(2)
 
         settings_row = QHBoxLayout()
         settings_row.setContentsMargins(0, 0, 0, 0)
