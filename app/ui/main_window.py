@@ -522,6 +522,7 @@ class MainWindow(QMainWindow):
         self.recovery_key_b64_input = QLineEdit()
         self.recovery_key_b64_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.recovery_key_b64_input.setPlaceholderText("Paste Recovery Key here.")
+        self.recovery_key_b64_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.unlock_with_recovery_key_button = QPushButton("Unlock Vault")
         self.unlock_with_recovery_key_button.clicked.connect(self.run_unlock_with_recovery_key)
