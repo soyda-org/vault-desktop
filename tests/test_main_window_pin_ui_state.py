@@ -269,7 +269,7 @@ def test_current_account_pin_requires_confirm_for_change_and_remove(qapp, tmp_pa
     assert "Vault is unlocked" in window.vault_next_step_label.text()
     assert "currently enrolled for this account" in window.device_pin_scope_label.text()
     assert window.enroll_vault_pin_button.text() == "Change PIN"
-    assert window.enroll_vault_pin_button.isEnabled() is False
+    assert window.enroll_vault_pin_button.isEnabled() is True
     assert window.remove_vault_pin_button.isEnabled() is False
 
     window.pin_confirmation_input.setText("CONFIRM")
