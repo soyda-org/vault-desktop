@@ -581,11 +581,12 @@ class MainWindow(QMainWindow):
 
         self.quick_crypto_input = QPlainTextEdit()
         self.quick_crypto_input.setPlaceholderText(
-            '{\n'
+            "Type plaintext to encrypt, or decrypt with following format:\n"
+            "{\n"
             '  "format": "quick-text-v1",\n'
             '  "method": "base64",\n'
             '  "payload_text": "aGVsbG8="\n'
-            '}'
+            "}"
         )
         self.quick_crypto_input.setMinimumHeight(48)
         self.quick_crypto_input.setSizePolicy(
