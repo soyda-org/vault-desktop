@@ -193,7 +193,7 @@ def test_new_vault_pin_field_tracks_validity_state(app_fixture) -> None:
     assert window.new_vault_pin_input.property("pinValidity") == "valid"
 
 
-def test_new_vault_pin_field_uses_larger_masked_font(app_fixture) -> None:
+def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.new_vault_pin_input.clear()
     window._refresh_new_vault_pin_field_state()
@@ -201,7 +201,7 @@ def test_new_vault_pin_field_uses_larger_masked_font(app_fixture) -> None:
 
     window.new_vault_pin_input.setText("1234")
     window._refresh_new_vault_pin_field_state()
-    assert "font-size: 28px;" in window.new_vault_pin_input.styleSheet()
+    assert window.new_vault_pin_input.styleSheet() == ""
 
 
 def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) -> None:

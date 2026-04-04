@@ -504,7 +504,7 @@ class MainWindow(QMainWindow):
         self.enroll_vault_pin_button.setProperty("hoverGlow", "light")
         self.enroll_vault_pin_button.clicked.connect(self.run_enroll_vault_pin)
 
-        self.remove_vault_pin_button = QPushButton("Remove PIN from This Device")
+        self.remove_vault_pin_button = QPushButton("Remove PIN")
         self.remove_vault_pin_button.setProperty("tone", "danger")
         self.remove_vault_pin_button.clicked.connect(self.run_remove_vault_pin)
 
@@ -651,7 +651,7 @@ class MainWindow(QMainWindow):
 
         self.pin_confirmation_input = QLineEdit()
         self.pin_confirmation_input.setPlaceholderText(
-            "Type CONFIRM before changing, replacing, or removing the device PIN."
+            "Type CONFIRM to change PIN."
         )
         self.pin_confirmation_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -2016,7 +2016,7 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "new_vault_pin_input"):
             return
         value = self.new_vault_pin_input.text().strip()
-        self.new_vault_pin_input.setStyleSheet("font-size: 28px;" if value else "")
+        self.new_vault_pin_input.setStyleSheet("")
         if not value:
             state = "idle"
         else:
