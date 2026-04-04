@@ -130,7 +130,7 @@ class SystemWorkspaceView(QWidget):
 
         content_container = QWidget()
         content_container.setObjectName("contentContainer")
-        content_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        content_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Expanding)
         content_container.setLayout(content_column)
 
         content_wrapper = QHBoxLayout()
@@ -247,9 +247,7 @@ class VaultWorkspaceView(QWidget):
         content_wrapper.addStretch(1)
         content_wrapper.addWidget(content_container, 0)
         content_wrapper.addStretch(1)
-        access_layout.addStretch(1)
-        access_layout.addLayout(content_wrapper)
-        access_layout.addStretch(1)
+        access_layout.addLayout(content_wrapper, 1)
 
         workspace_panel, workspace_layout = _panel(
             title="Vault workspace",
