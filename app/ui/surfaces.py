@@ -184,6 +184,7 @@ class VaultWorkspaceView(QWidget):
         tabs: QWidget,
     ) -> None:
         super().__init__()
+        self.panel_stack = QStackedWidget()
 
         access_panel, access_layout = _panel(
             title="Vault access",
@@ -241,22 +242,16 @@ class VaultWorkspaceView(QWidget):
         tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         workspace_layout.addWidget(tabs, 1)
 
-        sidebar = QVBoxLayout()
-        sidebar.setContentsMargins(0, 0, 0, 0)
-        sidebar.setSpacing(16)
-        sidebar.addWidget(access_panel)
-        sidebar.addStretch(1)
-
-        body = QHBoxLayout()
-        body.setContentsMargins(0, 0, 0, 0)
-        body.setSpacing(16)
-        body.addLayout(sidebar, 2)
-        body.addWidget(workspace_panel, 3)
+        self.panel_stack.addWidget(access_panel)
+        self.panel_stack.addWidget(workspace_panel)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        layout.addLayout(body, 1)
+        layout.addWidget(self.panel_stack, 1)
+
+    def set_current_panel(self, name: str) -> None:
+        self.panel_stack.setCurrentIndex(0 if name == "access" else 1)
 
 
 class GeneratorWorkspaceView(QWidget):

@@ -696,6 +696,13 @@ class MainWindow(QMainWindow):
         self.system_messages_tab_button.setProperty("segment", "true")
         self.system_messages_tab_button.clicked.connect(lambda: self._switch_system_panel("messages"))
         self.current_system_panel = "service"
+        self.vault_access_tab_button = QPushButton("Vault access")
+        self.vault_access_tab_button.setProperty("segment", "true")
+        self.vault_access_tab_button.clicked.connect(lambda: self._switch_vault_panel("access"))
+        self.vault_workspace_tab_button = QPushButton("Vault workspace")
+        self.vault_workspace_tab_button.setProperty("segment", "true")
+        self.vault_workspace_tab_button.clicked.connect(lambda: self._switch_vault_panel("workspace"))
+        self.current_vault_panel = "access"
 
         self.nav_vault_button = QPushButton("Vault")
         self.nav_vault_button.setProperty("nav", "true")
@@ -797,6 +804,8 @@ class MainWindow(QMainWindow):
         toolbar_layout.setSpacing(6)
         toolbar_layout.addWidget(self.system_service_tab_button)
         toolbar_layout.addWidget(self.system_messages_tab_button)
+        toolbar_layout.addWidget(self.vault_access_tab_button)
+        toolbar_layout.addWidget(self.vault_workspace_tab_button)
         toolbar_layout.addWidget(self.theme_toggle_button)
         toolbar_layout.addStretch(1)
         toolbar_layout.addWidget(self.nav_generator_button)
@@ -1233,9 +1242,29 @@ class MainWindow(QMainWindow):
             )
             self._repolish(self.system_service_tab_button)
             self._repolish(self.system_messages_tab_button)
+        if hasattr(self, "vault_access_tab_button"):
+            show_vault_segments = screen == "vault"
+            self.vault_access_tab_button.setVisible(show_vault_segments)
+            self.vault_workspace_tab_button.setVisible(show_vault_segments)
+            vault_segment_level = "success" if authenticated and self._is_vault_unlocked() else "warning"
+            self.vault_access_tab_button.setProperty("segmentLevel", vault_segment_level)
+            self.vault_access_tab_button.setProperty(
+                "segmentCurrent",
+                show_vault_segments and self.current_vault_panel == "access",
+            )
+            self.vault_workspace_tab_button.setProperty(
+                "segmentCurrent",
+                show_vault_segments and self.current_vault_panel == "workspace",
+            )
+            self._repolish(self.vault_access_tab_button)
+            self._repolish(self.vault_workspace_tab_button)
         if screen == "system" and hasattr(self, "system_workspace_view"):
             self.system_workspace_view.set_current_panel(
                 getattr(self, "current_system_panel", "service")
+            )
+        if screen == "vault" and hasattr(self, "vault_workspace_view"):
+            self.vault_workspace_view.set_current_panel(
+                getattr(self, "current_vault_panel", "access")
             )
         if not authenticated:
             vault_level = "warning"
@@ -1258,6 +1287,13 @@ class MainWindow(QMainWindow):
         self.current_system_panel = panel
         if hasattr(self, "system_workspace_view"):
             self.system_workspace_view.set_current_panel(panel)
+        self._apply_screen_state()
+
+    def _switch_vault_panel(self, panel: str) -> None:
+        self.current_screen = "vault"
+        self.current_vault_panel = panel
+        if hasattr(self, "vault_workspace_view"):
+            self.vault_workspace_view.set_current_panel(panel)
         self._apply_screen_state()
 
     def _infer_status_severity(self, message: str) -> str:
