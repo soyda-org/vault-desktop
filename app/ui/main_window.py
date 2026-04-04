@@ -2907,11 +2907,11 @@ class MainWindow(QMainWindow):
             )
             return
 
-        pin_value = self.new_vault_pin_input.text().strip()
+        pin_value = self.new_vault_pin_input.text().strip() or self.vault_pin_input.text().strip()
         if not pin_value:
             self.status_label.setText(
                 "PIN enrollment failed.\n"
-                "Error: New PIN input is empty."
+                "Error: Enter a new PIN in Settings or use the main PIN field."
             )
             return
 
@@ -2934,6 +2934,7 @@ class MainWindow(QMainWindow):
             return
 
         self.new_vault_pin_input.clear()
+        self.vault_pin_input.clear()
         self.pin_confirmation_input.clear()
         if prior_status == "current_account":
             self.status_label.setText(
@@ -3479,7 +3480,9 @@ class MainWindow(QMainWindow):
             and pin_bootstrap_status == "current_account"
             and pin_text_present
         )
-        new_pin_text_present = bool(self.new_vault_pin_input.text().strip())
+        new_pin_text_present = bool(
+            self.new_vault_pin_input.text().strip() or self.vault_pin_input.text().strip()
+        )
         if pin_bootstrap_status in {"current_account", "other_account"}:
             enroll_allowed = authenticated and vault_unlocked and new_pin_text_present and confirmation_ready
         else:

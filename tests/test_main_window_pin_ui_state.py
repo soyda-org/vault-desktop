@@ -402,6 +402,17 @@ def test_run_enroll_vault_pin_first_time_sets_local_only_message(qapp, tmp_path:
     assert window.desktop_service.local_pin_bootstrap_status() == "current_account"
 
 
+def test_run_enroll_vault_pin_accepts_main_pin_field_as_fallback(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+    window.vault_pin_input.setText("1234")
+
+    MainWindow.run_enroll_vault_pin(window)
+
+    assert "PIN saved for this device." in window.status_label.text()
+    assert window.desktop_service.local_pin_bootstrap_status() == "current_account"
+
+
 def test_run_enroll_vault_pin_rejects_change_without_confirm(qapp, tmp_path: Path) -> None:
     window = make_window_harness(tmp_path)
     window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
