@@ -242,7 +242,6 @@ class MainWindow(QMainWindow):
 
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.password_input.setText("strong-password")
         self.password_input.setPlaceholderText("........")
         self.password_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.password_input.setProperty("ghostField", True)

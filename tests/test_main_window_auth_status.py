@@ -248,7 +248,14 @@ def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
     assert window.new_vault_pin_input.styleSheet() == ""
 
 
-def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) -> None:
+def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    monkeypatch.setattr(
+        main_window_module.LocalSettingsStore,
+        "load",
+        lambda self: PersistedUiSettings(),
+    )
     window = MainWindow(get_settings())
     window.show()
     app_fixture.processEvents()
