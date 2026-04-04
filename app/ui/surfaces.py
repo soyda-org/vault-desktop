@@ -218,7 +218,13 @@ class VaultWorkspaceView(QWidget):
         manage_row.addStretch(1)
         content_column.addLayout(manage_row)
 
-        content_column.addWidget(recovery_widgets["toggle"])
+        settings_row = QHBoxLayout()
+        settings_row.setContentsMargins(0, 0, 0, 0)
+        settings_row.setSpacing(0)
+        settings_row.addStretch(1)
+        settings_row.addWidget(recovery_widgets["toggle"])
+        settings_row.addStretch(1)
+        content_column.addLayout(settings_row)
         content_column.addWidget(recovery_widgets["container"])
 
         content_container = QWidget()
