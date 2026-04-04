@@ -252,7 +252,7 @@ def test_first_time_enroll_requires_no_confirmation(qapp, tmp_path: Path) -> Non
     assert "Vault is unlocked" in window.vault_next_step_label.text()
     assert "local to this desktop only and not synced" in window.device_pin_scope_label.text()
     assert "No confirmation is required" in window.pin_confirmation_label.text()
-    assert window.enroll_vault_pin_button.text() == "Enroll PIN on This Device"
+    assert window.enroll_vault_pin_button.text() == "Enroll PIN"
     assert window.enroll_vault_pin_button.isEnabled() is True
     assert window.remove_vault_pin_button.isEnabled() is False
 
@@ -268,7 +268,7 @@ def test_current_account_pin_requires_confirm_for_change_and_remove(qapp, tmp_pa
     assert "current account" in window.pin_bootstrap_status_label.text()
     assert "Vault is unlocked" in window.vault_next_step_label.text()
     assert "currently enrolled for this account" in window.device_pin_scope_label.text()
-    assert window.enroll_vault_pin_button.text() == "Change PIN"
+    assert window.enroll_vault_pin_button.text() == "Enroll PIN"
     assert window.enroll_vault_pin_button.isEnabled() is True
     assert window.remove_vault_pin_button.isEnabled() is False
 
@@ -294,7 +294,7 @@ def test_other_account_pin_disables_unlock_and_requires_confirm(qapp, tmp_path: 
     assert "another account" in window.pin_bootstrap_status_label.text()
     assert "stored local PIN belongs to another account" in window.vault_next_step_label.text()
     assert "another account hint: alice" in window.device_pin_scope_label.text()
-    assert "Replace PIN for Current Account" == window.enroll_vault_pin_button.text()
+    assert "Enroll PIN" == window.enroll_vault_pin_button.text()
     assert window.unlock_vault_pin_button.isEnabled() is False
     assert window.enroll_vault_pin_button.isEnabled() is False
 
