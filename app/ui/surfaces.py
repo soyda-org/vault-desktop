@@ -194,13 +194,20 @@ class VaultWorkspaceView(QWidget):
         )
         content_column = QVBoxLayout()
         content_column.setContentsMargins(0, 0, 0, 0)
-        content_column.setSpacing(8)
+        content_column.setSpacing(10)
 
         pin_row = QHBoxLayout()
         pin_row.setContentsMargins(0, 6, 0, 0)
         pin_row.setSpacing(8)
         pin_row.addWidget(pin_widgets["input"], 1)
-        content_column.addLayout(pin_row)
+
+        pin_focus_area = QVBoxLayout()
+        pin_focus_area.setContentsMargins(0, 0, 0, 0)
+        pin_focus_area.setSpacing(0)
+        pin_focus_area.addStretch(3)
+        pin_focus_area.addLayout(pin_row)
+        pin_focus_area.addStretch(1)
+        content_column.addLayout(pin_focus_area, 3)
 
         help_row = QHBoxLayout()
         help_row.setContentsMargins(0, 0, 0, 0)
@@ -217,6 +224,7 @@ class VaultWorkspaceView(QWidget):
         manage_row.addWidget(session_actions["logout"])
         manage_row.addStretch(1)
         content_column.addLayout(manage_row)
+        content_column.addSpacing(8)
 
         settings_row = QHBoxLayout()
         settings_row.setContentsMargins(0, 0, 0, 0)
@@ -229,7 +237,7 @@ class VaultWorkspaceView(QWidget):
 
         content_container = QWidget()
         content_container.setObjectName("contentContainer")
-        content_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        content_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Expanding)
         content_container.setLayout(content_column)
 
         content_wrapper = QHBoxLayout()
@@ -238,9 +246,7 @@ class VaultWorkspaceView(QWidget):
         content_wrapper.addStretch(1)
         content_wrapper.addWidget(content_container, 0)
         content_wrapper.addStretch(1)
-        access_layout.addStretch(1)
-        access_layout.addLayout(content_wrapper)
-        access_layout.addStretch(1)
+        access_layout.addLayout(content_wrapper, 1)
 
         workspace_panel, workspace_layout = _panel(
             title="Vault workspace",
