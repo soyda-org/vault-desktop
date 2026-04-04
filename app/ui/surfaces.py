@@ -191,13 +191,6 @@ class VaultWorkspaceView(QWidget):
             description=None,
         )
         access_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        help_row = QHBoxLayout()
-        help_row.setContentsMargins(0, 0, 0, 0)
-        help_row.setSpacing(0)
-        help_row.addStretch(1)
-        help_row.addWidget(help_button)
-        access_layout.addLayout(help_row)
-
         pin_row = QHBoxLayout()
         pin_row.setContentsMargins(0, 6, 0, 0)
         pin_row.setSpacing(8)
@@ -205,6 +198,13 @@ class VaultWorkspaceView(QWidget):
         pin_row.addWidget(pin_widgets["unlock"])
         pin_row.addWidget(session_actions["lock"])
         access_layout.addLayout(pin_row)
+
+        help_row = QHBoxLayout()
+        help_row.setContentsMargins(0, 0, 0, 0)
+        help_row.setSpacing(0)
+        help_row.addStretch(1)
+        help_row.addWidget(help_button)
+        access_layout.addLayout(help_row)
 
         manage_row = QHBoxLayout()
         manage_row.setContentsMargins(0, 0, 0, 0)
