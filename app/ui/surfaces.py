@@ -190,7 +190,6 @@ class VaultWorkspaceView(QWidget):
             title="",
             description=None,
         )
-        access_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         content_column = QVBoxLayout()
         content_column.setContentsMargins(0, 0, 0, 0)
         content_column.setSpacing(8)
@@ -236,6 +235,7 @@ class VaultWorkspaceView(QWidget):
         content_wrapper.addStretch(1)
         content_wrapper.addWidget(content_container, 0)
         content_wrapper.addStretch(1)
+        access_layout.addStretch(1)
         access_layout.addLayout(content_wrapper)
         access_layout.addStretch(1)
 
