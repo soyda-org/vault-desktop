@@ -489,7 +489,7 @@ class MainWindow(QMainWindow):
 
         self.vault_pin_input = QLineEdit()
         self.vault_pin_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.vault_pin_input.setPlaceholderText("....")
+        self.vault_pin_input.setPlaceholderText("••••")
         self.vault_pin_input.setProperty("vaultPinField", True)
         self.vault_pin_input.setProperty("ghostField", True)
         self.vault_pin_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -1553,10 +1553,10 @@ class MainWindow(QMainWindow):
                 color: {muted};
             }}
             QLineEdit[vaultPinField="true"] {{
-                font-size: 64px;
+                font-size: 24px;
             }}
             QLineEdit[vaultPinField="true"]::placeholder {{
-                font-size: 64px;
+                font-size: 24px;
                 color: {muted};
             }}
             QPushButton {{
