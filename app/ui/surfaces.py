@@ -50,6 +50,23 @@ def _divider() -> QFrame:
     return frame
 
 
+class _CenteredDivider(QWidget):
+    def __init__(self, ratio: float = 0.5) -> None:
+        super().__init__()
+        self._ratio = ratio
+        self._line = _divider()
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 4, 0, 4)
+        layout.setSpacing(0)
+        layout.addStretch(1)
+        layout.addWidget(self._line, 0)
+        layout.addStretch(1)
+
+    def resizeEvent(self, event) -> None:  # type: ignore[override]
+        self._line.setFixedWidth(max(160, int(self.width() * self._ratio)))
+        super().resizeEvent(event)
+
+
 class SystemWorkspaceView(QWidget):
     def __init__(
         self,
@@ -269,6 +286,24 @@ class GeneratorWorkspaceView(QWidget):
         output_row.addWidget(generator_widgets["generate"])
         output_row.addWidget(generator_widgets["copy"])
         generator_layout.addLayout(output_row)
+
+        generator_layout.addWidget(_CenteredDivider(0.5))
+
+        quick_title = QLabel("Quick encrypt / decrypt")
+        quick_title.setObjectName("sectionTitle")
+        generator_layout.addWidget(quick_title)
+
+        method_row = QHBoxLayout()
+        method_row.setContentsMargins(0, 0, 0, 0)
+        method_row.setSpacing(8)
+        method_row.addWidget(generator_widgets["method"], 0)
+        method_row.addWidget(generator_widgets["passphrase"], 1)
+        method_row.addWidget(generator_widgets["encrypt"], 0)
+        method_row.addWidget(generator_widgets["decrypt"], 0)
+        generator_layout.addLayout(method_row)
+
+        generator_layout.addWidget(generator_widgets["quick_input"], 0)
+        generator_layout.addWidget(generator_widgets["quick_output"], 1)
         generator_layout.addStretch(1)
 
         layout = QVBoxLayout(self)

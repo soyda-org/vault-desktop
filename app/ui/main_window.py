@@ -11,6 +11,7 @@ from PySide6.QtGui import QColor, QFontDatabase
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
+    QComboBox,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -56,6 +57,12 @@ from app.services.password_generator import (
     PasswordGenerationError,
     PasswordPolicy,
     generate_password,
+)
+from app.services.quick_text_crypto import (
+    QuickTextCryptoError,
+    available_method_labels,
+    decrypt_text,
+    encrypt_text,
 )
 from app.services.vault_gateway import AuthenticatedVaultGateway
 from app.ui.file_download_worker import FileDownloadWorker
@@ -559,6 +566,37 @@ class MainWindow(QMainWindow):
         self.copy_generated_password_button.setProperty("hoverGlow", "light")
         self.copy_generated_password_button.clicked.connect(self.run_copy_generated_password)
 
+        self.quick_crypto_method_select = QComboBox()
+        for label, method_key in available_method_labels():
+            self.quick_crypto_method_select.addItem(label, method_key)
+
+        self.quick_crypto_passphrase_input = QLineEdit()
+        self.quick_crypto_passphrase_input.setPlaceholderText("Passphrase")
+        self.quick_crypto_passphrase_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self.quick_crypto_input = QPlainTextEdit()
+        self.quick_crypto_input.setPlaceholderText(
+            "Type plain text to encrypt, or paste an encrypted envelope to decrypt."
+        )
+        self.quick_crypto_input.setFixedHeight(110)
+
+        self.quick_crypto_output = QPlainTextEdit()
+        self.quick_crypto_output.setReadOnly(True)
+        self.quick_crypto_output.setPlaceholderText(
+            "Encrypted output or decrypted plain text will appear here."
+        )
+        self.quick_crypto_output.setFixedHeight(140)
+
+        self.quick_encrypt_button = QPushButton("Encrypt")
+        self.quick_encrypt_button.setProperty("tone", "secondary")
+        self.quick_encrypt_button.setProperty("hoverGlow", "light")
+        self.quick_encrypt_button.clicked.connect(self.run_quick_encrypt_text)
+
+        self.quick_decrypt_button = QPushButton("Decrypt")
+        self.quick_decrypt_button.setProperty("tone", "secondary")
+        self.quick_decrypt_button.setProperty("hoverGlow", "light")
+        self.quick_decrypt_button.clicked.connect(self.run_quick_decrypt_text)
+
         self.pin_bootstrap_status_label = QLabel()
         self.pin_bootstrap_status_label.setWordWrap(True)
 
@@ -711,6 +749,12 @@ class MainWindow(QMainWindow):
                 "output": self.generated_password_output,
                 "generate": self.generate_password_button,
                 "copy": self.copy_generated_password_button,
+                "method": self.quick_crypto_method_select,
+                "passphrase": self.quick_crypto_passphrase_input,
+                "quick_input": self.quick_crypto_input,
+                "quick_output": self.quick_crypto_output,
+                "encrypt": self.quick_encrypt_button,
+                "decrypt": self.quick_decrypt_button,
             },
         )
 
@@ -1332,6 +1376,7 @@ class MainWindow(QMainWindow):
             QPlainTextEdit,
             QListWidget,
             QSpinBox,
+            QComboBox,
             QLabel,
             QCheckBox,
             QTabBar::tab {{
@@ -1341,13 +1386,39 @@ class MainWindow(QMainWindow):
             QTextEdit,
             QPlainTextEdit,
             QListWidget,
-            QSpinBox {{
+            QSpinBox,
+            QComboBox {{
                 background: {input};
                 border: 1px solid {border};
                 border-radius: 10px;
                 color: {text};
                 padding: 6px 8px;
                 selection-background-color: {selection};
+            }}
+            QComboBox {{
+                padding-right: 22px;
+            }}
+            QComboBox::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 20px;
+                border: 0;
+                background: {surface};
+                border-left: 1px solid {border};
+                border-top-right-radius: 10px;
+                border-bottom-right-radius: 10px;
+            }}
+            QComboBox::down-arrow {{
+                image: url({spin_down_icon});
+                width: 8px;
+                height: 6px;
+            }}
+            QComboBox QAbstractItemView {{
+                background: {surface};
+                color: {text};
+                border: 1px solid {border};
+                selection-background-color: {nav_bg};
+                selection-color: {text};
             }}
             QSpinBox::up-button,
             QSpinBox::down-button {{
@@ -1399,7 +1470,8 @@ class MainWindow(QMainWindow):
             QTextEdit:focus,
             QPlainTextEdit:focus,
             QListWidget:focus,
-            QSpinBox:focus {{
+            QSpinBox:focus,
+            QComboBox:focus {{
                 border: 1px solid {primary};
             }}
             QLineEdit[ghostField="true"] {{
@@ -1990,6 +2062,38 @@ class MainWindow(QMainWindow):
         clipboard = app.clipboard()
         clipboard.setText(password)
         self.status_label.setText("Generated password copied to clipboard.")
+
+    def run_quick_encrypt_text(self) -> None:
+        try:
+            output = encrypt_text(
+                plaintext=self.quick_crypto_input.toPlainText(),
+                passphrase=self.quick_crypto_passphrase_input.text(),
+                method_key=str(self.quick_crypto_method_select.currentData()),
+            )
+        except QuickTextCryptoError as exc:
+            self.quick_crypto_output.setPlainText(f"Quick encrypt failed.\n{exc}")
+            self.status_label.setText(f"Quick encrypt failed.\nError: {exc}")
+            return
+
+        self.quick_crypto_output.setPlainText(output)
+        self.status_label.setText("Quick text encrypted locally.")
+
+    def run_quick_decrypt_text(self) -> None:
+        try:
+            plaintext, method_key = decrypt_text(
+                envelope_text=self.quick_crypto_input.toPlainText(),
+                passphrase=self.quick_crypto_passphrase_input.text(),
+            )
+        except QuickTextCryptoError as exc:
+            self.quick_crypto_output.setPlainText(f"Quick decrypt failed.\n{exc}")
+            self.status_label.setText(f"Quick decrypt failed.\nError: {exc}")
+            return
+
+        method_index = self.quick_crypto_method_select.findData(method_key)
+        if method_index >= 0:
+            self.quick_crypto_method_select.setCurrentIndex(method_index)
+        self.quick_crypto_output.setPlainText(plaintext)
+        self.status_label.setText("Quick text decrypted locally.")
 
     def _reset_credential_editor_defaults(self) -> tuple[str, str]:
         metadata_text = json.dumps({"label": "Personal"}, indent=2)
