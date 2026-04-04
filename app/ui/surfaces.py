@@ -83,6 +83,7 @@ class SystemWorkspaceView(QWidget):
         api_details_label: QLabel,
         form_widgets: dict[str, QWidget],
         auth_buttons: dict[str, QWidget],
+        preference_widgets: dict[str, QWidget],
         utility_buttons: dict[str, QWidget],
         log_widgets: dict[str, QWidget],
     ) -> None:
@@ -124,6 +125,7 @@ class SystemWorkspaceView(QWidget):
         primary_row.addWidget(utility_buttons["close"])
         primary_row.addStretch(1)
         content_column.addLayout(primary_row)
+        content_column.addWidget(preference_widgets["persist_logs"], 0, Qt.AlignmentFlag.AlignCenter)
         content_column.addWidget(status_label, 0)
 
         content_container = QWidget()

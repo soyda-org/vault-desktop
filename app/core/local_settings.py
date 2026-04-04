@@ -27,6 +27,8 @@ class PersistedUiSettings:
     platform: str = "unknown"
     last_tab_index: int = 0
     theme: str = "light"
+    persist_activity_log: bool = False
+    activity_log_entries: tuple[str, ...] = ()
 
 
 class LocalSettingsStore:
@@ -48,6 +50,12 @@ class LocalSettingsStore:
             platform=data.get("platform", defaults.platform),
             last_tab_index=int(data.get("last_tab_index", defaults.last_tab_index)),
             theme=data.get("theme", defaults.theme),
+            persist_activity_log=bool(
+                data.get("persist_activity_log", defaults.persist_activity_log)
+            ),
+            activity_log_entries=tuple(
+                str(entry) for entry in data.get("activity_log_entries", defaults.activity_log_entries)
+            ),
         )
 
     def save(self, settings: PersistedUiSettings) -> None:

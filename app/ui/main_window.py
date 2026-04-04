@@ -219,11 +219,20 @@ class MainWindow(QMainWindow):
         self.activity_log_list = QListWidget()
         self.activity_log_list.setObjectName("activityLog")
         self.activity_log_list.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.persist_activity_log_checkbox = QCheckBox("Save logs for next launch")
+        self.persist_activity_log_checkbox.setChecked(
+            self.persisted_ui_settings.persist_activity_log
+        )
+        self.persist_activity_log_checkbox.toggled.connect(
+            lambda *_: self._handle_persist_activity_log_toggle()
+        )
 
         self.copy_activity_log_button = QPushButton("Copy Diagnostics")
         self.copy_activity_log_button.clicked.connect(self.run_copy_activity_log)
         self.clear_activity_log_button = QPushButton("Clear Log")
         self.clear_activity_log_button.clicked.connect(self.run_clear_activity_log)
+
+        self._restore_persisted_activity_log()
 
         self.identifier_input = QLineEdit()
         self.identifier_input.setText(self.persisted_ui_settings.identifier)
@@ -766,6 +775,9 @@ class MainWindow(QMainWindow):
                 "probe": self.probe_button,
                 "login": self.login_button,
                 "signup": self.sign_up_button,
+            },
+            preference_widgets={
+                "persist_logs": self.persist_activity_log_checkbox,
             },
             utility_buttons={
                 "logout": self.logout_button,
@@ -1369,6 +1381,8 @@ class MainWindow(QMainWindow):
         while self.activity_log_list.count() > 200:
             self.activity_log_list.takeItem(self.activity_log_list.count() - 1)
         self._last_activity_message = message
+        if hasattr(self, "_persist_activity_log_if_enabled"):
+            self._persist_activity_log_if_enabled()
 
     def _handle_status_text_change(self, message: str) -> None:
         if not hasattr(self, "activity_log_list"):
@@ -1442,7 +1456,44 @@ class MainWindow(QMainWindow):
     def run_clear_activity_log(self) -> None:
         self.activity_log_list.clear()
         self._last_activity_message = ""
+        self._persist_activity_log_if_enabled()
         self.status_label.setText("Activity log cleared.")
+
+    def _activity_log_entries(self) -> tuple[str, ...]:
+        return tuple(
+            self.activity_log_list.item(index).text()
+            for index in range(self.activity_log_list.count())
+            if self.activity_log_list.item(index) is not None
+        )
+
+    def _restore_persisted_activity_log(self) -> None:
+        if not getattr(self.persisted_ui_settings, "persist_activity_log", False):
+            return
+        for entry in self.persisted_ui_settings.activity_log_entries:
+            self.activity_log_list.addItem(QListWidgetItem(entry))
+        if self.activity_log_list.count():
+            first_item = self.activity_log_list.item(0)
+            if first_item is not None:
+                self._last_activity_message = first_item.text().split(" ", 2)[-1]
+
+    def _persist_activity_log_if_enabled(self) -> None:
+        if not hasattr(self, "persist_activity_log_checkbox"):
+            return
+        self._save_ui_preferences()
+
+    def _handle_persist_activity_log_toggle(self) -> None:
+        if not self.persist_activity_log_checkbox.isChecked():
+            self.persisted_ui_settings = PersistedUiSettings(
+                api_base_url=self.persisted_ui_settings.api_base_url,
+                identifier=self.persisted_ui_settings.identifier,
+                device_name=self.persisted_ui_settings.device_name,
+                platform=self.persisted_ui_settings.platform,
+                last_tab_index=self.persisted_ui_settings.last_tab_index,
+                theme=self.persisted_ui_settings.theme,
+                persist_activity_log=False,
+                activity_log_entries=(),
+            )
+        self._save_ui_preferences()
 
     def _repolish(self, widget: QWidget) -> None:
         widget.style().unpolish(widget)
@@ -2099,16 +2150,28 @@ class MainWindow(QMainWindow):
 
     def _save_ui_preferences(self) -> None:
         default_device_name, default_platform = detect_local_device_defaults()
-        self.local_settings_store.save(
-            PersistedUiSettings(
-                api_base_url=self.persisted_ui_settings.api_base_url,
-                identifier=self.identifier_input.text().strip() or "alice",
-                device_name=self.device_name_input.text().strip() or default_device_name,
-                platform=self.platform_input.text().strip() or default_platform,
-                last_tab_index=self.tabs.currentIndex(),
-                theme=self.current_theme,
-            )
+        activity_log_entries = (
+            self._activity_log_entries()
+            if getattr(self, "persist_activity_log_checkbox", None) is not None
+            and self.persist_activity_log_checkbox.isChecked()
+            else ()
         )
+        updated_settings = PersistedUiSettings(
+            api_base_url=self.persisted_ui_settings.api_base_url,
+            identifier=self.identifier_input.text().strip() or "alice",
+            device_name=self.device_name_input.text().strip() or default_device_name,
+            platform=self.platform_input.text().strip() or default_platform,
+            last_tab_index=self.tabs.currentIndex(),
+            theme=self.current_theme,
+            persist_activity_log=(
+                self.persist_activity_log_checkbox.isChecked()
+                if hasattr(self, "persist_activity_log_checkbox")
+                else False
+            ),
+            activity_log_entries=activity_log_entries,
+        )
+        self.local_settings_store.save(updated_settings)
+        self.persisted_ui_settings = updated_settings
 
     def closeEvent(self, event) -> None:  # type: ignore[override]
         if self._is_file_job_running():

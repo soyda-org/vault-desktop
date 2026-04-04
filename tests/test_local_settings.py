@@ -21,6 +21,8 @@ def test_load_returns_detected_defaults_when_file_missing(tmp_path: Path, monkey
     assert settings.platform == "linux"
     assert settings.last_tab_index == 0
     assert settings.theme == "light"
+    assert settings.persist_activity_log is False
+    assert settings.activity_log_entries == ()
 
 
 def test_load_uses_detected_defaults_for_missing_device_fields(tmp_path: Path, monkeypatch) -> None:
@@ -61,6 +63,8 @@ def test_save_then_load_round_trip(tmp_path: Path) -> None:
         platform="linux",
         last_tab_index=2,
         theme="dark",
+        persist_activity_log=True,
+        activity_log_entries=("12:00:00  INFO    Login succeeded.",),
     )
     store.save(saved)
 
@@ -87,3 +91,27 @@ def test_save_does_not_persist_session_vault_key_material(tmp_path: Path) -> Non
 
     assert "vault_master_key_b64" not in data
     assert "session_vault_key" not in data
+
+
+def test_load_restores_persisted_activity_log_preferences(tmp_path: Path) -> None:
+    config_path = tmp_path / "settings.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "persist_activity_log": True,
+                "activity_log_entries": [
+                    "12:00:00  INFO    Login succeeded.",
+                    "12:01:00  SUCCESS Vault unlocked.",
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = LocalSettingsStore(config_path=config_path).load()
+
+    assert loaded.persist_activity_log is True
+    assert loaded.activity_log_entries == (
+        "12:00:00  INFO    Login succeeded.",
+        "12:01:00  SUCCESS Vault unlocked.",
+    )

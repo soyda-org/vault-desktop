@@ -8,6 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton
 
 from app.core.config import get_settings
+from app.core.local_settings import PersistedUiSettings
 from app.core.session import DesktopSession
 from app.ui.main_window import MainWindow
 
@@ -206,6 +207,24 @@ def test_recovery_key_field_tracks_validity_state(app_fixture) -> None:
 
     window._mark_recovery_key_valid()
     assert window.recovery_key_b64_input.property("recoveryValidity") == "valid"
+
+
+def test_persist_logs_checkbox_reflects_saved_preference(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    monkeypatch.setattr(
+        main_window_module.LocalSettingsStore,
+        "load",
+        lambda self: PersistedUiSettings(
+            persist_activity_log=True,
+            activity_log_entries=("12:00:00  INFO    Saved log.",),
+        ),
+    )
+    window = MainWindow(get_settings())
+
+    assert window.persist_activity_log_checkbox.isChecked() is True
+    assert window.activity_log_list.count() == 1
+    assert "Saved log." in window.activity_log_list.item(0).text()
 
 
 def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
