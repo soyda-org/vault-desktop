@@ -40,6 +40,7 @@ from app.core.local_settings import (
     PersistedUiSettings,
     detect_local_device_defaults,
 )
+from app.core.pin_bootstrap import MIN_PIN_LENGTH, validate_pin
 from app.services.api_client import (
     ObjectCreateResult,
     ObjectDetailResult,
@@ -655,7 +656,9 @@ class MainWindow(QMainWindow):
 
         self.new_vault_pin_input = QLineEdit()
         self.new_vault_pin_input.setEchoMode(QLineEdit.EchoMode.Password)
-        self.new_vault_pin_input.setPlaceholderText("new PIN")
+        self.new_vault_pin_input.setPlaceholderText(
+            f"new device PIN, min {MIN_PIN_LENGTH} chars, local to this device"
+        )
         self.new_vault_pin_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.pin_confirmation_label = QLabel()
@@ -854,6 +857,7 @@ class MainWindow(QMainWindow):
         self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_vault_pin_field_style())
         self.new_vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
+        self.new_vault_pin_input.textChanged.connect(lambda *_: self._refresh_new_vault_pin_field_state())
         self.pin_confirmation_input.textChanged.connect(lambda *_: self._refresh_action_states())
 
         self.vault_auto_lock_timeout_ms = self._read_timeout_ms(
@@ -881,6 +885,7 @@ class MainWindow(QMainWindow):
 
         self._apply_theme()
         self._refresh_vault_pin_field_style()
+        self._refresh_new_vault_pin_field_state()
         self._refresh_quick_crypto_method_state()
         self.refresh_session_label()
         self._refresh_system_state_indicators()
@@ -1582,6 +1587,18 @@ class MainWindow(QMainWindow):
             QLineEdit[vaultPinField="true"]::placeholder {{
                 color: {muted};
             }}
+            QLineEdit[pinValidity="invalid"] {{
+                border-color: #d84b4b;
+            }}
+            QLineEdit[pinValidity="valid"] {{
+                border-color: #1fdc78;
+            }}
+            QLineEdit[pinValidity="invalid"]:focus {{
+                border-color: #d84b4b;
+            }}
+            QLineEdit[pinValidity="valid"]:focus {{
+                border-color: #1fdc78;
+            }}
             QPushButton {{
                 background: {surface_alt};
                 border: 1px solid {border};
@@ -1988,6 +2005,22 @@ class MainWindow(QMainWindow):
             self.theme_toggle_button.setText(
                 "Theme: Dark" if self.current_theme == "dark" else "Theme: Light"
             )
+
+    def _refresh_new_vault_pin_field_state(self) -> None:
+        if not hasattr(self, "new_vault_pin_input"):
+            return
+        value = self.new_vault_pin_input.text().strip()
+        if not value:
+            state = "idle"
+        else:
+            try:
+                validate_pin(value)
+            except ValueError:
+                state = "invalid"
+            else:
+                state = "valid"
+        self.new_vault_pin_input.setProperty("pinValidity", state)
+        self._repolish(self.new_vault_pin_input)
 
     def run_toggle_theme(self) -> None:
         self.current_theme = "dark" if self.current_theme == "light" else "light"

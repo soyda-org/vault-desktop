@@ -176,6 +176,22 @@ def test_vault_pin_field_keeps_large_rendered_size_when_empty_or_typed(app_fixtu
     assert "font-size: 64px;" in window.vault_pin_input.styleSheet()
 
 
+def test_new_vault_pin_field_tracks_validity_state(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.new_vault_pin_input.clear()
+    window._refresh_new_vault_pin_field_state()
+    assert window.new_vault_pin_input.property("pinValidity") == "idle"
+
+    window.new_vault_pin_input.setText("123")
+    window._refresh_new_vault_pin_field_state()
+    assert window.new_vault_pin_input.property("pinValidity") == "invalid"
+
+    window.new_vault_pin_input.setText("1234")
+    window._refresh_new_vault_pin_field_state()
+    assert window.new_vault_pin_input.property("pinValidity") == "valid"
+
+
 def test_main_window_auth_buttons_switch_visibility_with_session(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.show()
