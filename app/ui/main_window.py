@@ -240,12 +240,14 @@ class MainWindow(QMainWindow):
         self.identifier_input.setPlaceholderText("username")
         self.identifier_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.identifier_input.setProperty("ghostField", True)
+        self.identifier_input.returnPressed.connect(self.run_login)
 
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_input.setPlaceholderText("........")
         self.password_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.password_input.setProperty("ghostField", True)
+        self.password_input.returnPressed.connect(self.run_login)
 
         self.device_name_input = QLineEdit()
         self.device_name_input.setText(self.persisted_ui_settings.device_name)
