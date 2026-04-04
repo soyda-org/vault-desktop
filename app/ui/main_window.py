@@ -3651,20 +3651,17 @@ class MainWindow(QMainWindow):
             )
 
         if hasattr(self, "vault_access_help_button"):
-            self.vault_access_help_button.setToolTip(
-                "\n\n".join(
-                    text
-                    for text in (
-                        self.vault_home_summary_label.text(),
-                        self.vault_unlock_source_label.text(),
-                        self.vault_next_step_label.text(),
-                        self.pin_bootstrap_status_label.text(),
-                        self.device_pin_scope_label.text(),
-                        self.pin_confirmation_label.text(),
-                    )
-                    if text
+            if not authenticated:
+                help_text = "Log in first. Then unlock with your device PIN or Recovery Key."
+            elif pin_bootstrap_status == "current_account":
+                help_text = (
+                    "Type your PIN to unlock. Open PIN Settings to change it or remove it from this device."
                 )
-            )
+            else:
+                help_text = (
+                    "No PIN on this device yet. Unlock with your Recovery Key, then open PIN Settings to enroll one."
+                )
+            self.vault_access_help_button.setToolTip(help_text)
         
         self.pin_confirmation_input.setToolTip("")
         self.new_vault_pin_input.setToolTip("")
