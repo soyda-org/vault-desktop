@@ -33,7 +33,8 @@ def test_quick_text_crypto_roundtrip_for_each_method(label: str, method_key: str
         passphrase=passphrase,
     )
 
-    assert decrypted == plaintext
+    expected_plaintext = plaintext.upper() if method_key == "morse" else plaintext
+    assert decrypted == expected_plaintext
     assert detected_method == method_key
 
 
@@ -51,6 +52,22 @@ def test_quick_text_crypto_optional_passphrase_defaults_cleanly() -> None:
 
     assert decrypted == "hello"
     assert detected_method == "caesar-shift"
+
+
+def test_quick_text_crypto_morse_roundtrip_preserves_words() -> None:
+    encrypted = encrypt_text(
+        plaintext="SOS HELP",
+        passphrase="",
+        method_key="morse",
+    )
+
+    decrypted, detected_method = decrypt_text(
+        envelope_text=encrypted,
+        passphrase="",
+    )
+
+    assert decrypted == "SOS HELP"
+    assert detected_method == "morse"
 
 
 def test_quick_text_crypto_rejects_wrong_passphrase() -> None:

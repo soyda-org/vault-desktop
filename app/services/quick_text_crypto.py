@@ -15,6 +15,62 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 PBKDF2_ITERATIONS = 600_000
 SALT_BYTES = 16
 DEFAULT_CAESAR_SHIFT = 13
+MORSE_CHAR_TO_CODE = {
+    "A": ".-",
+    "B": "-...",
+    "C": "-.-.",
+    "D": "-..",
+    "E": ".",
+    "F": "..-.",
+    "G": "--.",
+    "H": "....",
+    "I": "..",
+    "J": ".---",
+    "K": "-.-",
+    "L": ".-..",
+    "M": "--",
+    "N": "-.",
+    "O": "---",
+    "P": ".--.",
+    "Q": "--.-",
+    "R": ".-.",
+    "S": "...",
+    "T": "-",
+    "U": "..-",
+    "V": "...-",
+    "W": ".--",
+    "X": "-..-",
+    "Y": "-.--",
+    "Z": "--..",
+    "0": "-----",
+    "1": ".----",
+    "2": "..---",
+    "3": "...--",
+    "4": "....-",
+    "5": ".....",
+    "6": "-....",
+    "7": "--...",
+    "8": "---..",
+    "9": "----.",
+    ".": ".-.-.-",
+    ",": "--..--",
+    "?": "..--..",
+    "!": "-.-.--",
+    ":": "---...",
+    ";": "-.-.-.",
+    "-": "-....-",
+    "/": "-..-.",
+    "@": ".--.-.",
+    "(": "-.--.",
+    ")": "-.--.-",
+    "&": ".-...",
+    "'": ".----.",
+    "\"": ".-..-.",
+    "=": "-...-",
+    "+": ".-.-.",
+    "_": "..--.-",
+}
+MORSE_CODE_TO_CHAR = {value: key for key, value in MORSE_CHAR_TO_CODE.items()}
 
 
 @dataclass(frozen=True)
@@ -31,6 +87,7 @@ METHODS: tuple[QuickTextCryptoMethod, ...] = (
     QuickTextCryptoMethod("base64", "Base64", "none", "base64"),
     QuickTextCryptoMethod("hex", "Hex", "none", "hex"),
     QuickTextCryptoMethod("rot13", "ROT13", "none", "rot13"),
+    QuickTextCryptoMethod("morse", "Morse", "none", "morse"),
     QuickTextCryptoMethod("caesar-shift", "Caesar Shift", "optional", "caesar"),
     QuickTextCryptoMethod("xor-stream", "XOR Stream", "required", "xor"),
     QuickTextCryptoMethod("aes-128-gcm", "AES-128-GCM", "required", "aead", 16, 12),
@@ -98,6 +155,32 @@ def _xor_bytes(data: bytes, key: bytes) -> bytes:
     return bytes(value ^ key[index % len(key)] for index, value in enumerate(data))
 
 
+def _encode_morse(text: str) -> str:
+    words: list[str] = []
+    for word in text.upper().split():
+        encoded_letters: list[str] = []
+        for char in word:
+            code = MORSE_CHAR_TO_CODE.get(char)
+            if code is None:
+                raise QuickTextCryptoError(f"Morse does not support character: {char}")
+            encoded_letters.append(code)
+        words.append(" ".join(encoded_letters))
+    return " / ".join(words)
+
+
+def _decode_morse(text: str) -> str:
+    words: list[str] = []
+    for word in text.split(" / "):
+        decoded_letters: list[str] = []
+        for code in word.split():
+            char = MORSE_CODE_TO_CHAR.get(code)
+            if char is None:
+                raise QuickTextCryptoError(f"Unsupported Morse code: {code}")
+            decoded_letters.append(char)
+        words.append("".join(decoded_letters))
+    return " ".join(words)
+
+
 def _decode_utf8(data: bytes) -> str:
     try:
         return data.decode("utf-8")
@@ -158,6 +241,15 @@ def encrypt_text(*, plaintext: str, passphrase: str, method_key: str) -> str:
                 "format": "quick-text-v1",
                 "method": method.key,
                 "payload_text": codecs.encode(plaintext, "rot_13"),
+            },
+            indent=2,
+        )
+    if method.family == "morse":
+        return json.dumps(
+            {
+                "format": "quick-text-v1",
+                "method": method.key,
+                "payload_text": _encode_morse(plaintext),
             },
             indent=2,
         )
@@ -244,6 +336,13 @@ def decrypt_text(*, envelope_text: str, passphrase: str) -> tuple[str, str]:
         except KeyError as exc:
             raise QuickTextCryptoError("Encrypted payload is missing required fields.") from exc
         return codecs.decode(payload_text, "rot_13"), method.key
+
+    if method.family == "morse":
+        try:
+            payload_text = str(envelope["payload_text"])
+        except KeyError as exc:
+            raise QuickTextCryptoError("Encrypted payload is missing required fields.") from exc
+        return _decode_morse(payload_text), method.key
 
     if method.family == "caesar":
         try:
