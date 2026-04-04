@@ -299,6 +299,7 @@ class GeneratorWorkspaceView(QWidget):
         method_row.setContentsMargins(0, 0, 0, 0)
         method_row.setSpacing(8)
         method_row.addWidget(generator_widgets["method"], 0)
+        method_row.addWidget(generator_widgets["method_help"], 0)
         method_row.addWidget(generator_widgets["passphrase"], 1)
         method_row.addWidget(generator_widgets["encrypt"], 0)
         method_row.addWidget(generator_widgets["decrypt"], 0)

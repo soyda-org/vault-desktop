@@ -64,6 +64,7 @@ from app.services.quick_text_crypto import (
     available_method_labels,
     decrypt_text,
     encrypt_text,
+    method_summary_for_key,
     passphrase_mode_for_method,
 )
 from app.services.vault_gateway import AuthenticatedVaultGateway
@@ -575,6 +576,11 @@ class MainWindow(QMainWindow):
             self._refresh_quick_crypto_method_state
         )
 
+        self.quick_crypto_help_button = QPushButton("?")
+        self.quick_crypto_help_button.setProperty("tone", "secondary")
+        self.quick_crypto_help_button.setProperty("hoverGlow", "light")
+        self.quick_crypto_help_button.setToolTipDuration(0)
+
         self.quick_crypto_passphrase_input = QLineEdit()
         self.quick_crypto_passphrase_input.setPlaceholderText("Passphrase")
         self.quick_crypto_passphrase_input.setEchoMode(QLineEdit.EchoMode.Password)
@@ -770,6 +776,7 @@ class MainWindow(QMainWindow):
                 "generate": self.generate_password_button,
                 "copy": self.copy_generated_password_button,
                 "method": self.quick_crypto_method_select,
+                "method_help": self.quick_crypto_help_button,
                 "passphrase": self.quick_crypto_passphrase_input,
                 "quick_input": self.quick_crypto_input,
                 "quick_output": self.quick_crypto_output,
@@ -2138,6 +2145,7 @@ class MainWindow(QMainWindow):
     def _refresh_quick_crypto_method_state(self) -> None:
         method_key = str(self.quick_crypto_method_select.currentData())
         mode = passphrase_mode_for_method(method_key)
+        self.quick_crypto_help_button.setToolTip(method_summary_for_key(method_key))
         if mode == "none":
             self.quick_crypto_passphrase_input.clear()
             self.quick_crypto_passphrase_input.setReadOnly(True)

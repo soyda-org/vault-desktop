@@ -79,21 +79,22 @@ class QuickTextCryptoMethod:
     label: str
     passphrase_mode: str
     family: str
+    summary: str
     key_length: int = 0
     nonce_length: int = 0
 
 
 METHODS: tuple[QuickTextCryptoMethod, ...] = (
-    QuickTextCryptoMethod("base64", "Base64", "none", "base64"),
-    QuickTextCryptoMethod("hex", "Hex", "none", "hex"),
-    QuickTextCryptoMethod("rot13", "ROT13", "none", "rot13"),
-    QuickTextCryptoMethod("morse", "Morse", "none", "morse"),
-    QuickTextCryptoMethod("caesar-shift", "Caesar Shift", "optional", "caesar"),
-    QuickTextCryptoMethod("xor-stream", "XOR Stream", "required", "xor"),
-    QuickTextCryptoMethod("aes-128-gcm", "AES-128-GCM", "required", "aead", 16, 12),
-    QuickTextCryptoMethod("aes-256-gcm", "AES-256-GCM", "required", "aead", 32, 12),
-    QuickTextCryptoMethod("chacha20-poly1305", "ChaCha20-Poly1305", "required", "aead", 32, 12),
-    QuickTextCryptoMethod("aes-256-ccm", "AES-256-CCM", "required", "aead", 32, 13),
+    QuickTextCryptoMethod("base64", "Base64", "none", "base64", "Basic encoding. No secrecy, just text-to-text wrapping."),
+    QuickTextCryptoMethod("hex", "Hex", "none", "hex", "Basic byte-to-hex encoding. Readable, not secure."),
+    QuickTextCryptoMethod("rot13", "ROT13", "none", "rot13", "Classic letter rotation. Reversible and only obfuscation."),
+    QuickTextCryptoMethod("morse", "Morse", "none", "morse", "Converts supported text into Morse code and back."),
+    QuickTextCryptoMethod("caesar-shift", "Caesar Shift", "optional", "caesar", "Letter shift cipher. Optional passphrase changes the shift."),
+    QuickTextCryptoMethod("xor-stream", "XOR Stream", "required", "xor", "Simple byte-wise XOR with a passphrase-derived repeating key."),
+    QuickTextCryptoMethod("aes-128-gcm", "AES-128-GCM", "required", "aead", "Modern authenticated encryption with a required passphrase.", 16, 12),
+    QuickTextCryptoMethod("aes-256-gcm", "AES-256-GCM", "required", "aead", "Stronger AES-GCM variant with authenticated encryption.", 32, 12),
+    QuickTextCryptoMethod("chacha20-poly1305", "ChaCha20-Poly1305", "required", "aead", "Modern authenticated stream cipher with a required passphrase.", 32, 12),
+    QuickTextCryptoMethod("aes-256-ccm", "AES-256-CCM", "required", "aead", "Authenticated AES-CCM mode with a required passphrase.", 32, 13),
 )
 
 METHODS_BY_KEY = {method.key: method for method in METHODS}
@@ -109,6 +110,10 @@ def available_method_labels() -> tuple[tuple[str, str], ...]:
 
 def passphrase_mode_for_method(method_key: str) -> str:
     return _method_for_key(method_key).passphrase_mode
+
+
+def method_summary_for_key(method_key: str) -> str:
+    return _method_for_key(method_key).summary
 
 
 def _method_for_key(method_key: str) -> QuickTextCryptoMethod:
