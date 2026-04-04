@@ -21,9 +21,10 @@ def _panel(*, title: str, description: str | None = None) -> tuple[QWidget, QVBo
     layout.setContentsMargins(14, 14, 14, 14)
     layout.setSpacing(8)
 
-    title_label = QLabel(title)
-    title_label.setObjectName("surfacePanelTitle")
-    layout.addWidget(title_label)
+    if title:
+        title_label = QLabel(title)
+        title_label.setObjectName("surfacePanelTitle")
+        layout.addWidget(title_label)
 
     if description:
         description_label = QLabel(description)
@@ -186,9 +187,10 @@ class VaultWorkspaceView(QWidget):
         self.panel_stack = QStackedWidget()
 
         access_panel, access_layout = _panel(
-            title="Vault access",
+            title="",
             description=None,
         )
+        access_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         help_row = QHBoxLayout()
         help_row.setContentsMargins(0, 0, 0, 0)
         help_row.setSpacing(0)
