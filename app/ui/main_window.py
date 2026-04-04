@@ -1348,6 +1348,23 @@ class MainWindow(QMainWindow):
                 padding: 6px 8px;
                 selection-background-color: {selection};
             }}
+            QSpinBox::up-button,
+            QSpinBox::down-button {{
+                background: {surface};
+                border: 0;
+                border-left: 1px solid {border};
+                width: 18px;
+            }}
+            QSpinBox::up-button {{
+                border-top-right-radius: 10px;
+            }}
+            QSpinBox::down-button {{
+                border-bottom-right-radius: 10px;
+            }}
+            QSpinBox::up-button:hover,
+            QSpinBox::down-button:hover {{
+                background: {surface_alt};
+            }}
             QLineEdit:focus,
             QTextEdit:focus,
             QPlainTextEdit:focus,

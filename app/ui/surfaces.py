@@ -246,10 +246,7 @@ class GeneratorWorkspaceView(QWidget):
 
         generator_panel, generator_layout = _panel(
             title="Password generator",
-            description=(
-                "Generate a password at any time, even before the vault is unlocked, "
-                "then copy it into a credential payload when needed."
-            ),
+            description=None,
         )
         generator_panel.setProperty("panelVariant", "secondary")
 
