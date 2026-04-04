@@ -1589,9 +1589,6 @@ class MainWindow(QMainWindow):
             QLineEdit[vaultPinField="true"]::placeholder {{
                 color: {muted};
             }}
-            QLineEdit[newVaultPinField="true"] {{
-                font-size: 28px;
-            }}
             QLineEdit[pinValidity="invalid"] {{
                 border-color: #d84b4b;
             }}
@@ -2019,6 +2016,7 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "new_vault_pin_input"):
             return
         value = self.new_vault_pin_input.text().strip()
+        self.new_vault_pin_input.setStyleSheet("font-size: 28px;" if value else "")
         if not value:
             state = "idle"
         else:
@@ -2034,11 +2032,11 @@ class MainWindow(QMainWindow):
     def _blink_confirm_input(self, remaining_toggles: int = 6, active: bool = True) -> None:
         if not hasattr(self, "pin_confirmation_input"):
             return
-        self.pin_confirmation_input.setProperty("confirmBlink", active)
-        self._repolish(self.pin_confirmation_input)
+        self.pin_confirmation_input.setStyleSheet(
+            "border: 1px solid #d84b4b;" if active else ""
+        )
         if remaining_toggles <= 1:
-            self.pin_confirmation_input.setProperty("confirmBlink", False)
-            self._repolish(self.pin_confirmation_input)
+            self.pin_confirmation_input.setStyleSheet("")
             return
         QTimer.singleShot(
             120,
