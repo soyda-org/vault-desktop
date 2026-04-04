@@ -206,7 +206,6 @@ def make_window_harness(
     window.system_service_tab_button = QPushButton()
     window.system_messages_tab_button = QPushButton()
     window.nav_generator_button = QPushButton()
-    window.nav_system_button = QPushButton()
     window.nav_vault_button = QPushButton()
     window.theme_toggle_button = QPushButton()
     window.system_workspace_view = SimpleNamespace(set_current_panel=lambda panel: None)

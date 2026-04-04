@@ -677,9 +677,6 @@ class MainWindow(QMainWindow):
         self.system_messages_tab_button.clicked.connect(lambda: self._switch_system_panel("messages"))
         self.current_system_panel = "service"
 
-        self.nav_system_button = QPushButton("System")
-        self.nav_system_button.setProperty("nav", "true")
-        self.nav_system_button.clicked.connect(lambda: self._switch_to_screen("system"))
         self.nav_vault_button = QPushButton("Vault")
         self.nav_vault_button.setProperty("nav", "true")
         self.nav_vault_button.clicked.connect(lambda: self._switch_to_screen("vault"))
@@ -781,7 +778,6 @@ class MainWindow(QMainWindow):
         toolbar_layout.addStretch(1)
         toolbar_layout.addWidget(self.nav_generator_button)
         toolbar_layout.addWidget(self.theme_toggle_button)
-        toolbar_layout.addWidget(self.nav_system_button)
         toolbar_layout.addWidget(self.nav_vault_button)
         self.shell_toolbar_frame = toolbar_frame
 
@@ -1155,7 +1151,6 @@ class MainWindow(QMainWindow):
             "screen_eyebrow_label",
             "screen_title_label",
             "screen_subtitle_label",
-            "nav_system_button",
             "nav_generator_button",
             "nav_vault_button",
         )
@@ -1190,17 +1185,15 @@ class MainWindow(QMainWindow):
 
         authenticated = self.desktop_service.is_authenticated()
         self.nav_generator_button.setVisible(True)
-        self.nav_system_button.setVisible(True)
         self.nav_vault_button.setVisible(True)
         self.nav_generator_button.setEnabled(True)
-        self.nav_system_button.setEnabled(True)
         self.nav_vault_button.setEnabled(authenticated)
         if hasattr(self, "shell_toolbar_frame"):
             self.shell_toolbar_frame.setVisible(True)
         if hasattr(self, "system_service_tab_button"):
-            show_system_segments = screen == "system"
-            self.system_service_tab_button.setVisible(show_system_segments)
-            self.system_messages_tab_button.setVisible(show_system_segments)
+            show_system_segments = True
+            self.system_service_tab_button.setVisible(True)
+            self.system_messages_tab_button.setVisible(True)
             service_level = "success" if authenticated else "warning"
             if hasattr(self, "status_label"):
                 status_level = self.status_label.property("statusLevel")
@@ -1221,11 +1214,9 @@ class MainWindow(QMainWindow):
             self.system_workspace_view.set_current_panel(
                 getattr(self, "current_system_panel", "service")
             )
-        self.nav_system_button.setProperty("navCurrent", screen == "system")
         self.nav_generator_button.setProperty("navCurrent", screen == "generator")
         self.nav_vault_button.setProperty("navCurrent", screen == "vault")
         self._repolish(self.nav_generator_button)
-        self._repolish(self.nav_system_button)
         self._repolish(self.nav_vault_button)
 
     def _switch_to_screen(self, screen: str) -> None:
@@ -1233,6 +1224,7 @@ class MainWindow(QMainWindow):
         self._apply_screen_state()
 
     def _switch_system_panel(self, panel: str) -> None:
+        self.current_screen = "system"
         self.current_system_panel = panel
         if hasattr(self, "system_workspace_view"):
             self.system_workspace_view.set_current_panel(panel)
