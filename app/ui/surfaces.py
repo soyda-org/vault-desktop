@@ -311,7 +311,6 @@ class GeneratorWorkspaceView(QWidget):
         quick_splitter.setStretchFactor(0, 1)
         quick_splitter.setStretchFactor(1, 1)
         generator_layout.addWidget(quick_splitter, 1)
-        generator_layout.addStretch(1)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
