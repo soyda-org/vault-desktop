@@ -525,7 +525,7 @@ class MainWindow(QMainWindow):
         self.lock_now_button.setProperty("tone", "danger")
         self.lock_now_button.clicked.connect(self.run_lock_vault_now)
 
-        self.toggle_advanced_recovery_button = QPushButton("Show Settings")
+        self.toggle_advanced_recovery_button = QPushButton("PIN Settings")
         self.toggle_advanced_recovery_button.clicked.connect(
             self.toggle_advanced_recovery
         )
@@ -3204,7 +3204,7 @@ class MainWindow(QMainWindow):
         visible = not self.advanced_recovery_widget.isVisible()
         self.advanced_recovery_widget.setVisible(visible)
         self.toggle_advanced_recovery_button.setText(
-            "Hide Settings" if visible else "Show Settings"
+            "Hide PIN Settings" if visible else "PIN Settings"
         )
         self._refresh_action_states()
 
