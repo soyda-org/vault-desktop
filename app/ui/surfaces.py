@@ -242,7 +242,6 @@ class VaultWorkspaceView(QWidget):
         pin_focus_area.addLayout(pin_row)
         pin_focus_area.addStretch(1)
         content_column.addLayout(pin_focus_area, 3)
-        content_column.addStretch(1)
 
         help_row = QHBoxLayout()
         help_row.setContentsMargins(0, 0, 0, 0)
@@ -269,6 +268,7 @@ class VaultWorkspaceView(QWidget):
         settings_row.addStretch(1)
         content_column.addLayout(settings_row)
         content_column.addWidget(recovery_widgets["container"])
+        content_column.addWidget(status_widgets["status"], 0, Qt.AlignmentFlag.AlignCenter)
 
         content_container = QWidget()
         content_container.setObjectName("contentContainer")
@@ -281,15 +281,9 @@ class VaultWorkspaceView(QWidget):
         content_wrapper.addStretch(1)
         content_wrapper.addWidget(content_container, 0)
         content_wrapper.addStretch(1)
-        access_layout.addLayout(content_wrapper, 1)
-
-        status_row = QHBoxLayout()
-        status_row.setContentsMargins(0, 0, 0, 0)
-        status_row.setSpacing(0)
-        status_row.addStretch(1)
-        status_row.addWidget(status_widgets["status"], 0, Qt.AlignmentFlag.AlignCenter)
-        status_row.addStretch(1)
-        access_layout.addLayout(status_row)
+        access_layout.addStretch(1)
+        access_layout.addLayout(content_wrapper)
+        access_layout.addStretch(1)
 
         meta_row = QHBoxLayout()
         meta_row.setContentsMargins(0, 0, 0, 0)
