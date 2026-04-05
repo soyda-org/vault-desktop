@@ -906,6 +906,8 @@ class MainWindow(QMainWindow):
         self.theme_toggle_button = QPushButton("Theme: Light")
         self.theme_toggle_button.setProperty("nav", "true")
         self.theme_toggle_button.clicked.connect(self.run_toggle_theme)
+        self.nav_separator_label = QLabel("|")
+        self.nav_separator_label.setObjectName("navSeparator")
         self.nav_generator_button = QPushButton("Generator")
         self.nav_generator_button.setProperty("nav", "true")
         self.nav_generator_button.clicked.connect(lambda: self._switch_to_screen("generator"))
@@ -1048,6 +1050,7 @@ class MainWindow(QMainWindow):
         toolbar_layout.setSpacing(6)
         toolbar_layout.addStretch(1)
         toolbar_layout.addWidget(self.theme_toggle_button)
+        toolbar_layout.addWidget(self.nav_separator_label)
         toolbar_layout.addWidget(self.nav_generator_button)
         toolbar_layout.addWidget(self.system_service_tab_button)
         toolbar_layout.addWidget(self.nav_vault_button)
@@ -2240,6 +2243,12 @@ class MainWindow(QMainWindow):
                 font-size: 11px;
                 font-weight: 700;
                 text-transform: uppercase;
+            }}
+            #navSeparator {{
+                background: transparent;
+                border: 0;
+                color: {muted};
+                padding: 0 2px;
             }}
             #screenTitle {{
                 color: {text};
