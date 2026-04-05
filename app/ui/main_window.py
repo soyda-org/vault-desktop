@@ -264,9 +264,7 @@ class MainWindow(QMainWindow):
         self.clear_activity_log_button = QPushButton("Clear Log")
         self.clear_activity_log_button.clicked.connect(self.run_clear_activity_log)
         self.system_messages_back_button = QPushButton("Back")
-        self.system_messages_back_button.clicked.connect(
-            lambda: self._switch_system_panel("service")
-        )
+        self.system_messages_back_button.clicked.connect(self._return_from_system_logs)
 
         self.identifier_input = QLineEdit()
         self.identifier_input.setText(self.persisted_ui_settings.identifier)
@@ -914,13 +912,15 @@ class MainWindow(QMainWindow):
         self.system_service_tab_button = QPushButton("Access")
         self.system_service_tab_button.setProperty("segment", "true")
         self.system_service_tab_button.clicked.connect(lambda: self._switch_system_panel("service"))
-        self.system_messages_tab_button = QPushButton("System messages")
+        self.system_messages_tab_button = QPushButton("System logs")
         self.system_messages_tab_button.setProperty("segment", "true")
-        self.system_messages_tab_button.clicked.connect(lambda: self._switch_system_panel("messages"))
-        self.vault_access_messages_button = QPushButton("System messages")
+        self.system_messages_tab_button.clicked.connect(self._open_system_logs)
+        self.vault_access_messages_button = QPushButton("System logs")
         self.vault_access_messages_button.setProperty("segment", "true")
-        self.vault_access_messages_button.clicked.connect(lambda: self._switch_system_panel("messages"))
+        self.vault_access_messages_button.clicked.connect(self._open_system_logs)
         self.current_system_panel = "service"
+        self._system_logs_origin_screen = "system"
+        self._system_logs_origin_vault_panel = "access"
         self.vault_access_tab_button = QPushButton("Vault access")
         self.vault_access_tab_button.setProperty("segment", "true")
         self.vault_access_tab_button.clicked.connect(lambda: self._switch_vault_panel("access"))
@@ -1566,6 +1566,26 @@ class MainWindow(QMainWindow):
     def _switch_to_screen(self, screen: str) -> None:
         self.current_screen = screen
         self._apply_screen_state()
+
+    def _open_system_logs(self) -> None:
+        self._system_logs_origin_screen = self.current_screen
+        self._system_logs_origin_vault_panel = getattr(self, "current_vault_panel", "access")
+        self._switch_system_panel("messages")
+
+    def _return_from_system_logs(self) -> None:
+        origin_screen = getattr(self, "_system_logs_origin_screen", "system")
+        if origin_screen == "vault":
+            self.current_screen = "vault"
+            self.current_vault_panel = getattr(
+                self, "_system_logs_origin_vault_panel", "access"
+            )
+            if hasattr(self, "vault_workspace_view"):
+                self.vault_workspace_view.set_current_panel(self.current_vault_panel)
+            if self.current_vault_panel == "workspace":
+                self._autoload_current_workspace_tab()
+            self._apply_screen_state()
+            return
+        self._switch_system_panel("service")
 
     def _switch_system_panel(self, panel: str) -> None:
         self.current_screen = "system"
