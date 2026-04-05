@@ -1027,6 +1027,7 @@ class MainWindow(QMainWindow):
         list_actions = QHBoxLayout()
         list_actions.setContentsMargins(0, 0, 0, 0)
         list_actions.setSpacing(8)
+        list_actions.addWidget(self.create_credential_button)
         list_actions.addStretch(1)
 
         list_content = QVBoxLayout()
@@ -1052,7 +1053,6 @@ class MainWindow(QMainWindow):
         detail_actions = QHBoxLayout()
         detail_actions.setContentsMargins(0, 0, 0, 0)
         detail_actions.setSpacing(8)
-        detail_actions.addWidget(self.create_credential_button)
         detail_actions.addWidget(self.update_credential_button)
         detail_actions.addWidget(self.delete_credential_button)
         detail_actions.addStretch(1)
