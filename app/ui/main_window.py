@@ -1040,8 +1040,6 @@ class MainWindow(QMainWindow):
         toolbar_layout.setContentsMargins(12, 8, 12, 8)
         toolbar_layout.setSpacing(6)
         toolbar_layout.addWidget(self.system_service_tab_button)
-        toolbar_layout.addWidget(self.vault_access_tab_button)
-        toolbar_layout.addWidget(self.vault_workspace_tab_button)
         toolbar_layout.addStretch(1)
         toolbar_layout.addWidget(self.theme_toggle_button)
         toolbar_layout.addWidget(self.nav_generator_button)
@@ -1524,18 +1522,17 @@ class MainWindow(QMainWindow):
             )
             self._repolish(self.system_messages_tab_button)
         if hasattr(self, "vault_access_tab_button"):
-            show_vault_segments = screen == "vault"
-            self.vault_access_tab_button.setVisible(show_vault_segments)
-            self.vault_workspace_tab_button.setVisible(show_vault_segments)
+            self.vault_access_tab_button.setVisible(False)
+            self.vault_workspace_tab_button.setVisible(False)
             vault_segment_level = "success" if authenticated and self._is_vault_unlocked() else "warning"
             self.vault_access_tab_button.setProperty("segmentLevel", vault_segment_level)
             self.vault_access_tab_button.setProperty(
                 "segmentCurrent",
-                show_vault_segments and self.current_vault_panel == "access",
+                False,
             )
             self.vault_workspace_tab_button.setProperty(
                 "segmentCurrent",
-                show_vault_segments and self.current_vault_panel == "workspace",
+                False,
             )
             self._repolish(self.vault_access_tab_button)
             self._repolish(self.vault_workspace_tab_button)
