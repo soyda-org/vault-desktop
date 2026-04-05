@@ -360,15 +360,15 @@ class MainWindow(QMainWindow):
         self.load_all_button.clicked.connect(self.load_all)
         self.load_all_button.setProperty("tone", "secondary")
 
-        self.create_credential_button = QPushButton("New Credential")
+        self.create_credential_button = QPushButton("New")
         self.create_credential_button.clicked.connect(self.run_open_create_credential_dialog)
         self.create_credential_button.setProperty("tone", "primary")
 
-        self.update_credential_button = QPushButton("Edit Credential")
+        self.update_credential_button = QPushButton("Edit")
         self.update_credential_button.clicked.connect(self.run_open_update_credential_dialog)
         self.update_credential_button.setEnabled(False)
 
-        self.delete_credential_button = QPushButton("Delete Credential")
+        self.delete_credential_button = QPushButton("Delete")
         self.delete_credential_button.clicked.connect(self.run_delete_credential)
         self.delete_credential_button.setEnabled(False)
         self.delete_credential_button.setProperty("tone", "danger")
