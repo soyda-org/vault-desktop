@@ -81,7 +81,6 @@ from app.ui.surfaces import (
 from app.ui.dashboard_formatters import (
     credential_list_label,
     file_list_label,
-    format_credential_detail,
     format_credentials_items,
     format_file_detail,
     format_files_items,
@@ -433,6 +432,111 @@ class MainWindow(QMainWindow):
         self.credentials_output = QTextEdit()
         self.credentials_output.setReadOnly(True)
         self.credentials_output.setPlaceholderText("Credential details will appear here.")
+
+        self.credential_detail_stack = QStackedWidget()
+        self.credential_detail_message = self.credentials_output
+
+        self.credential_detail_name_input = QLineEdit()
+        self.credential_detail_name_input.setReadOnly(True)
+        self.credential_detail_username_input = QLineEdit()
+        self.credential_detail_username_input.setReadOnly(True)
+        self.credential_detail_password_input = QLineEdit()
+        self.credential_detail_password_input.setReadOnly(True)
+        self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.credential_detail_url_input = QLineEdit()
+        self.credential_detail_url_input.setReadOnly(True)
+        self.credential_detail_state_input = QLineEdit()
+        self.credential_detail_state_input.setReadOnly(True)
+
+        self.copy_credential_name_button = QPushButton("Copy")
+        self.copy_credential_name_button.setProperty("tone", "secondary")
+        self.copy_credential_name_button.setProperty("hoverGlow", "light")
+        self.copy_credential_name_button.clicked.connect(
+            lambda: self._copy_text_value(
+                self.credential_detail_name_input.text(),
+                "Credential name copied to clipboard.",
+            )
+        )
+        self.copy_credential_username_button = QPushButton("Copy")
+        self.copy_credential_username_button.setProperty("tone", "secondary")
+        self.copy_credential_username_button.setProperty("hoverGlow", "light")
+        self.copy_credential_username_button.clicked.connect(
+            lambda: self._copy_text_value(
+                self.credential_detail_username_input.text(),
+                "Credential username copied to clipboard.",
+            )
+        )
+        self.copy_credential_password_button = QPushButton("Copy")
+        self.copy_credential_password_button.setProperty("tone", "secondary")
+        self.copy_credential_password_button.setProperty("hoverGlow", "light")
+        self.copy_credential_password_button.clicked.connect(
+            lambda: self._copy_text_value(
+                self.credential_detail_password_input.text(),
+                "Credential password copied to clipboard.",
+            )
+        )
+        self.copy_credential_url_button = QPushButton("Copy")
+        self.copy_credential_url_button.setProperty("tone", "secondary")
+        self.copy_credential_url_button.setProperty("hoverGlow", "light")
+        self.copy_credential_url_button.clicked.connect(
+            lambda: self._copy_text_value(
+                self.credential_detail_url_input.text(),
+                "Credential URL copied to clipboard.",
+            )
+        )
+        self.copy_credential_state_button = QPushButton("Copy")
+        self.copy_credential_state_button.setProperty("tone", "secondary")
+        self.copy_credential_state_button.setProperty("hoverGlow", "light")
+        self.copy_credential_state_button.clicked.connect(
+            lambda: self._copy_text_value(
+                self.credential_detail_state_input.text(),
+                "Credential state copied to clipboard.",
+            )
+        )
+
+        credential_detail_fields_page = QWidget()
+        credential_detail_fields_layout = QVBoxLayout(credential_detail_fields_page)
+        credential_detail_fields_layout.setContentsMargins(0, 0, 0, 0)
+        credential_detail_fields_layout.setSpacing(10)
+        credential_detail_fields_layout.addLayout(
+            self._build_readonly_detail_row(
+                "Name",
+                self.credential_detail_name_input,
+                self.copy_credential_name_button,
+            )
+        )
+        credential_detail_fields_layout.addLayout(
+            self._build_readonly_detail_row(
+                "Username",
+                self.credential_detail_username_input,
+                self.copy_credential_username_button,
+            )
+        )
+        credential_detail_fields_layout.addLayout(
+            self._build_readonly_detail_row(
+                "Password",
+                self.credential_detail_password_input,
+                self.copy_credential_password_button,
+            )
+        )
+        credential_detail_fields_layout.addLayout(
+            self._build_readonly_detail_row(
+                "URL",
+                self.credential_detail_url_input,
+                self.copy_credential_url_button,
+            )
+        )
+        credential_detail_fields_layout.addLayout(
+            self._build_readonly_detail_row(
+                "State",
+                self.credential_detail_state_input,
+                self.copy_credential_state_button,
+            )
+        )
+        credential_detail_fields_layout.addStretch(1)
+
+        self.credential_detail_stack.addWidget(self.credential_detail_message)
+        self.credential_detail_stack.addWidget(credential_detail_fields_page)
 
         self.notes_output = QTextEdit()
         self.notes_output.setReadOnly(True)
@@ -1023,6 +1127,27 @@ class MainWindow(QMainWindow):
 
         return card
 
+    def _build_readonly_detail_row(
+        self,
+        label_text: str,
+        input_widget: QLineEdit,
+        copy_button: QPushButton,
+    ) -> QVBoxLayout:
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+        label = QLabel(label_text)
+        label.setObjectName("sectionHint")
+        layout.addWidget(label)
+
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(8)
+        row.addWidget(input_widget, 1)
+        row.addWidget(copy_button, 0)
+        layout.addLayout(row)
+        return layout
+
     def _build_credentials_tab(self) -> QWidget:
         list_actions = QHBoxLayout()
         list_actions.setContentsMargins(0, 0, 0, 0)
@@ -1062,7 +1187,7 @@ class MainWindow(QMainWindow):
         detail_content.setContentsMargins(0, 0, 0, 0)
         detail_content.setSpacing(10)
         detail_content.addLayout(detail_actions)
-        detail_content.addWidget(self.credentials_output, 1)
+        detail_content.addWidget(self.credential_detail_stack, 1)
 
         detail_card = self._build_workspace_card(
             title=None,
@@ -1476,7 +1601,8 @@ class MainWindow(QMainWindow):
             self.selected_credential_id = None
             self.selected_credential_current_version = None
 
-        self.credentials_output.setPlainText(format_credentials_items(filtered_items))
+        if not filtered_items:
+            self._show_credential_detail_message(format_credentials_items(filtered_items))
         self._refresh_credential_filter_buttons()
         self._refresh_action_states()
 
@@ -2562,6 +2688,19 @@ class MainWindow(QMainWindow):
         clipboard.setText(password)
         self.status_label.setText("Generated password copied to clipboard.")
 
+    def _copy_text_value(self, value: str, success_message: str) -> None:
+        if not value or value == "-":
+            self.status_label.setText("Nothing to copy.")
+            return
+
+        app = QApplication.instance()
+        if app is None:
+            self.status_label.setText("Clipboard is unavailable.")
+            return
+
+        app.clipboard().setText(value)
+        self.status_label.setText(success_message)
+
     def _refresh_quick_crypto_method_state(self) -> None:
         method_key = str(self.quick_crypto_method_select.currentData())
         mode = passphrase_mode_for_method(method_key)
@@ -2766,7 +2905,7 @@ class MainWindow(QMainWindow):
 
         prepare_result = self.desktop_service.prepare_credential(device_name=device_name)
         if prepare_result.error:
-            self.credentials_output.setPlainText(
+            self._show_credential_detail_message(
                 f"Credential prepare failed.\nError: {prepare_result.error}"
             )
             self.status_label.setText(
@@ -3955,7 +4094,8 @@ class MainWindow(QMainWindow):
         self.file_chunks_input.clear()
 
         if self.selected_credential_id:
-            self.credentials_output.setPlainText(
+            MainWindow._show_credential_detail_message(
+                self,
                 self._locked_detail_text(
                     "Credential",
                     {
@@ -3965,7 +4105,8 @@ class MainWindow(QMainWindow):
                 )
             )
         else:
-            self.credentials_output.setPlainText(
+            MainWindow._show_credential_detail_message(
+                self,
                 self._locked_placeholder_text("Credential")
             )
 
@@ -4116,7 +4257,8 @@ class MainWindow(QMainWindow):
         self.credentials_list.clear()
         self.notes_list.clear()
         self.files_list.clear()
-        self.credentials_output.clear()
+        MainWindow._show_credential_detail_message(self, "")
+        MainWindow._clear_credential_detail_fields(self)
         self.notes_output.clear()
         self.files_output.clear()
         self.recovery_key_b64_input.clear()
@@ -4141,6 +4283,64 @@ class MainWindow(QMainWindow):
                 remembered_session=None,
             )
         self._save_ui_preferences()
+
+    def _show_credential_detail_message(self, text: str) -> None:
+        self.credentials_output.setPlainText(text)
+        if hasattr(self, "credential_detail_stack"):
+            self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
+
+    def _clear_credential_detail_fields(self) -> None:
+        for attribute_name in (
+            "credential_detail_name_input",
+            "credential_detail_username_input",
+            "credential_detail_password_input",
+            "credential_detail_url_input",
+            "credential_detail_state_input",
+        ):
+            widget = getattr(self, attribute_name, None)
+            if widget is not None:
+                widget.clear()
+        if hasattr(self, "credential_detail_stack"):
+            self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
+
+    def _render_credential_detail_fields(self, item: dict) -> None:
+        payload = item.get("plaintext_payload") or {}
+        metadata = item.get("plaintext_metadata") or {}
+        name_value = self._first_non_empty_string(
+            item.get("plaintext_app_name"),
+            metadata.get("label"),
+            payload.get("app_name"),
+            payload.get("service"),
+            payload.get("site"),
+            payload.get("title"),
+        ) or "-"
+        username_value = self._first_non_empty_string(
+            item.get("plaintext_username"),
+            payload.get("username"),
+            payload.get("login"),
+            payload.get("email"),
+            payload.get("account"),
+        ) or "-"
+        password_value = self._first_non_empty_string(
+            payload.get("secret"),
+            payload.get("password"),
+            payload.get("token"),
+            payload.get("api_key"),
+        ) or "-"
+        url_value = self._first_non_empty_string(
+            payload.get("url"),
+            payload.get("site"),
+            payload.get("uri"),
+        ) or "-"
+        state_value = str(item.get("state", "-"))
+
+        self.credential_detail_name_input.setText(name_value)
+        self.credential_detail_username_input.setText(username_value)
+        self.credential_detail_password_input.setText(password_value)
+        self.credential_detail_url_input.setText(url_value)
+        self.credential_detail_state_input.setText(state_value)
+        if hasattr(self, "credential_detail_stack"):
+            self.credential_detail_stack.setCurrentIndex(1)
 
     def _handle_session_auto_logout_timeout(self) -> None:
         if not self.desktop_service.is_authenticated():
@@ -4208,7 +4408,7 @@ class MainWindow(QMainWindow):
 
     def _render_credentials(self, result: ObjectListResult) -> None:
         if result.error:
-            self.credentials_output.setPlainText(
+            self._show_credential_detail_message(
                 f"Credentials fetch failed.\nError: {result.error}"
             )
             self._refresh_action_states()
@@ -4261,7 +4461,7 @@ class MainWindow(QMainWindow):
 
     def _render_credential_create_result(self, result: ObjectCreateResult) -> None:
         if result.error:
-            self.credentials_output.setPlainText(
+            self._show_credential_detail_message(
                 f"Credential create failed.\nError: {result.error}"
             )
             self.status_label.setText(
@@ -4281,7 +4481,7 @@ class MainWindow(QMainWindow):
             self._select_credential_item_by_id(credential_id)
 
         self._bind_credential_item_to_editors(display_item)
-        self.credentials_output.setPlainText(format_credential_detail(display_item))
+        self._render_credential_detail_fields(display_item)
         self.tabs.setCurrentIndex(0)
 
         status_lines = [
@@ -4333,7 +4533,7 @@ class MainWindow(QMainWindow):
 
     def _render_credential_delete_result(self, result: ObjectCreateResult) -> None:
         if result.error:
-            self.credentials_output.setPlainText(
+            self._show_credential_detail_message(
                 f"Credential delete failed.\nError: {result.error}"
             )
             self.status_label.setText(
@@ -4399,7 +4599,7 @@ class MainWindow(QMainWindow):
 
     def _render_credential_update_result(self, result: ObjectCreateResult) -> None:
         if result.error:
-            self.credentials_output.setPlainText(
+            self._show_credential_detail_message(
                 f"Credential update failed.\nError: {result.error}"
             )
             self.status_label.setText(
@@ -4419,7 +4619,7 @@ class MainWindow(QMainWindow):
             self._select_credential_item_by_id(credential_id)
 
         self._bind_credential_item_to_editors(display_item)
-        self.credentials_output.setPlainText(format_credential_detail(display_item))
+        self._render_credential_detail_fields(display_item)
         self.tabs.setCurrentIndex(0)
 
         status_lines = [
@@ -4684,7 +4884,7 @@ class MainWindow(QMainWindow):
         if result.error:
             self.selected_credential_id = None
             self.selected_credential_current_version = None
-            self.credentials_output.setPlainText(
+            self._show_credential_detail_message(
                 f"Credential detail fetch failed.\nError: {result.error}"
             )
             self._refresh_action_states()
@@ -4701,13 +4901,15 @@ class MainWindow(QMainWindow):
             self.selected_credential_current_version = (
                 current_version if current_version is not None and current_version >= 1 else None
             )
-            self.credentials_output.setPlainText(self._locked_detail_text("Credential", item))
+            self._show_credential_detail_message(
+                self._locked_detail_text("Credential", item)
+            )
             self._refresh_action_states()
             return
 
         display_item = self._decorate_item_detail_for_local_display(item)
         self._bind_credential_item_to_editors(display_item)
-        self.credentials_output.setPlainText(format_credential_detail(display_item))
+        self._render_credential_detail_fields(display_item)
         self._refresh_action_states()
 
     def _render_note_detail(self, result: ObjectDetailResult) -> None:

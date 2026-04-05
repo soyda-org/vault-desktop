@@ -299,6 +299,35 @@ def test_credentials_filter_buttons_switch_visible_items(app_fixture) -> None:
     assert "Legacy" in window.credentials_list.item(0).text()
 
 
+def test_credential_detail_renders_readonly_fields_with_masked_password(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window._render_credential_detail_fields(
+        {
+            "credential_id": "cred_1",
+            "state": "active",
+            "plaintext_app_name": "GitHub",
+            "plaintext_username": "alice@example.com",
+            "plaintext_payload": {
+                "secret": "s3cr3t",
+                "url": "https://example.com",
+            },
+            "current_version": 1,
+        }
+    )
+
+    assert window.credential_detail_stack.currentIndex() == 1
+    assert window.credential_detail_name_input.text() == "GitHub"
+    assert window.credential_detail_username_input.text() == "alice@example.com"
+    assert window.credential_detail_password_input.text() == "s3cr3t"
+    assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password
+    assert window.credential_detail_url_input.text() == "https://example.com"
+    assert window.credential_detail_state_input.text() == "active"
+    assert window.credential_detail_name_input.isReadOnly()
+    assert window.credential_detail_username_input.isReadOnly()
+    assert window.credential_detail_password_input.isReadOnly()
+
+
 def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.new_vault_pin_input.clear()
