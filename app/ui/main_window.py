@@ -168,6 +168,19 @@ def _load_embedded_font_family() -> str:
 
 
 class MainWindow(QMainWindow):
+    _NAVBAR_LABELS = {
+        "theme_light": "Light",
+        "theme_dark": "Dark",
+        "theme_light_compact": "L",
+        "theme_dark_compact": "D",
+        "generator": "Generator",
+        "generator_compact": "G",
+        "access": "Access",
+        "access_compact": "A",
+        "vault": "Vault",
+        "vault_compact": "V",
+    }
+
     def __init__(self, settings: DesktopSettings) -> None:
         super().__init__()
         self.settings = settings
@@ -1126,6 +1139,7 @@ class MainWindow(QMainWindow):
         self._refresh_system_state_indicators()
         self._refresh_action_states()
         self._refresh_idle_policy()
+        self._refresh_navbar_labels()
 
     def _build_tab(
         self,
@@ -2467,10 +2481,29 @@ class MainWindow(QMainWindow):
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(self._build_stylesheet())
-        if hasattr(self, "theme_toggle_button"):
-            self.theme_toggle_button.setText(
-                "Dark" if self.current_theme == "dark" else "Light"
-            )
+        self._refresh_navbar_labels()
+
+    def resizeEvent(self, event) -> None:  # type: ignore[override]
+        super().resizeEvent(event)
+        self._refresh_navbar_labels()
+
+    def _refresh_navbar_labels(self) -> None:
+        if not hasattr(self, "theme_toggle_button"):
+            return
+        compact = self.width() < 860
+        theme_key = f"theme_{self.current_theme}"
+        if compact:
+            theme_key = f"{theme_key}_compact"
+        self.theme_toggle_button.setText(self._NAVBAR_LABELS[theme_key])
+        self.nav_generator_button.setText(
+            self._NAVBAR_LABELS["generator_compact" if compact else "generator"]
+        )
+        self.system_service_tab_button.setText(
+            self._NAVBAR_LABELS["access_compact" if compact else "access"]
+        )
+        self.nav_vault_button.setText(
+            self._NAVBAR_LABELS["vault_compact" if compact else "vault"]
+        )
 
     def _refresh_vault_pin_field_style(self) -> None:
         if not hasattr(self, "vault_pin_input"):

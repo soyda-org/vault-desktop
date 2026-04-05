@@ -137,12 +137,27 @@ def test_theme_toggle_button_text_tracks_current_theme(app_fixture) -> None:
     window = MainWindow(get_settings())
 
     window.current_theme = "dark"
+    window.resize(1180, 780)
     window._apply_theme()
     assert window.theme_toggle_button.text() == "Dark"
 
     window.current_theme = "light"
+    window.resize(1180, 780)
     window._apply_theme()
     assert window.theme_toggle_button.text() == "Light"
+
+
+def test_shared_navbar_compacts_to_single_letters_when_window_is_narrow(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.current_theme = "dark"
+    window.resize(720, 780)
+    window._refresh_navbar_labels()
+
+    assert window.theme_toggle_button.text() == "D"
+    assert window.nav_generator_button.text() == "G"
+    assert window.system_service_tab_button.text() == "A"
+    assert window.nav_vault_button.text() == "V"
 
 
 def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
