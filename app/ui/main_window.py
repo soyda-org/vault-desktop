@@ -206,6 +206,13 @@ class MainWindow(QMainWindow):
         self.vault_access_status_label.setWordWrap(True)
         self.vault_access_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.vault_access_status_label.setObjectName("inlineStatusText")
+        self.vault_access_status_label.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Minimum,
+        )
+        self.vault_access_status_label.setMinimumHeight(
+            self.fontMetrics().lineSpacing() * 2 + 6
+        )
 
         self.session_label = QLabel("No active session.")
         self.session_label.setWordWrap(True)
@@ -1714,6 +1721,8 @@ class MainWindow(QMainWindow):
             self.vault_access_status_label.setProperty(
                 "statusLevel", self._infer_status_severity(message)
             )
+            self.vault_access_status_label.adjustSize()
+            self.vault_access_status_label.updateGeometry()
             self._repolish(self.vault_access_status_label)
         self._append_activity_log(message)
         self._refresh_system_state_indicators()
