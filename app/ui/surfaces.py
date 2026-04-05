@@ -183,6 +183,7 @@ class VaultWorkspaceView(QWidget):
         help_button: QWidget,
         load_buttons: dict[str, QWidget],
         session_actions: dict[str, QWidget],
+        preference_widgets: dict[str, QWidget],
         tabs: QWidget,
     ) -> None:
         super().__init__()
@@ -266,6 +267,7 @@ class VaultWorkspaceView(QWidget):
         load_row.addStretch(1)
         load_row.addWidget(load_buttons["all"])
         workspace_layout.addLayout(load_row)
+        workspace_layout.addWidget(preference_widgets["keep_open"], 0)
 
         tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         workspace_layout.addWidget(tabs, 1)

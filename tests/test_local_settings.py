@@ -23,6 +23,7 @@ def test_load_returns_detected_defaults_when_file_missing(tmp_path: Path, monkey
     assert settings.theme == "light"
     assert settings.remember_session is False
     assert settings.remembered_session is None
+    assert settings.keep_vault_open is False
 
 
 def test_load_uses_detected_defaults_for_missing_device_fields(tmp_path: Path, monkeypatch) -> None:
@@ -64,6 +65,7 @@ def test_save_then_load_round_trip(tmp_path: Path) -> None:
         last_tab_index=2,
         theme="dark",
         remember_session=True,
+        keep_vault_open=True,
         remembered_session={
             "identifier": "bob",
             "user_id": "user-1",
@@ -124,6 +126,7 @@ def test_load_restores_persisted_remembered_session(tmp_path: Path) -> None:
     loaded = LocalSettingsStore(config_path=config_path).load()
 
     assert loaded.remember_session is True
+    assert loaded.keep_vault_open is False
     assert loaded.remembered_session == {
         "identifier": "alice",
         "user_id": "user-1",
@@ -133,3 +136,19 @@ def test_load_restores_persisted_remembered_session(tmp_path: Path) -> None:
         "refresh_token": "refresh-1",
         "token_type": "bearer",
     }
+
+
+def test_load_restores_keep_vault_open_preference(tmp_path: Path) -> None:
+    config_path = tmp_path / "settings.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "keep_vault_open": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = LocalSettingsStore(config_path=config_path).load()
+
+    assert loaded.keep_vault_open is True

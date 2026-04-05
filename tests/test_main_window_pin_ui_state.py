@@ -6,7 +6,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton, QTextEdit, QWidget
+from PySide6.QtWidgets import QApplication, QCheckBox, QLabel, QLineEdit, QListWidget, QPushButton, QTextEdit, QWidget
 
 from app.core.pin_bootstrap import LocalPinBootstrapStore
 from app.services.desktop_service import VaultDesktopService
@@ -175,6 +175,7 @@ def make_window_harness(
     window.toggle_advanced_recovery_button = QPushButton()
     window.unlock_with_recovery_key_button = QPushButton()
     window.clear_vault_key_button = QPushButton()
+    window.keep_vault_open_checkbox = QCheckBox()
 
     window.load_credential_detail_button = QPushButton()
     window.create_credential_button = QPushButton()
@@ -583,6 +584,24 @@ def test_handle_vault_auto_lock_timeout_wipes_sensitive_views(qapp, tmp_path: Pa
     assert "Credential detail is locked." in window.credentials_output.toPlainText()
     assert "Note detail is locked." in window.notes_output.toPlainText()
     assert "File detail is locked." in window.files_output.toPlainText()
+
+
+def test_refresh_idle_policy_skips_vault_auto_lock_when_keep_open_enabled(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.keep_vault_open_checkbox.setChecked(True)
+    window.session_auto_logout_timer = SimpleNamespace(start=lambda *_: None, stop=lambda: None)
+    window.vault_auto_lock_timer = SimpleNamespace(
+        start=lambda *_: setattr(window, "_vault_timer_started", True),
+        stop=lambda: setattr(window, "_vault_timer_stopped", True),
+    )
+    window.session_auto_logout_timeout_ms = 1
+    window.vault_auto_lock_timeout_ms = 1
+    window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+
+    MainWindow._refresh_idle_policy(window)
+
+    assert getattr(window, "_vault_timer_started", False) is False
+    assert getattr(window, "_vault_timer_stopped", False) is True
 
 
 def test_perform_local_logout_clears_sensitive_outputs(qapp, tmp_path: Path) -> None:

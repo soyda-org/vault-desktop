@@ -29,6 +29,7 @@ class PersistedUiSettings:
     theme: str = "light"
     remember_session: bool = False
     remembered_session: dict[str, str] | None = None
+    keep_vault_open: bool = False
 
 
 class LocalSettingsStore:
@@ -52,6 +53,9 @@ class LocalSettingsStore:
             theme=data.get("theme", defaults.theme),
             remember_session=bool(
                 data.get("remember_session", defaults.remember_session)
+            ),
+            keep_vault_open=bool(
+                data.get("keep_vault_open", defaults.keep_vault_open)
             ),
             remembered_session=(
                 {

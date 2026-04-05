@@ -229,6 +229,14 @@ class MainWindow(QMainWindow):
         self.remember_session_checkbox.toggled.connect(
             lambda *_: self._handle_remember_session_toggle()
         )
+        self.keep_vault_open_checkbox = QCheckBox("Keep vault open on this device")
+        self.keep_vault_open_checkbox.setObjectName("keepVaultOpenCheckbox")
+        self.keep_vault_open_checkbox.setChecked(
+            self.persisted_ui_settings.keep_vault_open
+        )
+        self.keep_vault_open_checkbox.toggled.connect(
+            lambda *_: self._handle_keep_vault_open_toggle()
+        )
 
         self.copy_activity_log_button = QPushButton("Copy Diagnostics")
         self.copy_activity_log_button.clicked.connect(self.run_copy_activity_log)
@@ -813,6 +821,9 @@ class MainWindow(QMainWindow):
             session_actions={
                 "lock": self.lock_now_button,
                 "logout": self.vault_logout_button,
+            },
+            preference_widgets={
+                "keep_open": self.keep_vault_open_checkbox,
             },
             tabs=self.tabs,
         )
@@ -1461,6 +1472,10 @@ class MainWindow(QMainWindow):
     def _handle_remember_session_toggle(self) -> None:
         self._save_ui_preferences()
 
+    def _handle_keep_vault_open_toggle(self) -> None:
+        self._refresh_idle_policy()
+        self._save_ui_preferences()
+
     def _repolish(self, widget: QWidget) -> None:
         widget.style().unpolish(widget)
         widget.style().polish(widget)
@@ -1574,6 +1589,9 @@ class MainWindow(QMainWindow):
                 spacing: 4px;
             }}
             #rememberSessionCheckbox:checked {{
+                color: {warning};
+            }}
+            #keepVaultOpenCheckbox:checked {{
                 color: {warning};
             }}
             QCheckBox::indicator {{
@@ -2176,6 +2194,11 @@ class MainWindow(QMainWindow):
             remember_session=(
                 self.remember_session_checkbox.isChecked()
                 if hasattr(self, "remember_session_checkbox")
+                else False
+            ),
+            keep_vault_open=(
+                self.keep_vault_open_checkbox.isChecked()
+                if hasattr(self, "keep_vault_open_checkbox")
                 else False
             ),
             remembered_session=self._remembered_session_payload(),
@@ -3856,7 +3879,13 @@ class MainWindow(QMainWindow):
 
         self.session_auto_logout_timer.start(self.session_auto_logout_timeout_ms)
 
-        if self._is_vault_unlocked():
+        if (
+            self._is_vault_unlocked()
+            and not (
+                hasattr(self, "keep_vault_open_checkbox")
+                and self.keep_vault_open_checkbox.isChecked()
+            )
+        ):
             self.vault_auto_lock_timer.start(self.vault_auto_lock_timeout_ms)
         else:
             self.vault_auto_lock_timer.stop()

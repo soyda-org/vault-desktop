@@ -237,6 +237,21 @@ def test_remember_session_checkbox_reflects_saved_preference(app_fixture, monkey
     assert session.identifier == "alice"
 
 
+def test_keep_vault_open_checkbox_reflects_saved_preference(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    monkeypatch.setattr(
+        main_window_module.LocalSettingsStore,
+        "load",
+        lambda self: PersistedUiSettings(
+            keep_vault_open=True,
+        ),
+    )
+    window = MainWindow(get_settings())
+
+    assert window.keep_vault_open_checkbox.isChecked() is True
+
+
 def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.new_vault_pin_input.clear()
