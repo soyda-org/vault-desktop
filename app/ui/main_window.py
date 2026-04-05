@@ -485,13 +485,13 @@ class MainWindow(QMainWindow):
         self.credential_detail_username_input = QLineEdit()
         self.credential_detail_username_input.setReadOnly(True)
         self.credential_detail_username_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.credential_detail_username_input.setMinimumWidth(320)
+        self.credential_detail_username_input.setMinimumWidth(140)
         self.credential_detail_username_input.setMaximumWidth(420)
         self.credential_detail_password_input = QLineEdit()
         self.credential_detail_password_input.setReadOnly(True)
         self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.credential_detail_password_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.credential_detail_password_input.setMinimumWidth(320)
+        self.credential_detail_password_input.setMinimumWidth(140)
         self.credential_detail_password_input.setMaximumWidth(420)
         self.credential_detail_url_input = QLineEdit()
         self.credential_detail_url_input.setReadOnly(True)
@@ -4526,8 +4526,40 @@ class MainWindow(QMainWindow):
             self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
         if hasattr(self, "toggle_credential_password_button"):
             self.toggle_credential_password_button.setText("Show")
+        self._refresh_credential_detail_field_widths()
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
+
+    def _set_detail_input_width(
+        self,
+        input_widget: QLineEdit,
+        value: str,
+        *,
+        masked: bool = False,
+        minimum: int = 140,
+        maximum: int = 420,
+    ) -> None:
+        display_text = value or "-"
+        if masked:
+            display_text = "\u2022" * max(len(value), 8)
+        width = input_widget.fontMetrics().horizontalAdvance(display_text) + 34
+        input_widget.setFixedWidth(max(minimum, min(maximum, width)))
+
+    def _refresh_credential_detail_field_widths(self) -> None:
+        if not hasattr(self, "credential_detail_username_input"):
+            return
+        self._set_detail_input_width(
+            self.credential_detail_username_input,
+            self.credential_detail_username_input.text(),
+        )
+        password_masked = (
+            self.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password
+        )
+        self._set_detail_input_width(
+            self.credential_detail_password_input,
+            self.credential_detail_password_input.text(),
+            masked=password_masked,
+        )
 
     def _render_credential_detail_fields(self, item: dict) -> None:
         payload = item.get("plaintext_payload") or {}
@@ -4564,6 +4596,7 @@ class MainWindow(QMainWindow):
         self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.toggle_credential_password_button.setText("Show")
         self.credential_detail_url_input.setText(url_value)
+        self._refresh_credential_detail_field_widths()
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentIndex(1)
 
@@ -4571,10 +4604,12 @@ class MainWindow(QMainWindow):
         if self.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password:
             self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Normal)
             self.toggle_credential_password_button.setText("Hide")
+            self._refresh_credential_detail_field_widths()
             return
 
         self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.toggle_credential_password_button.setText("Show")
+        self._refresh_credential_detail_field_widths()
 
     def _handle_session_auto_logout_timeout(self) -> None:
         if not self.desktop_service.is_authenticated():
