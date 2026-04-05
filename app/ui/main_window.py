@@ -1182,6 +1182,7 @@ class MainWindow(QMainWindow):
             hint=None,
             content_layout=list_content,
         )
+        left_card.setObjectName("flatWorkspacePanel")
 
         detail_actions = QHBoxLayout()
         detail_actions.setContentsMargins(0, 0, 0, 0)
@@ -1202,7 +1203,7 @@ class MainWindow(QMainWindow):
             hint=None,
             content_layout=detail_content,
         )
-        detail_card.setObjectName("detailCard")
+        detail_card.setObjectName("flatWorkspacePanel")
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
@@ -2134,6 +2135,11 @@ class MainWindow(QMainWindow):
                 background: {surface};
                 border: 1px solid {border};
                 border-radius: 14px;
+            }}
+            #flatWorkspacePanel {{
+                background: transparent;
+                border: 0;
+                border-radius: 0;
             }}
             #surfacePanel {{
                 background: {panel};
