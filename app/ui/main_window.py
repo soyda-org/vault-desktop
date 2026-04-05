@@ -903,7 +903,7 @@ class MainWindow(QMainWindow):
         self.screen_subtitle_label = QLabel()
         self.screen_subtitle_label.setObjectName("screenSubtitle")
         self.screen_subtitle_label.setWordWrap(True)
-        self.theme_toggle_button = QPushButton("Theme: Light")
+        self.theme_toggle_button = QPushButton("Light")
         self.theme_toggle_button.setProperty("nav", "true")
         self.theme_toggle_button.clicked.connect(self.run_toggle_theme)
         self.nav_separator_left_label = QLabel("|")
@@ -2469,7 +2469,7 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(self._build_stylesheet())
         if hasattr(self, "theme_toggle_button"):
             self.theme_toggle_button.setText(
-                "Theme: Dark" if self.current_theme == "dark" else "Theme: Light"
+                "Dark" if self.current_theme == "dark" else "Light"
             )
 
     def _refresh_vault_pin_field_style(self) -> None:

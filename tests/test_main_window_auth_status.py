@@ -138,11 +138,11 @@ def test_theme_toggle_button_text_tracks_current_theme(app_fixture) -> None:
 
     window.current_theme = "dark"
     window._apply_theme()
-    assert window.theme_toggle_button.text() == "Theme: Dark"
+    assert window.theme_toggle_button.text() == "Dark"
 
     window.current_theme = "light"
     window._apply_theme()
-    assert window.theme_toggle_button.text() == "Theme: Light"
+    assert window.theme_toggle_button.text() == "Light"
 
 
 def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
