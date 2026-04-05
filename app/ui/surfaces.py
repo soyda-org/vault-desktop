@@ -251,10 +251,13 @@ class VaultWorkspaceView(QWidget):
         access_layout.addLayout(content_wrapper, 1)
 
         workspace_panel, workspace_layout = _panel_shell()
-        workspace_layout.addWidget(preference_widgets["keep_open"], 0)
-
         tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         workspace_layout.addWidget(tabs, 1)
+        workspace_layout.addWidget(
+            preference_widgets["keep_open"],
+            0,
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom,
+        )
 
         self.panel_stack.addWidget(access_panel)
         self.panel_stack.addWidget(workspace_panel)
