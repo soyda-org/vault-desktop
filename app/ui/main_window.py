@@ -1039,6 +1039,7 @@ class MainWindow(QMainWindow):
         filter_row = QHBoxLayout()
         filter_row.setContentsMargins(0, 0, 0, 0)
         filter_row.setSpacing(8)
+        filter_row.addStretch(1)
         filter_row.addWidget(self.credentials_active_filter_button)
         filter_row.addWidget(self.credentials_deleted_filter_button)
         filter_row.addStretch(1)
