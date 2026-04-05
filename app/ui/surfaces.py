@@ -110,6 +110,13 @@ class SystemWorkspaceView(QWidget):
         connection_row.addStretch(1)
         connect_layout.addLayout(connection_row)
 
+        messages_row = QHBoxLayout()
+        messages_row.setContentsMargins(0, 0, 0, 0)
+        messages_row.setSpacing(0)
+        messages_row.addWidget(auth_buttons["messages"], 0)
+        messages_row.addStretch(1)
+        connect_layout.addLayout(messages_row)
+
         for key in ("identifier", "password", "device_name", "platform"):
             form_widgets[key].setMinimumWidth(260)
             form_widgets[key].setMaximumWidth(560)

@@ -924,6 +924,7 @@ class MainWindow(QMainWindow):
             },
             auth_buttons={
                 "probe": self.probe_button,
+                "messages": self.system_messages_tab_button,
                 "login": self.login_button,
                 "signup": self.sign_up_button,
             },
@@ -1005,7 +1006,6 @@ class MainWindow(QMainWindow):
         toolbar_layout.setContentsMargins(12, 8, 12, 8)
         toolbar_layout.setSpacing(6)
         toolbar_layout.addWidget(self.system_service_tab_button)
-        toolbar_layout.addWidget(self.system_messages_tab_button)
         toolbar_layout.addWidget(self.vault_access_tab_button)
         toolbar_layout.addWidget(self.vault_workspace_tab_button)
         toolbar_layout.addWidget(self.theme_toggle_button)
@@ -1472,7 +1472,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, "system_service_tab_button"):
             show_system_segments = screen == "system"
             self.system_service_tab_button.setVisible(True)
-            self.system_messages_tab_button.setVisible(True)
             service_level = "success" if authenticated else "warning"
             if hasattr(self, "status_label"):
                 status_level = self.status_label.property("statusLevel")
@@ -1483,11 +1482,12 @@ class MainWindow(QMainWindow):
                 "segmentCurrent",
                 show_system_segments and self.current_system_panel == "service",
             )
+            self._repolish(self.system_service_tab_button)
+        if hasattr(self, "system_messages_tab_button"):
             self.system_messages_tab_button.setProperty(
                 "segmentCurrent",
-                show_system_segments and self.current_system_panel == "messages",
+                self.current_screen == "system" and self.current_system_panel == "messages",
             )
-            self._repolish(self.system_service_tab_button)
             self._repolish(self.system_messages_tab_button)
         if hasattr(self, "vault_access_tab_button"):
             show_vault_segments = screen == "vault"
