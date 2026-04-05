@@ -168,6 +168,7 @@ class SystemWorkspaceView(QWidget):
         log_toolbar.setSpacing(6)
         log_toolbar.addWidget(log_widgets["copy"])
         log_toolbar.addWidget(log_widgets["clear"])
+        log_toolbar.addStretch(1)
         messages_layout.addLayout(log_toolbar)
         messages_layout.addWidget(log_widgets["list"], 1)
 
