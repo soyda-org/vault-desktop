@@ -529,16 +529,6 @@ class MainWindow(QMainWindow):
                 "Credential URL copied to clipboard.",
             )
         )
-        self.copy_credential_state_button = QPushButton("Copy")
-        self.copy_credential_state_button.setProperty("tone", "secondary")
-        self.copy_credential_state_button.setProperty("hoverGlow", "light")
-        self.copy_credential_state_button.clicked.connect(
-            lambda: self._copy_text_value(
-                self.credential_detail_state_input.text(),
-                "Credential state copied to clipboard.",
-            )
-        )
-
         credential_detail_fields_page = QWidget()
         credential_detail_fields_layout = QVBoxLayout(credential_detail_fields_page)
         credential_detail_fields_layout.setContentsMargins(0, 0, 0, 0)
@@ -570,13 +560,6 @@ class MainWindow(QMainWindow):
                 "URL",
                 self.credential_detail_url_input,
                 self.copy_credential_url_button,
-            )
-        )
-        credential_detail_fields_layout.addLayout(
-            self._build_readonly_detail_row(
-                "State",
-                self.credential_detail_state_input,
-                self.copy_credential_state_button,
             )
         )
         credential_detail_fields_layout.addStretch(1)
@@ -1254,7 +1237,6 @@ class MainWindow(QMainWindow):
         detail_actions.addWidget(self.update_credential_button)
         detail_actions.addWidget(self.delete_credential_button)
         detail_actions.addStretch(1)
-        detail_actions.addWidget(self.reset_credential_payload_button)
 
         detail_content = QVBoxLayout()
         detail_content.setContentsMargins(0, 0, 0, 0)
@@ -4547,15 +4529,12 @@ class MainWindow(QMainWindow):
             payload.get("site"),
             payload.get("uri"),
         ) or "-"
-        state_value = str(item.get("state", "-"))
-
         self.credential_detail_name_input.setText(name_value)
         self.credential_detail_username_input.setText(username_value)
         self.credential_detail_password_input.setText(password_value)
         self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.toggle_credential_password_button.setText("Show")
         self.credential_detail_url_input.setText(url_value)
-        self.credential_detail_state_input.setText(state_value)
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentIndex(1)
 
