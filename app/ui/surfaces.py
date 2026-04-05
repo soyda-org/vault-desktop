@@ -113,6 +113,7 @@ class SystemWorkspaceView(QWidget):
         messages_row = QHBoxLayout()
         messages_row.setContentsMargins(0, 0, 0, 0)
         messages_row.setSpacing(0)
+        auth_buttons["messages"].setProperty("statusRowButton", True)
         messages_row.addWidget(auth_buttons["messages"], 0)
         messages_row.addStretch(1)
         connect_layout.addLayout(messages_row)
