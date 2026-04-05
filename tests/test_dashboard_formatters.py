@@ -24,8 +24,7 @@ def test_credential_list_label() -> None:
 
     assert "GitHub" in text
     assert "alice" in text
-    assert "active" in text
-    assert "v1" in text
+    assert "·" in text
 
 
 def test_note_list_label() -> None:

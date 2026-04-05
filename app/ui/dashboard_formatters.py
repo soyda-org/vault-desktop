@@ -7,6 +7,15 @@ def _json_text(value) -> str:
     return json.dumps(value, indent=2)
 
 
+def _shorten(value: str, limit: int = 24) -> str:
+    text = (value or "").strip()
+    if not text:
+        return ""
+    if len(text) <= limit:
+        return text
+    return f"{text[: limit - 1]}…"
+
+
 def _append_local_decrypt_sections(lines: list[str], item: dict) -> None:
     has_plaintext = "plaintext_metadata" in item or "plaintext_payload" in item
     has_error = bool(item.get("decryption_error"))
@@ -37,13 +46,12 @@ def _append_local_decrypt_sections(lines: list[str], item: dict) -> None:
 
 def credential_list_label(item: dict) -> str:
     app_name = item.get("plaintext_app_name") or item.get("credential_id", "-")
-    username = item.get("plaintext_username") or "username unknown"
-    return (
-        f"{app_name}"
-        f" | {username}"
-        f" | {item.get('state', '-')}"
-        f" | v{item.get('current_version', '-')}"
-    )
+    username = item.get("plaintext_username") or ""
+    primary = _shorten(str(app_name), 28) or "-"
+    secondary = _shorten(str(username), 28)
+    if secondary:
+        return f"{primary} · {secondary}"
+    return primary
 
 
 def note_list_label(item: dict) -> str:

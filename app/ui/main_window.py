@@ -986,21 +986,23 @@ class MainWindow(QMainWindow):
         widget.setLayout(layout)
         return widget
 
-    def _build_workspace_card(self, *, title: str, hint: str, content_layout) -> QFrame:
+    def _build_workspace_card(self, *, title: str | None, hint: str | None, content_layout) -> QFrame:
         card = QFrame()
         card.setObjectName("workspaceCard")
         layout = QVBoxLayout(card)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(10)
 
-        title_label = QLabel(title)
-        title_label.setObjectName("sectionTitle")
-        layout.addWidget(title_label)
+        if title:
+            title_label = QLabel(title)
+            title_label.setObjectName("sectionTitle")
+            layout.addWidget(title_label)
 
-        hint_label = QLabel(hint)
-        hint_label.setObjectName("sectionHint")
-        hint_label.setWordWrap(True)
-        layout.addWidget(hint_label)
+        if hint:
+            hint_label = QLabel(hint)
+            hint_label.setObjectName("sectionHint")
+            hint_label.setWordWrap(True)
+            layout.addWidget(hint_label)
 
         if isinstance(content_layout, QWidget):
             layout.addWidget(content_layout, 1)
@@ -1023,8 +1025,8 @@ class MainWindow(QMainWindow):
         list_content.addWidget(self.credentials_list, 1)
 
         left_card = self._build_workspace_card(
-            title="Credentials list",
-            hint="Browse apps and usernames first, then load the selected item to inspect or revise it.",
+            title=None,
+            hint=None,
             content_layout=list_content,
         )
 
@@ -1044,8 +1046,8 @@ class MainWindow(QMainWindow):
         detail_content.addWidget(self.credentials_output, 1)
 
         detail_card = self._build_workspace_card(
-            title="Credential detail",
-            hint="The default view stays readable. Use New or Edit to open a focused draft dialog without turning the workspace into a raw editor.",
+            title=None,
+            hint=None,
             content_layout=detail_content,
         )
         detail_card.setObjectName("detailCard")
