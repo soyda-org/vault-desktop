@@ -202,6 +202,10 @@ class MainWindow(QMainWindow):
         self.status_label.setWordWrap(True)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setObjectName("inlineStatusText")
+        self.vault_access_status_label = QLabel(self.status_label.text())
+        self.vault_access_status_label.setWordWrap(True)
+        self.vault_access_status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.vault_access_status_label.setObjectName("inlineStatusText")
 
         self.session_label = QLabel("No active session.")
         self.session_label.setWordWrap(True)
@@ -213,9 +217,18 @@ class MainWindow(QMainWindow):
         self.session_state_label.setObjectName("statePill")
         self.vault_state_label = QLabel()
         self.vault_state_label.setObjectName("statePill")
+        self.vault_access_connection_state_label = QLabel()
+        self.vault_access_connection_state_label.setObjectName("statePill")
+        self.vault_access_session_state_label = QLabel()
+        self.vault_access_session_state_label.setObjectName("statePill")
+        self.vault_access_vault_state_label = QLabel()
+        self.vault_access_vault_state_label.setObjectName("statePill")
         self.api_details_label = QLabel()
         self.api_details_label.setObjectName("technicalMeta")
         self.api_details_label.setWordWrap(False)
+        self.vault_access_api_details_label = QLabel()
+        self.vault_access_api_details_label.setObjectName("technicalMeta")
+        self.vault_access_api_details_label.setWordWrap(False)
 
         self.activity_log_list = QListWidget()
         self.activity_log_list.setObjectName("activityLog")
@@ -286,6 +299,10 @@ class MainWindow(QMainWindow):
         self.probe_button.setProperty("tone", "primary")
         self.probe_button.setProperty("hoverGlow", "light")
         self.probe_button.clicked.connect(self.run_probe)
+        self.vault_access_probe_button = QPushButton("Probe API")
+        self.vault_access_probe_button.setProperty("tone", "primary")
+        self.vault_access_probe_button.setProperty("hoverGlow", "light")
+        self.vault_access_probe_button.clicked.connect(self.run_probe)
 
         self.login_button = QPushButton("Login")
         self.login_button.setProperty("tone", "secondary")
@@ -959,6 +976,14 @@ class MainWindow(QMainWindow):
                 "container": self.advanced_recovery_widget,
             },
             help_button=self.vault_access_help_button,
+            status_widgets={
+                "probe": self.vault_access_probe_button,
+                "connection": self.vault_access_connection_state_label,
+                "session": self.vault_access_session_state_label,
+                "vault": self.vault_access_vault_state_label,
+                "status": self.vault_access_status_label,
+                "api_details": self.vault_access_api_details_label,
+            },
             load_buttons={
                 "credentials": self.load_credentials_button,
                 "notes": self.load_notes_button,
@@ -1683,6 +1708,12 @@ class MainWindow(QMainWindow):
                 "statusLevel", self._infer_status_severity(message)
             )
             self._repolish(self.status_label)
+        if hasattr(self, "vault_access_status_label"):
+            self.vault_access_status_label.setText(message)
+            self.vault_access_status_label.setProperty(
+                "statusLevel", self._infer_status_severity(message)
+            )
+            self._repolish(self.vault_access_status_label)
         self._append_activity_log(message)
         self._refresh_system_state_indicators()
 
@@ -1691,30 +1722,43 @@ class MainWindow(QMainWindow):
             return
 
         if self._last_probe_result is None:
-            self.connection_state_label.setText("API not tested...")
-            self._set_badge_state(self.connection_state_label, "warning")
+            connection_text = "API not tested..."
+            connection_level = "warning"
         elif getattr(self._last_probe_result, "error", None):
-            self.connection_state_label.setText("API ko.")
-            self._set_badge_state(self.connection_state_label, "error")
+            connection_text = "API ko."
+            connection_level = "error"
         else:
-            self.connection_state_label.setText("API ok.")
-            self._set_badge_state(self.connection_state_label, "success")
+            connection_text = "API ok."
+            connection_level = "success"
 
         if not self.desktop_service.is_authenticated():
-            self.session_state_label.setText("Session inactive.")
-            self._set_badge_state(self.session_state_label, "warning")
-            self.vault_state_label.setText("Vault locked.")
-            self._set_badge_state(self.vault_state_label, "warning")
+            session_text = "Session inactive."
+            session_level = "warning"
+            vault_text = "Vault locked."
+            vault_level = "warning"
         elif self._is_vault_unlocked():
-            self.session_state_label.setText("Session active.")
-            self._set_badge_state(self.session_state_label, "success")
-            self.vault_state_label.setText("Vault open.")
-            self._set_badge_state(self.vault_state_label, "success")
+            session_text = "Session active."
+            session_level = "success"
+            vault_text = "Vault open."
+            vault_level = "success"
         else:
-            self.session_state_label.setText("Session active.")
-            self._set_badge_state(self.session_state_label, "success")
-            self.vault_state_label.setText("Vault locked.")
-            self._set_badge_state(self.vault_state_label, "warning")
+            session_text = "Session active."
+            session_level = "success"
+            vault_text = "Vault locked."
+            vault_level = "warning"
+
+        for label in (self.connection_state_label, getattr(self, "vault_access_connection_state_label", None)):
+            if label is not None:
+                label.setText(connection_text)
+                self._set_badge_state(label, connection_level)
+        for label in (self.session_state_label, getattr(self, "vault_access_session_state_label", None)):
+            if label is not None:
+                label.setText(session_text)
+                self._set_badge_state(label, session_level)
+        for label in (self.vault_state_label, getattr(self, "vault_access_vault_state_label", None)):
+            if label is not None:
+                label.setText(vault_text)
+                self._set_badge_state(label, vault_level)
 
         probe_meta = []
         probe_succeeded = self._last_probe_result is not None and not getattr(
@@ -1726,9 +1770,14 @@ class MainWindow(QMainWindow):
             probe_meta.append(f"Env: {self._last_probe_result.environment or '-'}")
         if probe_succeeded or self.desktop_service.is_authenticated():
             probe_meta.append(f"API: {self.api_client.base_url}")
-        self.api_details_label.setText(" | ".join(probe_meta))
+        probe_meta_text = " | ".join(probe_meta)
+        self.api_details_label.setText(probe_meta_text)
+        if hasattr(self, "vault_access_api_details_label"):
+            self.vault_access_api_details_label.setText(probe_meta_text)
 
         self._set_button_tone(self.probe_button, "secondary")
+        if hasattr(self, "vault_access_probe_button"):
+            self._set_button_tone(self.vault_access_probe_button, "secondary")
         self._set_button_tone(self.login_button, "secondary")
 
     def run_copy_activity_log(self) -> None:

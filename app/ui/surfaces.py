@@ -189,6 +189,7 @@ class VaultWorkspaceView(QWidget):
         pin_widgets: dict[str, QWidget],
         recovery_widgets: dict[str, QWidget],
         help_button: QWidget,
+        status_widgets: dict[str, QWidget],
         load_buttons: dict[str, QWidget],
         session_actions: dict[str, QWidget],
         preference_widgets: dict[str, QWidget],
@@ -205,6 +206,21 @@ class VaultWorkspaceView(QWidget):
         content_column = QVBoxLayout()
         content_column.setContentsMargins(0, 0, 0, 0)
         content_column.setSpacing(6)
+
+        status_widgets["connection"].setObjectName("connectionStateText")
+        status_widgets["session"].setObjectName("connectionStateText")
+        status_widgets["vault"].setObjectName("connectionStateText")
+
+        connection_row = QHBoxLayout()
+        connection_row.setContentsMargins(0, 0, 0, 0)
+        connection_row.setSpacing(12)
+        status_widgets["probe"].setProperty("statusRowButton", True)
+        connection_row.addWidget(status_widgets["probe"], 0)
+        connection_row.addWidget(status_widgets["connection"], 0)
+        connection_row.addWidget(status_widgets["session"], 0)
+        connection_row.addWidget(status_widgets["vault"], 0)
+        connection_row.addStretch(1)
+        access_layout.addLayout(connection_row)
 
         pin_row = QHBoxLayout()
         pin_row.setContentsMargins(0, 6, 0, 0)
@@ -258,6 +274,21 @@ class VaultWorkspaceView(QWidget):
         content_wrapper.addWidget(content_container, 0)
         content_wrapper.addStretch(1)
         access_layout.addLayout(content_wrapper, 1)
+
+        status_row = QHBoxLayout()
+        status_row.setContentsMargins(0, 0, 0, 0)
+        status_row.setSpacing(0)
+        status_row.addStretch(1)
+        status_row.addWidget(status_widgets["status"], 0, Qt.AlignmentFlag.AlignCenter)
+        status_row.addStretch(1)
+        access_layout.addLayout(status_row)
+
+        meta_row = QHBoxLayout()
+        meta_row.setContentsMargins(0, 0, 0, 0)
+        meta_row.setSpacing(0)
+        status_widgets["api_details"].setAlignment(Qt.AlignmentFlag.AlignCenter)
+        meta_row.addWidget(status_widgets["api_details"], 0, Qt.AlignmentFlag.AlignCenter)
+        access_layout.addLayout(meta_row)
 
         workspace_panel, workspace_layout = _panel_shell()
         workspace_nav_row = QHBoxLayout()
