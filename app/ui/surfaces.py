@@ -88,6 +88,9 @@ class SystemWorkspaceView(QWidget):
         log_widgets: dict[str, QWidget],
     ) -> None:
         super().__init__()
+        self.toolbar_slot = QVBoxLayout()
+        self.toolbar_slot.setContentsMargins(0, 0, 0, 0)
+        self.toolbar_slot.setSpacing(8)
         self.panel_stack = QStackedWidget()
 
         connect_panel, connect_layout = _panel_shell()
@@ -165,8 +168,6 @@ class SystemWorkspaceView(QWidget):
         log_toolbar.setSpacing(6)
         log_toolbar.addWidget(log_widgets["copy"])
         log_toolbar.addWidget(log_widgets["clear"])
-        log_toolbar.addStretch(1)
-        log_toolbar.addWidget(log_widgets["back"])
         messages_layout.addLayout(log_toolbar)
         messages_layout.addWidget(log_widgets["list"], 1)
 
@@ -175,11 +176,20 @@ class SystemWorkspaceView(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(8)
+        layout.addLayout(self.toolbar_slot)
         layout.addWidget(self.panel_stack, 1)
 
     def set_current_panel(self, name: str) -> None:
         self.panel_stack.setCurrentIndex(0 if name == "service" else 1)
+
+    def set_toolbar_widget(self, widget: QWidget) -> None:
+        while self.toolbar_slot.count():
+            item = self.toolbar_slot.takeAt(0)
+            child = item.widget()
+            if child is not None:
+                child.setParent(None)
+        self.toolbar_slot.addWidget(widget)
 
 
 class VaultWorkspaceView(QWidget):
@@ -197,6 +207,9 @@ class VaultWorkspaceView(QWidget):
         tabs: QWidget,
     ) -> None:
         super().__init__()
+        self.toolbar_slot = QVBoxLayout()
+        self.toolbar_slot.setContentsMargins(0, 0, 0, 0)
+        self.toolbar_slot.setSpacing(8)
         self.panel_stack = QStackedWidget()
 
         access_panel, access_layout = _panel(
@@ -317,16 +330,28 @@ class VaultWorkspaceView(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(8)
+        layout.addLayout(self.toolbar_slot)
         layout.addWidget(self.panel_stack, 1)
 
     def set_current_panel(self, name: str) -> None:
         self.panel_stack.setCurrentIndex(0 if name == "access" else 1)
 
+    def set_toolbar_widget(self, widget: QWidget) -> None:
+        while self.toolbar_slot.count():
+            item = self.toolbar_slot.takeAt(0)
+            child = item.widget()
+            if child is not None:
+                child.setParent(None)
+        self.toolbar_slot.addWidget(widget)
+
 
 class GeneratorWorkspaceView(QWidget):
     def __init__(self, *, generator_widgets: dict[str, QWidget]) -> None:
         super().__init__()
+        self.toolbar_slot = QVBoxLayout()
+        self.toolbar_slot.setContentsMargins(0, 0, 0, 0)
+        self.toolbar_slot.setSpacing(8)
 
         generator_panel, generator_layout = _panel(
             title="Password generator",
@@ -383,5 +408,14 @@ class GeneratorWorkspaceView(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setSpacing(8)
+        layout.addLayout(self.toolbar_slot)
         layout.addWidget(generator_panel, 1)
+
+    def set_toolbar_widget(self, widget: QWidget) -> None:
+        while self.toolbar_slot.count():
+            item = self.toolbar_slot.takeAt(0)
+            child = item.widget()
+            if child is not None:
+                child.setParent(None)
+        self.toolbar_slot.addWidget(widget)

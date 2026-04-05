@@ -1062,7 +1062,6 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
-        layout.addWidget(toolbar_frame)
         layout.addWidget(self.screen_stack, 1)
 
         container = QWidget()
@@ -1514,6 +1513,24 @@ class MainWindow(QMainWindow):
         self.nav_vault_button.setEnabled(authenticated)
         if hasattr(self, "shell_toolbar_frame"):
             self.shell_toolbar_frame.setVisible(True)
+            if (
+                screen == "system"
+                and hasattr(self, "system_workspace_view")
+                and hasattr(self.system_workspace_view, "set_toolbar_widget")
+            ):
+                self.system_workspace_view.set_toolbar_widget(self.shell_toolbar_frame)
+            elif (
+                screen == "vault"
+                and hasattr(self, "vault_workspace_view")
+                and hasattr(self.vault_workspace_view, "set_toolbar_widget")
+            ):
+                self.vault_workspace_view.set_toolbar_widget(self.shell_toolbar_frame)
+            elif (
+                screen == "generator"
+                and hasattr(self, "generator_workspace_view")
+                and hasattr(self.generator_workspace_view, "set_toolbar_widget")
+            ):
+                self.generator_workspace_view.set_toolbar_widget(self.shell_toolbar_frame)
         if hasattr(self, "system_service_tab_button"):
             show_system_segments = screen == "system"
             self.system_service_tab_button.setVisible(True)
