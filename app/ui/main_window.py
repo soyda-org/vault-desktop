@@ -1100,6 +1100,11 @@ class MainWindow(QMainWindow):
         self.vault_auto_lock_countdown_timer.timeout.connect(
             self._refresh_vault_auto_lock_countdown_label
         )
+        self.vault_auto_lock_disabled_blink_timer = QTimer(self)
+        self.vault_auto_lock_disabled_blink_timer.setInterval(500)
+        self.vault_auto_lock_disabled_blink_timer.timeout.connect(
+            self._toggle_vault_auto_lock_disabled_blink
+        )
 
         self.session_auto_logout_timer = QTimer(self)
         self.session_auto_logout_timer.setSingleShot(True)
@@ -2302,6 +2307,12 @@ class MainWindow(QMainWindow):
                 color: {danger};
             }}
             #inlineStatusText[statusLevel="info"] {{
+                color: {muted};
+            }}
+            #vaultAutoLockCountdown[blinkActive="true"] {{
+                color: {warning};
+            }}
+            #vaultAutoLockCountdown[blinkActive="false"] {{
                 color: {muted};
             }}
             #surfacePanelTitle,
@@ -4300,21 +4311,47 @@ class MainWindow(QMainWindow):
             return f"{minutes}m {seconds:02d}s"
         return f"{seconds}s"
 
+    def _set_vault_auto_lock_blinking(self, enabled: bool) -> None:
+        if not hasattr(self, "vault_auto_lock_countdown_label"):
+            return
+        if enabled:
+            self.vault_auto_lock_countdown_label.setProperty("blinkActive", "true")
+            if hasattr(self, "vault_auto_lock_disabled_blink_timer"):
+                self.vault_auto_lock_disabled_blink_timer.start()
+            self._repolish(self.vault_auto_lock_countdown_label)
+            return
+        if hasattr(self, "vault_auto_lock_disabled_blink_timer"):
+            self.vault_auto_lock_disabled_blink_timer.stop()
+        self.vault_auto_lock_countdown_label.setProperty("blinkActive", "false")
+        self._repolish(self.vault_auto_lock_countdown_label)
+
+    def _toggle_vault_auto_lock_disabled_blink(self) -> None:
+        if not hasattr(self, "vault_auto_lock_countdown_label"):
+            return
+        current = self.vault_auto_lock_countdown_label.property("blinkActive")
+        next_value = "false" if current == "true" else "true"
+        self.vault_auto_lock_countdown_label.setProperty("blinkActive", next_value)
+        self._repolish(self.vault_auto_lock_countdown_label)
+
     def _refresh_vault_auto_lock_countdown_label(self) -> None:
         if not hasattr(self, "vault_auto_lock_countdown_label"):
             return
         if not self.desktop_service.is_authenticated():
+            MainWindow._set_vault_auto_lock_blinking(self, False)
             self.vault_auto_lock_countdown_label.setText("")
             return
         if not self._is_vault_unlocked():
+            MainWindow._set_vault_auto_lock_blinking(self, False)
             self.vault_auto_lock_countdown_label.setText("Vault locked.")
             return
         if (
             hasattr(self, "keep_vault_open_checkbox")
             and self.keep_vault_open_checkbox.isChecked()
         ):
+            MainWindow._set_vault_auto_lock_blinking(self, True)
             self.vault_auto_lock_countdown_label.setText("Auto-lock disabled.")
             return
+        MainWindow._set_vault_auto_lock_blinking(self, False)
         remaining_ms = self.vault_auto_lock_timer.remainingTime()
         if remaining_ms < 0:
             self.vault_auto_lock_countdown_label.setText(

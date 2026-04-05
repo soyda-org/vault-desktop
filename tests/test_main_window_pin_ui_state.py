@@ -640,6 +640,22 @@ def test_refresh_idle_policy_sets_vault_auto_lock_countdown_label(qapp, tmp_path
     assert window.vault_auto_lock_countdown_label.text() == "Auto-lock in 1m 05s."
 
 
+def test_keep_open_mode_marks_auto_lock_label_as_blinking(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+    window.keep_vault_open_checkbox.setChecked(True)
+    window.vault_auto_lock_disabled_blink_timer = SimpleNamespace(
+        start=lambda *_: setattr(window, "_blink_timer_started", True),
+        stop=lambda: setattr(window, "_blink_timer_stopped", True),
+    )
+
+    MainWindow._refresh_vault_auto_lock_countdown_label(window)
+
+    assert window.vault_auto_lock_countdown_label.text() == "Auto-lock disabled."
+    assert window.vault_auto_lock_countdown_label.property("blinkActive") == "true"
+    assert getattr(window, "_blink_timer_started", False) is True
+
+
 def test_handle_workspace_tab_changed_loads_visible_section(qapp, tmp_path: Path) -> None:
     window = make_window_harness(tmp_path)
     window.current_screen = "vault"
