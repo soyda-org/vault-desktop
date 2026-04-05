@@ -1174,6 +1174,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(splitter)
 
         widget = QWidget()
+        widget.setObjectName("contentContainer")
         widget.setLayout(layout)
         return widget
 
@@ -1290,6 +1291,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(splitter)
 
         widget = QWidget()
+        widget.setObjectName("contentContainer")
         widget.setLayout(layout)
         return widget
 
@@ -1348,6 +1350,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(splitter)
 
         widget = QWidget()
+        widget.setObjectName("contentContainer")
         widget.setLayout(layout)
         return widget
 
