@@ -915,6 +915,7 @@ class MainWindow(QMainWindow):
         self.nav_separator_right_label.setObjectName("navSeparator")
         self.system_service_tab_button = QPushButton("Access")
         self.system_service_tab_button.setProperty("segment", "true")
+        self.system_service_tab_button.setProperty("navSegment", "true")
         self.system_service_tab_button.clicked.connect(lambda: self._switch_system_panel("service"))
         self.system_messages_tab_button = QPushButton("System logs")
         self.system_messages_tab_button.setProperty("segment", "true")
@@ -2095,8 +2096,11 @@ class MainWindow(QMainWindow):
                 background: {nav_bg};
                 border: 1px solid {border};
                 border-radius: 999px;
-                font-size: 9px;
+                font-size: 10px;
                 padding: 2px 8px;
+            }}
+            QPushButton[segment="true"][navSegment="true"] {{
+                font-size: 10px;
             }}
             QPushButton[nav="true"][navLevel="success"] {{
                 border-color: {success};
@@ -2278,7 +2282,7 @@ class MainWindow(QMainWindow):
                 background: transparent;
                 border: 0;
                 color: {muted};
-                font-size: 9px;
+                font-size: 10px;
                 padding: 0 2px;
             }}
             #screenTitle {{
