@@ -222,6 +222,14 @@ class VaultWorkspaceView(QWidget):
         connection_row.addStretch(1)
         access_layout.addLayout(connection_row)
 
+        messages_row = QHBoxLayout()
+        messages_row.setContentsMargins(0, 0, 0, 0)
+        messages_row.setSpacing(0)
+        status_widgets["messages"].setProperty("statusRowButton", True)
+        messages_row.addWidget(status_widgets["messages"], 0)
+        messages_row.addStretch(1)
+        access_layout.addLayout(messages_row)
+
         pin_row = QHBoxLayout()
         pin_row.setContentsMargins(0, 6, 0, 0)
         pin_row.setSpacing(8)

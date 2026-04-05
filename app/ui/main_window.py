@@ -910,6 +910,9 @@ class MainWindow(QMainWindow):
         self.system_messages_tab_button = QPushButton("System messages")
         self.system_messages_tab_button.setProperty("segment", "true")
         self.system_messages_tab_button.clicked.connect(lambda: self._switch_system_panel("messages"))
+        self.vault_access_messages_button = QPushButton("System messages")
+        self.vault_access_messages_button.setProperty("segment", "true")
+        self.vault_access_messages_button.clicked.connect(lambda: self._switch_system_panel("messages"))
         self.current_system_panel = "service"
         self.vault_access_tab_button = QPushButton("Vault access")
         self.vault_access_tab_button.setProperty("segment", "true")
@@ -978,6 +981,7 @@ class MainWindow(QMainWindow):
             help_button=self.vault_access_help_button,
             status_widgets={
                 "probe": self.vault_access_probe_button,
+                "messages": self.vault_access_messages_button,
                 "connection": self.vault_access_connection_state_label,
                 "session": self.vault_access_session_state_label,
                 "vault": self.vault_access_vault_state_label,
