@@ -1062,8 +1062,8 @@ class MainWindow(QMainWindow):
         toolbar_frame = QFrame()
         toolbar_frame.setObjectName("toolbarFrame")
         toolbar_layout = QHBoxLayout(toolbar_frame)
-        toolbar_layout.setContentsMargins(12, 8, 12, 8)
-        toolbar_layout.setSpacing(6)
+        toolbar_layout.setContentsMargins(10, 6, 10, 6)
+        toolbar_layout.setSpacing(4)
         toolbar_layout.addStretch(1)
         toolbar_layout.addWidget(self.theme_toggle_button)
         toolbar_layout.addWidget(self.nav_separator_left_label)
@@ -2111,10 +2111,11 @@ class MainWindow(QMainWindow):
                 border: 1px solid {border};
                 border-radius: 999px;
                 font-size: 10px;
-                padding: 2px 8px;
+                padding: 1px 6px;
             }}
             QPushButton[segment="true"][navSegment="true"] {{
                 font-size: 10px;
+                padding: 1px 6px;
             }}
             QPushButton[nav="true"][navLevel="success"] {{
                 border-color: {success};
@@ -2297,7 +2298,7 @@ class MainWindow(QMainWindow):
                 border: 0;
                 color: {muted};
                 font-size: 10px;
-                padding: 0 2px;
+                padding: 0 1px;
             }}
             #screenTitle {{
                 color: {text};
