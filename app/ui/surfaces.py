@@ -89,7 +89,7 @@ class SystemWorkspaceView(QWidget):
     ) -> None:
         super().__init__()
         self.toolbar_slot = QVBoxLayout()
-        self.toolbar_slot.setContentsMargins(0, 0, 0, 0)
+        self.toolbar_slot.setContentsMargins(0, 10, 0, 0)
         self.toolbar_slot.setSpacing(8)
         self.panel_stack = QStackedWidget()
 
@@ -209,7 +209,7 @@ class VaultWorkspaceView(QWidget):
     ) -> None:
         super().__init__()
         self.toolbar_slot = QVBoxLayout()
-        self.toolbar_slot.setContentsMargins(0, 0, 0, 0)
+        self.toolbar_slot.setContentsMargins(0, 10, 0, 0)
         self.toolbar_slot.setSpacing(8)
         self.panel_stack = QStackedWidget()
 
@@ -351,7 +351,7 @@ class GeneratorWorkspaceView(QWidget):
     def __init__(self, *, generator_widgets: dict[str, QWidget]) -> None:
         super().__init__()
         self.toolbar_slot = QVBoxLayout()
-        self.toolbar_slot.setContentsMargins(0, 0, 0, 0)
+        self.toolbar_slot.setContentsMargins(0, 10, 0, 0)
         self.toolbar_slot.setSpacing(8)
 
         generator_panel, generator_layout = _panel(
