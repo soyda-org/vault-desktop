@@ -237,6 +237,8 @@ class MainWindow(QMainWindow):
         self.keep_vault_open_checkbox.toggled.connect(
             lambda *_: self._handle_keep_vault_open_toggle()
         )
+        self.vault_auto_lock_countdown_label = QLabel()
+        self.vault_auto_lock_countdown_label.setObjectName("vaultAutoLockCountdown")
 
         self.copy_activity_log_button = QPushButton("Copy Diagnostics")
         self.copy_activity_log_button.clicked.connect(self.run_copy_activity_log)
@@ -825,6 +827,7 @@ class MainWindow(QMainWindow):
             },
             preference_widgets={
                 "keep_open": self.keep_vault_open_checkbox,
+                "auto_lock_status": self.vault_auto_lock_countdown_label,
             },
             tabs=self.tabs,
         )
@@ -905,6 +908,11 @@ class MainWindow(QMainWindow):
         self.vault_auto_lock_timer = QTimer(self)
         self.vault_auto_lock_timer.setSingleShot(True)
         self.vault_auto_lock_timer.timeout.connect(self._handle_vault_auto_lock_timeout)
+        self.vault_auto_lock_countdown_timer = QTimer(self)
+        self.vault_auto_lock_countdown_timer.setInterval(1000)
+        self.vault_auto_lock_countdown_timer.timeout.connect(
+            self._refresh_vault_auto_lock_countdown_label
+        )
 
         self.session_auto_logout_timer = QTimer(self)
         self.session_auto_logout_timer.setSingleShot(True)
@@ -3902,11 +3910,46 @@ class MainWindow(QMainWindow):
 
     def _stop_idle_timers(self) -> None:
         self.vault_auto_lock_timer.stop()
+        if hasattr(self, "vault_auto_lock_countdown_timer"):
+            self.vault_auto_lock_countdown_timer.stop()
         self.session_auto_logout_timer.stop()
+
+    def _format_duration_label(self, remaining_ms: int) -> str:
+        remaining_seconds = max(0, (remaining_ms + 999) // 1000)
+        minutes, seconds = divmod(remaining_seconds, 60)
+        if minutes:
+            return f"{minutes}m {seconds:02d}s"
+        return f"{seconds}s"
+
+    def _refresh_vault_auto_lock_countdown_label(self) -> None:
+        if not hasattr(self, "vault_auto_lock_countdown_label"):
+            return
+        if not self.desktop_service.is_authenticated():
+            self.vault_auto_lock_countdown_label.setText("")
+            return
+        if not self._is_vault_unlocked():
+            self.vault_auto_lock_countdown_label.setText("Vault locked.")
+            return
+        if (
+            hasattr(self, "keep_vault_open_checkbox")
+            and self.keep_vault_open_checkbox.isChecked()
+        ):
+            self.vault_auto_lock_countdown_label.setText("Auto-lock disabled.")
+            return
+        remaining_ms = self.vault_auto_lock_timer.remainingTime()
+        if remaining_ms < 0:
+            self.vault_auto_lock_countdown_label.setText(
+                f"Auto-lock in {self._format_duration_label(self.vault_auto_lock_timeout_ms)}."
+            )
+            return
+        self.vault_auto_lock_countdown_label.setText(
+            f"Auto-lock in {self._format_duration_label(remaining_ms)}."
+        )
 
     def _refresh_idle_policy(self) -> None:
         if not self.desktop_service.is_authenticated():
             self._stop_idle_timers()
+            self._refresh_vault_auto_lock_countdown_label()
             return
 
         self.session_auto_logout_timer.start(self.session_auto_logout_timeout_ms)
@@ -3919,8 +3962,13 @@ class MainWindow(QMainWindow):
             )
         ):
             self.vault_auto_lock_timer.start(self.vault_auto_lock_timeout_ms)
+            if hasattr(self, "vault_auto_lock_countdown_timer"):
+                self.vault_auto_lock_countdown_timer.start()
         else:
             self.vault_auto_lock_timer.stop()
+            if hasattr(self, "vault_auto_lock_countdown_timer"):
+                self.vault_auto_lock_countdown_timer.stop()
+        self._refresh_vault_auto_lock_countdown_label()
 
     def _handle_user_activity(self) -> None:
         if not self.desktop_service.is_authenticated():
@@ -3934,6 +3982,7 @@ class MainWindow(QMainWindow):
             return
         if self._is_file_job_running():
             self.vault_auto_lock_timer.start(15000)
+            self._refresh_vault_auto_lock_countdown_label()
             self.status_label.setText(
                 "Vault auto-lock delayed because a file job is still running."
             )

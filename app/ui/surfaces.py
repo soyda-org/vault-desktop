@@ -258,6 +258,7 @@ class VaultWorkspaceView(QWidget):
         workspace_footer_row.setSpacing(8)
         workspace_footer_row.addWidget(preference_widgets["keep_open"], 0)
         workspace_footer_row.addStretch(1)
+        workspace_footer_row.addWidget(preference_widgets["auto_lock_status"], 0)
         workspace_footer_row.addWidget(session_actions["lock"], 0)
         workspace_layout.addLayout(workspace_footer_row)
 

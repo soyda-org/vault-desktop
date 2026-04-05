@@ -176,6 +176,7 @@ def make_window_harness(
     window.unlock_with_recovery_key_button = QPushButton()
     window.clear_vault_key_button = QPushButton()
     window.keep_vault_open_checkbox = QCheckBox()
+    window.vault_auto_lock_countdown_label = QLabel()
 
     window.load_credential_detail_button = QPushButton()
     window.create_credential_button = QPushButton()
@@ -233,6 +234,8 @@ def make_window_harness(
     window._resolve_active_screen = lambda: MainWindow._resolve_active_screen(window)
     window._screen_index = lambda screen: MainWindow._screen_index(window, screen)
     window._apply_screen_state = lambda: MainWindow._apply_screen_state(window)
+    window._format_duration_label = lambda remaining_ms: MainWindow._format_duration_label(window, remaining_ms)
+    window._refresh_vault_auto_lock_countdown_label = lambda: MainWindow._refresh_vault_auto_lock_countdown_label(window)
     window._locked_detail_text = lambda kind, item: MainWindow._locked_detail_text(window, kind, item)
     window._locked_placeholder_text = lambda kind: MainWindow._locked_placeholder_text(window, kind)
     window._clear_sensitive_views_for_locked_vault = lambda: MainWindow._clear_sensitive_views_for_locked_vault(window)
@@ -597,6 +600,11 @@ def test_refresh_idle_policy_skips_vault_auto_lock_when_keep_open_enabled(qapp, 
     window.vault_auto_lock_timer = SimpleNamespace(
         start=lambda *_: setattr(window, "_vault_timer_started", True),
         stop=lambda: setattr(window, "_vault_timer_stopped", True),
+        remainingTime=lambda: -1,
+    )
+    window.vault_auto_lock_countdown_timer = SimpleNamespace(
+        start=lambda *_: setattr(window, "_countdown_started", True),
+        stop=lambda: setattr(window, "_countdown_stopped", True),
     )
     window.session_auto_logout_timeout_ms = 1
     window.vault_auto_lock_timeout_ms = 1
@@ -606,6 +614,29 @@ def test_refresh_idle_policy_skips_vault_auto_lock_when_keep_open_enabled(qapp, 
 
     assert getattr(window, "_vault_timer_started", False) is False
     assert getattr(window, "_vault_timer_stopped", False) is True
+    assert window.vault_auto_lock_countdown_label.text() == "Auto-lock disabled."
+
+
+def test_refresh_idle_policy_sets_vault_auto_lock_countdown_label(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.session_auto_logout_timer = SimpleNamespace(start=lambda *_: None, stop=lambda: None)
+    window.vault_auto_lock_timer = SimpleNamespace(
+        start=lambda *_: setattr(window, "_vault_timer_started", True),
+        stop=lambda: setattr(window, "_vault_timer_stopped", True),
+        remainingTime=lambda: 65000,
+    )
+    window.vault_auto_lock_countdown_timer = SimpleNamespace(
+        start=lambda *_: setattr(window, "_countdown_started", True),
+        stop=lambda: setattr(window, "_countdown_stopped", True),
+    )
+    window.session_auto_logout_timeout_ms = 1
+    window.vault_auto_lock_timeout_ms = 180000
+    window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+
+    MainWindow._refresh_idle_policy(window)
+
+    assert getattr(window, "_vault_timer_started", False) is True
+    assert window.vault_auto_lock_countdown_label.text() == "Auto-lock in 1m 05s."
 
 
 def test_handle_workspace_tab_changed_loads_visible_section(qapp, tmp_path: Path) -> None:
