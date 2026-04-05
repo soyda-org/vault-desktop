@@ -1039,10 +1039,10 @@ class MainWindow(QMainWindow):
         toolbar_layout = QHBoxLayout(toolbar_frame)
         toolbar_layout.setContentsMargins(12, 8, 12, 8)
         toolbar_layout.setSpacing(6)
-        toolbar_layout.addWidget(self.system_service_tab_button)
         toolbar_layout.addStretch(1)
         toolbar_layout.addWidget(self.theme_toggle_button)
         toolbar_layout.addWidget(self.nav_generator_button)
+        toolbar_layout.addWidget(self.system_service_tab_button)
         toolbar_layout.addWidget(self.nav_vault_button)
         self.shell_toolbar_frame = toolbar_frame
 
