@@ -562,11 +562,13 @@ def test_clear_sensitive_views_for_locked_vault_sets_locked_placeholders(qapp, t
 def test_run_clear_vault_key_wipes_sensitive_views(qapp, tmp_path: Path) -> None:
     window = make_window_harness(tmp_path)
     window.desktop_service.set_session_vault_master_key(VALID_MASTER_KEY_B64)
+    window.current_vault_panel = "workspace"
     _seed_sensitive_views(window)
 
     MainWindow.run_clear_vault_key(window)
 
     assert window.desktop_service.current_session_vault_master_key() is None
+    assert window.current_vault_panel == "access"
     assert "Vault locked." in window.status_label.text()
     assert "Credential detail is locked." in window.credentials_output.toPlainText()
     assert "Note detail is locked." in window.notes_output.toPlainText()

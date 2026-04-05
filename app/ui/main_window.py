@@ -3324,6 +3324,9 @@ class MainWindow(QMainWindow):
         self.desktop_service.clear_session_vault_master_key()
         self.recovery_key_b64_input.clear()
         self.current_screen = "vault"
+        self.current_vault_panel = "access"
+        if hasattr(self, "vault_workspace_view"):
+            self.vault_workspace_view.set_current_panel("access")
         self._clear_sensitive_views_for_locked_vault()
         self.status_label.setText(
             "Vault locked.\n"
