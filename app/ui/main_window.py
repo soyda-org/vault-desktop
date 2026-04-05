@@ -2762,6 +2762,9 @@ class MainWindow(QMainWindow):
             f"Token type: {session.token_type}"
         )
         self.current_screen = "vault"
+        self.current_vault_panel = "access"
+        if hasattr(self, "vault_workspace_view"):
+            self.vault_workspace_view.set_current_panel("access")
         self.recovery_key_b64_input.clear()
         self.refresh_session_label()
         if not self._is_vault_unlocked():

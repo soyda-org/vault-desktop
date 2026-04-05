@@ -40,6 +40,7 @@ def test_handle_login_result_does_not_show_access_token_preview(app_fixture) -> 
         status_label=QLabel(),
         recovery_key_b64_input=QLineEdit(),
         current_screen="system",
+        current_vault_panel="workspace",
         refresh_session_label=lambda: None,
         _is_vault_unlocked=lambda: False,
         _clear_sensitive_views_for_locked_vault=lambda: None,
@@ -53,6 +54,8 @@ def test_handle_login_result_does_not_show_access_token_preview(app_fixture) -> 
     assert "Login succeeded." in window.status_label.text()
     assert "Token type: bearer" in window.status_label.text()
     assert "Access token preview" not in window.status_label.text()
+    assert window.current_screen == "vault"
+    assert window.current_vault_panel == "access"
 
 
 def test_refresh_system_state_indicators_reflect_probe_and_session(app_fixture) -> None:
