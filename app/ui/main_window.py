@@ -2310,7 +2310,8 @@ class MainWindow(QMainWindow):
                 color: {muted};
             }}
             #vaultAutoLockCountdown[blinkActive="true"] {{
-                color: {warning};
+                color: #ffd36a;
+                font-weight: 700;
             }}
             #vaultAutoLockCountdown[blinkActive="false"] {{
                 color: {muted};
