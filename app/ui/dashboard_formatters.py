@@ -44,6 +44,23 @@ def _append_local_decrypt_sections(lines: list[str], item: dict) -> None:
         )
 
 
+def _append_plaintext_pairs(lines: list[str], payload: dict | None, *, skip: set[str] | None = None) -> None:
+    data = payload or {}
+    ignored = skip or set()
+    extras = [
+        (str(key), value)
+        for key, value in data.items()
+        if key not in ignored and value not in (None, "", [], {})
+    ]
+    if not extras:
+        return
+
+    lines.append("Details:")
+    for key, value in extras:
+        lines.append(f"{key.replace('_', ' ').title()}: {value}")
+    lines.append("")
+
+
 def credential_list_label(item: dict) -> str:
     app_name = item.get("plaintext_app_name") or item.get("credential_id", "-")
     username = item.get("plaintext_username") or ""
@@ -158,67 +175,74 @@ def format_files_items(items: list[dict]) -> str:
 
 
 def format_credential_detail(item: dict) -> str:
+    payload = item.get("plaintext_payload") or {}
+    metadata = item.get("plaintext_metadata") or {}
+    username = item.get("plaintext_username") or payload.get("username") or "-"
     lines = [
         "Credential detail loaded successfully.",
         "",
         f"App: {item.get('plaintext_app_name', '-')}",
-        f"Username: {item.get('plaintext_username', '-')}",
-        f"ID: {item.get('credential_id', '-')}",
-        f"User ID: {item.get('user_id', '-')}",
+        f"Username: {username}",
         f"State: {item.get('state', '-')}",
-        f"Current version: {item.get('current_version', '-')}",
-        f"Created by device ID: {item.get('created_by_device_id', '-')}",
-        f"Created at: {item.get('created_at', '-')}",
         "",
     ]
 
-    _append_local_decrypt_sections(lines, item)
+    label = metadata.get("label")
+    if label and label != item.get("plaintext_app_name"):
+        lines.append(f"Label: {label}")
+    if payload.get("url"):
+        lines.append(f"URL: {payload.get('url')}")
+    if payload.get("secret"):
+        lines.append(f"Secret: {payload.get('secret')}")
+    if len(lines) > 5:
+        lines.append("")
 
-    lines.extend(
-        [
-            "Encrypted metadata:",
-            _json_text(item.get("encrypted_metadata")),
-            "",
-            "Encrypted payload:",
-            _json_text(item.get("encrypted_payload")),
-            "",
-            "Encryption header:",
-            _json_text(item.get("encryption_header")),
-        ]
-    )
-    return "\n".join(lines)
+    if item.get("decryption_error"):
+        lines.extend(
+            [
+                "Unlock vault to view decrypted content.",
+                f"Reason: {item.get('decryption_error')}",
+                "",
+            ]
+        )
+        return "\n".join(lines).rstrip()
+
+    _append_plaintext_pairs(lines, payload, skip={"username", "url", "secret"})
+    return "\n".join(lines).rstrip()
 
 
 def format_note_detail(item: dict) -> str:
+    payload = item.get("plaintext_payload") or {}
     lines = [
         "Note detail loaded successfully.",
         "",
         f"Title: {item.get('plaintext_title', '-')}",
-        f"ID: {item.get('note_id', '-')}",
-        f"User ID: {item.get('user_id', '-')}",
         f"Type: {item.get('note_type', '-')}",
         f"State: {item.get('state', '-')}",
-        f"Current version: {item.get('current_version', '-')}",
-        f"Created by device ID: {item.get('created_by_device_id', '-')}",
-        f"Created at: {item.get('created_at', '-')}",
         "",
     ]
 
-    _append_local_decrypt_sections(lines, item)
+    if item.get("decryption_error"):
+        lines.extend(
+            [
+                "Unlock vault to view decrypted content.",
+                f"Reason: {item.get('decryption_error')}",
+                "",
+            ]
+        )
+        return "\n".join(lines).rstrip()
 
-    lines.extend(
-        [
-            "Encrypted metadata:",
-            _json_text(item.get("encrypted_metadata")),
-            "",
-            "Encrypted payload:",
-            _json_text(item.get("encrypted_payload")),
-            "",
-            "Encryption header:",
-            _json_text(item.get("encryption_header")),
-        ]
-    )
-    return "\n".join(lines)
+    body = payload.get("content") or payload.get("body") or payload.get("text")
+    if body:
+        lines.extend(
+            [
+                "Content:",
+                str(body),
+                "",
+            ]
+        )
+    _append_plaintext_pairs(lines, payload, skip={"content", "body", "text"})
+    return "\n".join(lines).rstrip()
 
 
 def format_file_detail(item: dict) -> str:
@@ -226,16 +250,6 @@ def format_file_detail(item: dict) -> str:
         "File detail loaded successfully.\n\n"
         f"Name: {item.get('plaintext_filename', '-')}\n"
         f"Size: {item.get('plaintext_size_bytes', '-')}\n"
-        f"ID: {item.get('file_id', '-')}\n"
-        f"User ID: {item.get('user_id', '-')}\n"
         f"State: {item.get('state', '-')}\n"
-        f"Current version: {item.get('current_version', '-')}\n"
-        f"Created by device ID: {item.get('created_by_device_id', '-')}\n"
-        f"Created at: {item.get('created_at', '-')}\n\n"
-        "Encrypted manifest:\n"
-        f"{json.dumps(item.get('encrypted_manifest'), indent=2)}\n\n"
-        "Encryption header:\n"
-        f"{json.dumps(item.get('encryption_header'), indent=2)}\n\n"
-        "Blobs:\n"
-        f"{json.dumps(item.get('blobs'), indent=2)}"
+        f"Current version: {item.get('current_version', '-')}"
     )

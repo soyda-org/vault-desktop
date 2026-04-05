@@ -121,6 +121,8 @@ def test_format_credential_detail() -> None:
     text = format_credential_detail(
         {
             "credential_id": "cred_001",
+            "plaintext_app_name": "GitHub",
+            "plaintext_username": "alice",
             "state": "active",
             "current_version": 1,
             "encrypted_payload": {"ciphertext_b64": "abc"},
@@ -129,14 +131,16 @@ def test_format_credential_detail() -> None:
     )
 
     assert "Credential detail loaded successfully." in text
-    assert "cred_001" in text
-    assert "ciphertext_b64" in text
+    assert "GitHub" in text
+    assert "alice" in text
+    assert "ciphertext_b64" not in text
 
 
 def test_format_note_detail() -> None:
     text = format_note_detail(
         {
             "note_id": "note_001",
+            "plaintext_title": "todo",
             "note_type": "note",
             "state": "active",
             "encrypted_payload": {"ciphertext_b64": "abc"},
@@ -145,14 +149,16 @@ def test_format_note_detail() -> None:
     )
 
     assert "Note detail loaded successfully." in text
-    assert "note_001" in text
-    assert "ciphertext_b64" in text
+    assert "todo" in text
+    assert "ciphertext_b64" not in text
 
 
 def test_format_file_detail() -> None:
     text = format_file_detail(
         {
             "file_id": "file_001",
+            "plaintext_filename": "archive.zip",
+            "plaintext_size_bytes": 1234,
             "state": "active",
             "encrypted_manifest": {"ciphertext_b64": "abc"},
             "encryption_header": {"nonce_b64": "xyz"},
@@ -161,14 +167,15 @@ def test_format_file_detail() -> None:
     )
 
     assert "File detail loaded successfully." in text
-    assert "file_001" in text
-    assert "object_key" in text
+    assert "archive.zip" in text
+    assert "object_key" not in text
 
 
 def test_format_credential_detail_includes_plaintext_sections_when_available() -> None:
     text = format_credential_detail(
         {
             "credential_id": "cred_001",
+            "plaintext_app_name": "Personal",
             "state": "active",
             "current_version": 1,
             "encrypted_payload": {"ciphertext_b64": "abc"},
@@ -178,12 +185,8 @@ def test_format_credential_detail_includes_plaintext_sections_when_available() -
         }
     )
 
-    assert "Local decrypt status:" in text
-    assert "Available" in text
-    assert "Plaintext metadata:" in text
-    assert '"label": "Personal"' in text
-    assert "Plaintext payload:" in text
-    assert '"username": "alice"' in text
+    assert "Personal" in text
+    assert "Username: alice" in text
 
 
 def test_format_note_detail_includes_decryption_error_when_unavailable() -> None:
@@ -198,5 +201,5 @@ def test_format_note_detail_includes_decryption_error_when_unavailable() -> None
         }
     )
 
-    assert "Local decrypt status:" in text
-    assert "Unavailable: Session vault key is not unlocked." in text
+    assert "Unlock vault to view decrypted content." in text
+    assert "Session vault key is not unlocked." in text
