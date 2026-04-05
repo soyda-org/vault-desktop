@@ -236,6 +236,8 @@ def test_remember_session_checkbox_reflects_saved_preference(app_fixture, monkey
     session = window.desktop_service.current_session()
     assert session is not None
     assert session.identifier == "alice"
+    assert window.current_screen == "vault"
+    assert window.current_vault_panel == "access"
 
 
 def test_keep_vault_open_checkbox_reflects_saved_preference(app_fixture, monkeypatch) -> None:

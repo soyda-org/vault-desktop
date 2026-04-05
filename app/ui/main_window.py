@@ -797,6 +797,9 @@ class MainWindow(QMainWindow):
 
         self.screen_stack = QStackedWidget()
         self.current_screen = "system"
+        if self.desktop_service.is_authenticated():
+            self.current_screen = "vault"
+            self.current_vault_panel = "access"
 
         self.system_workspace_view = SystemWorkspaceView(
             header_label=self.header_label,
