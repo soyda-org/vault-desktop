@@ -321,11 +321,6 @@ class MainWindow(QMainWindow):
         self.load_all_button.clicked.connect(self.load_all)
         self.load_all_button.setProperty("tone", "secondary")
 
-        self.load_credential_detail_button = QPushButton("Load Selected Credential")
-        self.load_credential_detail_button.clicked.connect(self.load_credential_detail)
-        self.load_credential_detail_button.setEnabled(False)
-        self.load_credential_detail_button.setProperty("tone", "secondary")
-
         self.create_credential_button = QPushButton("New Credential")
         self.create_credential_button.clicked.connect(self.run_open_create_credential_dialog)
         self.create_credential_button.setProperty("tone", "primary")
@@ -416,6 +411,7 @@ class MainWindow(QMainWindow):
         self.selected_note_current_version: int | None = None
 
         self.credentials_list = QListWidget()
+        self.credentials_list.currentItemChanged.connect(lambda *_: self.load_credential_detail())
         self.credentials_list.itemDoubleClicked.connect(lambda _: self.load_credential_detail())
         self.credentials_active_filter_button = QPushButton("Active")
         self.credentials_active_filter_button.setProperty("segment", "true")
@@ -1031,7 +1027,6 @@ class MainWindow(QMainWindow):
         list_actions = QHBoxLayout()
         list_actions.setContentsMargins(0, 0, 0, 0)
         list_actions.setSpacing(8)
-        list_actions.addWidget(self.load_credential_detail_button)
         list_actions.addStretch(1)
 
         list_content = QVBoxLayout()
@@ -3898,7 +3893,6 @@ class MainWindow(QMainWindow):
             self.selected_credential_id is not None
             and self.selected_credential_current_version is not None
         )
-        self.load_credential_detail_button.setEnabled(credential_item_selected)
         self.create_credential_button.setEnabled(vault_unlocked)
         self.update_credential_button.setEnabled(vault_unlocked and credential_detail_loaded)
         self.delete_credential_button.setEnabled(vault_unlocked and credential_detail_loaded)
