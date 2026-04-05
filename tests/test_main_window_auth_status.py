@@ -326,6 +326,32 @@ def test_credential_detail_renders_readonly_fields_with_masked_password(app_fixt
     assert window.credential_detail_name_input.isReadOnly()
     assert window.credential_detail_username_input.isReadOnly()
     assert window.credential_detail_password_input.isReadOnly()
+    assert window.toggle_credential_password_button.text() == "Show"
+
+
+def test_credential_password_toggle_reveals_and_hides_value(app_fixture) -> None:
+    window = MainWindow(get_settings())
+    window._render_credential_detail_fields(
+        {
+            "state": "active",
+            "plaintext_payload": {
+                "secret": "s3cr3t",
+            },
+        }
+    )
+
+    assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password
+    assert window.toggle_credential_password_button.text() == "Show"
+
+    window.toggle_credential_password_button.click()
+
+    assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Normal
+    assert window.toggle_credential_password_button.text() == "Hide"
+
+    window.toggle_credential_password_button.click()
+
+    assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password
+    assert window.toggle_credential_password_button.text() == "Show"
 
 
 def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:

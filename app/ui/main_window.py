@@ -475,6 +475,12 @@ class MainWindow(QMainWindow):
                 "Credential password copied to clipboard.",
             )
         )
+        self.toggle_credential_password_button = QPushButton("Show")
+        self.toggle_credential_password_button.setProperty("tone", "secondary")
+        self.toggle_credential_password_button.setProperty("hoverGlow", "light")
+        self.toggle_credential_password_button.clicked.connect(
+            self._toggle_credential_password_visibility
+        )
         self.copy_credential_url_button = QPushButton("Copy")
         self.copy_credential_url_button.setProperty("tone", "secondary")
         self.copy_credential_url_button.setProperty("hoverGlow", "light")
@@ -516,6 +522,7 @@ class MainWindow(QMainWindow):
             self._build_readonly_detail_row(
                 "Password",
                 self.credential_detail_password_input,
+                self.toggle_credential_password_button,
                 self.copy_credential_password_button,
             )
         )
@@ -1131,7 +1138,7 @@ class MainWindow(QMainWindow):
         self,
         label_text: str,
         input_widget: QLineEdit,
-        copy_button: QPushButton,
+        *action_buttons: QPushButton,
     ) -> QVBoxLayout:
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1144,7 +1151,8 @@ class MainWindow(QMainWindow):
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(8)
         row.addWidget(input_widget, 1)
-        row.addWidget(copy_button, 0)
+        for button in action_buttons:
+            row.addWidget(button, 0)
         layout.addLayout(row)
         return layout
 
@@ -4300,6 +4308,10 @@ class MainWindow(QMainWindow):
             widget = getattr(self, attribute_name, None)
             if widget is not None:
                 widget.clear()
+        if hasattr(self, "credential_detail_password_input"):
+            self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        if hasattr(self, "toggle_credential_password_button"):
+            self.toggle_credential_password_button.setText("Show")
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
 
@@ -4337,10 +4349,21 @@ class MainWindow(QMainWindow):
         self.credential_detail_name_input.setText(name_value)
         self.credential_detail_username_input.setText(username_value)
         self.credential_detail_password_input.setText(password_value)
+        self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.toggle_credential_password_button.setText("Show")
         self.credential_detail_url_input.setText(url_value)
         self.credential_detail_state_input.setText(state_value)
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentIndex(1)
+
+    def _toggle_credential_password_visibility(self) -> None:
+        if self.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password:
+            self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Normal)
+            self.toggle_credential_password_button.setText("Hide")
+            return
+
+        self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.toggle_credential_password_button.setText("Show")
 
     def _handle_session_auto_logout_timeout(self) -> None:
         if not self.desktop_service.is_authenticated():
