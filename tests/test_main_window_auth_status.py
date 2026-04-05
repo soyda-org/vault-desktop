@@ -133,6 +133,18 @@ def test_main_window_device_fields_are_read_only(app_fixture) -> None:
     assert window.platform_input.alignment() == Qt.AlignmentFlag.AlignCenter
 
 
+def test_theme_toggle_button_text_tracks_current_theme(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.current_theme = "dark"
+    window._apply_theme()
+    assert window.theme_toggle_button.text() == "Theme: Dark"
+
+    window.current_theme = "light"
+    window._apply_theme()
+    assert window.theme_toggle_button.text() == "Theme: Light"
+
+
 def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
     window = MainWindow(get_settings())
 
