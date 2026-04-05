@@ -346,8 +346,10 @@ def test_credential_detail_renders_readonly_fields_with_masked_password(app_fixt
     assert window.credential_detail_stack.currentIndex() == 1
     assert window.credential_detail_name_input.text() == "GitHub"
     assert window.credential_detail_username_input.text() == "alice@example.com"
-    assert window.credential_detail_password_input.text() == "s3cr3t"
-    assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password
+    assert window._credential_detail_password_plaintext == "s3cr3t"
+    assert 8 <= len(window.credential_detail_password_input.text()) <= 14
+    assert set(window.credential_detail_password_input.text()) == {"\u2022"}
+    assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Normal
     assert window.credential_detail_url_input.text() == "https://example.com"
     assert window.credential_detail_name_input.property("ghostField") is True
     assert window.credential_detail_url_input.property("ghostField") is True
@@ -372,17 +374,20 @@ def test_credential_password_toggle_reveals_and_hides_value(app_fixture) -> None
         }
     )
 
-    assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password
+    assert window.toggle_credential_password_button.text() == "Show"
+    hidden_display = window.credential_detail_password_input.text()
+    assert 8 <= len(hidden_display) <= 14
     assert window.toggle_credential_password_button.text() == "Show"
 
     window.toggle_credential_password_button.click()
 
-    assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Normal
+    assert window.credential_detail_password_input.text() == "s3cr3t"
     assert window.toggle_credential_password_button.text() == "Hide"
 
     window.toggle_credential_password_button.click()
 
-    assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password
+    assert 8 <= len(window.credential_detail_password_input.text()) <= 14
+    assert set(window.credential_detail_password_input.text()) == {"\u2022"}
     assert window.toggle_credential_password_button.text() == "Show"
 
 

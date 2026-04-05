@@ -4,6 +4,7 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
+import secrets
 
 from PySide6.QtCore import QThread, Qt, QEvent, QTimer
 from PySide6.QtGui import QColor, QFont, QFontDatabase
@@ -447,6 +448,7 @@ class MainWindow(QMainWindow):
         self.current_credential_filter = "active"
         self.selected_note_id: str | None = None
         self.selected_note_current_version: int | None = None
+        self._credential_detail_password_plaintext = ""
 
         self.credentials_list = QListWidget()
         self.credentials_list.currentItemChanged.connect(lambda *_: self.load_credential_detail())
@@ -526,7 +528,7 @@ class MainWindow(QMainWindow):
         self.copy_credential_password_button.setProperty("hoverGlow", "light")
         self.copy_credential_password_button.clicked.connect(
             lambda: self._copy_text_value(
-                self.credential_detail_password_input.text(),
+                self._credential_detail_password_plaintext,
                 "Credential password copied to clipboard.",
             )
         )
@@ -4512,6 +4514,7 @@ class MainWindow(QMainWindow):
             self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
 
     def _clear_credential_detail_fields(self) -> None:
+        self._credential_detail_password_plaintext = ""
         for attribute_name in (
             "credential_detail_name_input",
             "credential_detail_username_input",
@@ -4523,12 +4526,15 @@ class MainWindow(QMainWindow):
             if widget is not None:
                 widget.clear()
         if hasattr(self, "credential_detail_password_input"):
-            self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+            self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Normal)
         if hasattr(self, "toggle_credential_password_button"):
             self.toggle_credential_password_button.setText("Show")
         self._refresh_credential_detail_field_widths()
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
+
+    def _random_password_mask(self) -> str:
+        return "\u2022" * (8 + secrets.randbelow(7))
 
     def _set_detail_input_width(
         self,
@@ -4552,13 +4558,9 @@ class MainWindow(QMainWindow):
             self.credential_detail_username_input,
             self.credential_detail_username_input.text(),
         )
-        password_masked = (
-            self.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password
-        )
         self._set_detail_input_width(
             self.credential_detail_password_input,
             self.credential_detail_password_input.text(),
-            masked=password_masked,
         )
 
     def _render_credential_detail_fields(self, item: dict) -> None:
@@ -4592,8 +4594,9 @@ class MainWindow(QMainWindow):
         ) or "-"
         self.credential_detail_name_input.setText(name_value)
         self.credential_detail_username_input.setText(username_value)
-        self.credential_detail_password_input.setText(password_value)
-        self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self._credential_detail_password_plaintext = password_value
+        self.credential_detail_password_input.setText(self._random_password_mask())
+        self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Normal)
         self.toggle_credential_password_button.setText("Show")
         self.credential_detail_url_input.setText(url_value)
         self._refresh_credential_detail_field_widths()
@@ -4601,13 +4604,15 @@ class MainWindow(QMainWindow):
             self.credential_detail_stack.setCurrentIndex(1)
 
     def _toggle_credential_password_visibility(self) -> None:
-        if self.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password:
-            self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Normal)
+        if self.toggle_credential_password_button.text() == "Show":
+            self.credential_detail_password_input.setText(
+                self._credential_detail_password_plaintext or "-"
+            )
             self.toggle_credential_password_button.setText("Hide")
             self._refresh_credential_detail_field_widths()
             return
 
-        self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.credential_detail_password_input.setText(self._random_password_mask())
         self.toggle_credential_password_button.setText("Show")
         self._refresh_credential_detail_field_widths()
 
