@@ -1060,8 +1060,8 @@ class MainWindow(QMainWindow):
         self.shell_toolbar_frame = toolbar_frame
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(10, 10, 10, 10)
-        layout.setSpacing(8)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
         layout.addWidget(self.screen_stack, 1)
 
         container = QWidget()
