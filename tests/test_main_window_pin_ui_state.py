@@ -236,6 +236,7 @@ def make_window_harness(
     window._apply_screen_state = lambda: MainWindow._apply_screen_state(window)
     window._format_duration_label = lambda remaining_ms: MainWindow._format_duration_label(window, remaining_ms)
     window._refresh_vault_auto_lock_countdown_label = lambda: MainWindow._refresh_vault_auto_lock_countdown_label(window)
+    window._refresh_workspace_nav_buttons = lambda: MainWindow._refresh_workspace_nav_buttons(window)
     window._locked_detail_text = lambda kind, item: MainWindow._locked_detail_text(window, kind, item)
     window._locked_placeholder_text = lambda kind: MainWindow._locked_placeholder_text(window, kind)
     window._clear_sensitive_views_for_locked_vault = lambda: MainWindow._clear_sensitive_views_for_locked_vault(window)

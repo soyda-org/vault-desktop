@@ -252,6 +252,17 @@ def test_keep_vault_open_checkbox_reflects_saved_preference(app_fixture, monkeyp
     assert window.keep_vault_open_checkbox.isChecked() is True
 
 
+def test_workspace_nav_buttons_follow_selected_tab(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.tabs.setCurrentIndex(1)
+    app_fixture.processEvents()
+
+    assert window.workspace_notes_tab_button.property("segmentCurrent") is True
+    assert window.workspace_credentials_tab_button.property("segmentCurrent") is False
+    assert window.workspace_files_tab_button.property("segmentCurrent") is False
+
+
 def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.new_vault_pin_input.clear()

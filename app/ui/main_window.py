@@ -727,8 +727,24 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._build_credentials_tab(), "Credentials")
         self.tabs.addTab(self._build_notes_tab(), "Notes")
         self.tabs.addTab(self._build_files_tab(), "Files")
+        self.tabs.tabBar().hide()
         self.tabs.setCurrentIndex(self.persisted_ui_settings.last_tab_index)
         self.tabs.currentChanged.connect(self._handle_workspace_tab_changed)
+        self.workspace_credentials_tab_button = QPushButton("Credentials")
+        self.workspace_credentials_tab_button.setProperty("segment", "true")
+        self.workspace_credentials_tab_button.clicked.connect(
+            lambda: self.tabs.setCurrentIndex(0)
+        )
+        self.workspace_notes_tab_button = QPushButton("Notes")
+        self.workspace_notes_tab_button.setProperty("segment", "true")
+        self.workspace_notes_tab_button.clicked.connect(
+            lambda: self.tabs.setCurrentIndex(1)
+        )
+        self.workspace_files_tab_button = QPushButton("Files")
+        self.workspace_files_tab_button.setProperty("segment", "true")
+        self.workspace_files_tab_button.clicked.connect(
+            lambda: self.tabs.setCurrentIndex(2)
+        )
 
         self.header_label = QLabel(
             f"App: {settings.app_name} | Environment: {settings.environment} | API: {self.persisted_ui_settings.api_base_url}"
@@ -829,6 +845,11 @@ class MainWindow(QMainWindow):
                 "keep_open": self.keep_vault_open_checkbox,
                 "auto_lock_status": self.vault_auto_lock_countdown_label,
             },
+            workspace_nav_buttons={
+                "credentials": self.workspace_credentials_tab_button,
+                "notes": self.workspace_notes_tab_button,
+                "files": self.workspace_files_tab_button,
+            },
             tabs=self.tabs,
         )
         self.generator_workspace_view = GeneratorWorkspaceView(
@@ -927,6 +948,7 @@ class MainWindow(QMainWindow):
         self._refresh_new_vault_pin_field_state()
         self._refresh_recovery_key_field_state()
         self._refresh_quick_crypto_method_state()
+        self._refresh_workspace_nav_buttons()
         self.refresh_session_label()
         self._refresh_system_state_indicators()
         self._refresh_action_states()
@@ -1379,9 +1401,26 @@ class MainWindow(QMainWindow):
         elif current_index == 2:
             self.load_files()
 
+    def _refresh_workspace_nav_buttons(self) -> None:
+        if not hasattr(self, "tabs"):
+            return
+        current_index = self.tabs.currentIndex()
+        button_map = (
+            (getattr(self, "workspace_credentials_tab_button", None), 0),
+            (getattr(self, "workspace_notes_tab_button", None), 1),
+            (getattr(self, "workspace_files_tab_button", None), 2),
+        )
+        for button, index in button_map:
+            if button is None:
+                continue
+            button.setProperty("segmentCurrent", current_index == index)
+            button.setEnabled(self.tabs.isTabEnabled(index))
+            self._repolish(button)
+
     def _handle_workspace_tab_changed(self, index: int) -> None:
         if not hasattr(self, "tabs"):
             return
+        self._refresh_workspace_nav_buttons()
         if self.current_screen != "vault" or self.current_vault_panel != "workspace":
             return
         if index == 0:
@@ -4418,6 +4457,7 @@ class MainWindow(QMainWindow):
         self.tabs.setTabEnabled(0, not (upload_busy or download_busy))
         self.tabs.setTabEnabled(1, not (upload_busy or download_busy))
         self.tabs.setTabEnabled(2, True)
+        self._refresh_workspace_nav_buttons()
         self._refresh_action_states()
 
     def _set_file_upload_busy(self, is_busy: bool) -> None:

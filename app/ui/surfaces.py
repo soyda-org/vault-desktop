@@ -184,6 +184,7 @@ class VaultWorkspaceView(QWidget):
         load_buttons: dict[str, QWidget],
         session_actions: dict[str, QWidget],
         preference_widgets: dict[str, QWidget],
+        workspace_nav_buttons: dict[str, QWidget],
         tabs: QWidget,
     ) -> None:
         super().__init__()
@@ -251,6 +252,14 @@ class VaultWorkspaceView(QWidget):
         access_layout.addLayout(content_wrapper, 1)
 
         workspace_panel, workspace_layout = _panel_shell()
+        workspace_nav_row = QHBoxLayout()
+        workspace_nav_row.setContentsMargins(0, 0, 0, 0)
+        workspace_nav_row.setSpacing(6)
+        workspace_nav_row.addWidget(workspace_nav_buttons["credentials"])
+        workspace_nav_row.addWidget(workspace_nav_buttons["notes"])
+        workspace_nav_row.addWidget(workspace_nav_buttons["files"])
+        workspace_nav_row.addStretch(1)
+        workspace_layout.addLayout(workspace_nav_row)
         tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         workspace_layout.addWidget(tabs, 1)
         workspace_footer_row = QHBoxLayout()
