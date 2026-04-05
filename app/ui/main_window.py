@@ -1013,8 +1013,8 @@ class MainWindow(QMainWindow):
         toolbar_layout.addWidget(self.system_service_tab_button)
         toolbar_layout.addWidget(self.vault_access_tab_button)
         toolbar_layout.addWidget(self.vault_workspace_tab_button)
-        toolbar_layout.addWidget(self.theme_toggle_button)
         toolbar_layout.addStretch(1)
+        toolbar_layout.addWidget(self.theme_toggle_button)
         toolbar_layout.addWidget(self.nav_generator_button)
         toolbar_layout.addWidget(self.nav_vault_button)
         self.shell_toolbar_frame = toolbar_frame
