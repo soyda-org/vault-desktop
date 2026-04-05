@@ -726,6 +726,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self._build_notes_tab(), "Notes")
         self.tabs.addTab(self._build_files_tab(), "Files")
         self.tabs.setCurrentIndex(self.persisted_ui_settings.last_tab_index)
+        self.tabs.currentChanged.connect(self._handle_workspace_tab_changed)
 
         self.header_label = QLabel(
             f"App: {settings.app_name} | Environment: {settings.environment} | API: {self.persisted_ui_settings.api_base_url}"
@@ -982,7 +983,6 @@ class MainWindow(QMainWindow):
         list_actions = QHBoxLayout()
         list_actions.setContentsMargins(0, 0, 0, 0)
         list_actions.setSpacing(8)
-        list_actions.addWidget(self.load_credentials_button)
         list_actions.addWidget(self.load_credential_detail_button)
         list_actions.addStretch(1)
 
@@ -1041,7 +1041,6 @@ class MainWindow(QMainWindow):
         list_actions = QHBoxLayout()
         list_actions.setContentsMargins(0, 0, 0, 0)
         list_actions.setSpacing(8)
-        list_actions.addWidget(self.load_notes_button)
         list_actions.addWidget(self.load_note_detail_button)
         list_actions.addStretch(1)
 
@@ -1357,7 +1356,32 @@ class MainWindow(QMainWindow):
         self.current_vault_panel = panel
         if hasattr(self, "vault_workspace_view"):
             self.vault_workspace_view.set_current_panel(panel)
+        if panel == "workspace":
+            self._autoload_current_workspace_tab()
         self._apply_screen_state()
+
+    def _autoload_current_workspace_tab(self) -> None:
+        if not hasattr(self, "tabs"):
+            return
+        current_index = self.tabs.currentIndex()
+        if current_index == 0:
+            self.load_credentials()
+        elif current_index == 1:
+            self.load_notes()
+        elif current_index == 2:
+            self.load_files()
+
+    def _handle_workspace_tab_changed(self, index: int) -> None:
+        if not hasattr(self, "tabs"):
+            return
+        if self.current_screen != "vault" or self.current_vault_panel != "workspace":
+            return
+        if index == 0:
+            self.load_credentials()
+        elif index == 1:
+            self.load_notes()
+        elif index == 2:
+            self.load_files()
 
     def _infer_status_severity(self, message: str) -> str:
         lower = message.lower()

@@ -211,6 +211,7 @@ def make_window_harness(
     window.nav_vault_button = QPushButton()
     window.theme_toggle_button = QPushButton()
     window.system_workspace_view = SimpleNamespace(set_current_panel=lambda panel: None)
+    window.tabs = SimpleNamespace(currentIndex=lambda: 0)
 
     window.selected_credential_id = None
     window.selected_credential_current_version = None
@@ -602,6 +603,22 @@ def test_refresh_idle_policy_skips_vault_auto_lock_when_keep_open_enabled(qapp, 
 
     assert getattr(window, "_vault_timer_started", False) is False
     assert getattr(window, "_vault_timer_stopped", False) is True
+
+
+def test_handle_workspace_tab_changed_loads_visible_section(qapp, tmp_path: Path) -> None:
+    window = make_window_harness(tmp_path)
+    window.current_screen = "vault"
+    window.current_vault_panel = "workspace"
+    calls: list[str] = []
+    window.load_credentials = lambda: calls.append("credentials")
+    window.load_notes = lambda: calls.append("notes")
+    window.load_files = lambda: calls.append("files")
+
+    MainWindow._handle_workspace_tab_changed(window, 0)
+    MainWindow._handle_workspace_tab_changed(window, 1)
+    MainWindow._handle_workspace_tab_changed(window, 2)
+
+    assert calls == ["credentials", "notes", "files"]
 
 
 def test_perform_local_logout_clears_sensitive_outputs(qapp, tmp_path: Path) -> None:

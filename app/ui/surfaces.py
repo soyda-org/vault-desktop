@@ -250,23 +250,7 @@ class VaultWorkspaceView(QWidget):
         content_wrapper.addStretch(1)
         access_layout.addLayout(content_wrapper, 1)
 
-        workspace_panel, workspace_layout = _panel(
-            title="Vault workspace",
-            description=(
-                "Load credentials, notes, or files, then work inside the section tabs "
-                "below. Locked sessions can still browse list metadata but sensitive "
-                "detail remains hidden."
-            ),
-        )
-        load_row = QHBoxLayout()
-        load_row.setContentsMargins(0, 8, 0, 0)
-        load_row.setSpacing(8)
-        load_row.addWidget(load_buttons["credentials"])
-        load_row.addWidget(load_buttons["notes"])
-        load_row.addWidget(load_buttons["files"])
-        load_row.addStretch(1)
-        load_row.addWidget(load_buttons["all"])
-        workspace_layout.addLayout(load_row)
+        workspace_panel, workspace_layout = _panel_shell()
         workspace_layout.addWidget(preference_widgets["keep_open"], 0)
 
         tabs.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
