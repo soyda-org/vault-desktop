@@ -393,17 +393,17 @@ class GeneratorWorkspaceView(QWidget):
         self.toolbar_slot.setContentsMargins(0, 0, 0, 0)
         self.toolbar_slot.setSpacing(0)
 
-        generator_panel, generator_layout = _panel(
-            title="Password generator",
-            description=None,
-        )
+        generator_panel, generator_layout = _panel_shell()
         generator_panel.setProperty("panelVariant", "secondary")
-        top_row = QHBoxLayout()
-        top_row.setContentsMargins(0, 0, 0, 0)
-        top_row.setSpacing(0)
-        top_row.addStretch(1)
-        top_row.addLayout(self.toolbar_slot, 0)
-        generator_layout.addLayout(top_row)
+        header_row = QHBoxLayout()
+        header_row.setContentsMargins(0, 0, 0, 0)
+        header_row.setSpacing(8)
+        title_label = QLabel("Password generator")
+        title_label.setObjectName("surfacePanelTitle")
+        header_row.addWidget(title_label, 0)
+        header_row.addStretch(1)
+        header_row.addLayout(self.toolbar_slot, 0)
+        generator_layout.addLayout(header_row)
 
         policy_row = QHBoxLayout()
         policy_row.setContentsMargins(0, 0, 0, 0)
