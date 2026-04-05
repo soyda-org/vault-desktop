@@ -349,6 +349,12 @@ def test_credential_detail_renders_readonly_fields_with_masked_password(app_fixt
     assert window.credential_detail_password_input.text() == "s3cr3t"
     assert window.credential_detail_password_input.echoMode() == QLineEdit.EchoMode.Password
     assert window.credential_detail_url_input.text() == "https://example.com"
+    assert window.credential_detail_name_input.property("ghostField") is True
+    assert window.credential_detail_url_input.property("ghostField") is True
+    assert window.credential_detail_name_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.credential_detail_username_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.credential_detail_password_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.credential_detail_url_input.alignment() == Qt.AlignmentFlag.AlignCenter
     assert window.credential_detail_name_input.isReadOnly()
     assert window.credential_detail_username_input.isReadOnly()
     assert window.credential_detail_password_input.isReadOnly()

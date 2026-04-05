@@ -477,13 +477,25 @@ class MainWindow(QMainWindow):
 
         self.credential_detail_name_input = QLineEdit()
         self.credential_detail_name_input.setReadOnly(True)
+        self.credential_detail_name_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.credential_detail_name_input.setMaximumWidth(420)
+        self.credential_detail_name_input.setProperty("ghostField", True)
+        self.credential_detail_name_input.setProperty("autoFilled", True)
         self.credential_detail_username_input = QLineEdit()
         self.credential_detail_username_input.setReadOnly(True)
+        self.credential_detail_username_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.credential_detail_username_input.setMaximumWidth(420)
         self.credential_detail_password_input = QLineEdit()
         self.credential_detail_password_input.setReadOnly(True)
         self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.credential_detail_password_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.credential_detail_password_input.setMaximumWidth(420)
         self.credential_detail_url_input = QLineEdit()
         self.credential_detail_url_input.setReadOnly(True)
+        self.credential_detail_url_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.credential_detail_url_input.setMaximumWidth(420)
+        self.credential_detail_url_input.setProperty("ghostField", True)
+        self.credential_detail_url_input.setProperty("autoFilled", True)
         self.credential_detail_state_input = QLineEdit()
         self.credential_detail_state_input.setReadOnly(True)
 
@@ -536,31 +548,33 @@ class MainWindow(QMainWindow):
         credential_detail_fields_layout.addStretch(1)
         credential_detail_fields_layout.addLayout(
             self._build_readonly_detail_row(
-                "Name",
+                None,
                 self.credential_detail_name_input,
-                self.copy_credential_name_button,
+                centered=True,
             )
         )
         credential_detail_fields_layout.addLayout(
             self._build_readonly_detail_row(
-                "Username",
+                None,
                 self.credential_detail_username_input,
                 self.copy_credential_username_button,
+                centered=True,
             )
         )
         credential_detail_fields_layout.addLayout(
             self._build_readonly_detail_row(
-                "Password",
+                None,
                 self.credential_detail_password_input,
                 self.toggle_credential_password_button,
                 self.copy_credential_password_button,
+                centered=True,
             )
         )
         credential_detail_fields_layout.addLayout(
             self._build_readonly_detail_row(
-                "URL",
+                None,
                 self.credential_detail_url_input,
-                self.copy_credential_url_button,
+                centered=True,
             )
         )
         credential_detail_fields_layout.addStretch(1)
@@ -1184,23 +1198,33 @@ class MainWindow(QMainWindow):
 
     def _build_readonly_detail_row(
         self,
-        label_text: str,
+        label_text: str | None,
         input_widget: QLineEdit,
         *action_buttons: QPushButton,
+        centered: bool = False,
     ) -> QVBoxLayout:
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
-        label = QLabel(label_text)
-        label.setObjectName("sectionHint")
-        layout.addWidget(label)
+        if label_text:
+            label = QLabel(label_text)
+            label.setObjectName("sectionHint")
+            if centered:
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(label)
 
         row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(8)
-        row.addWidget(input_widget, 1)
+        if centered:
+            row.addStretch(1)
+            row.addWidget(input_widget, 0)
+        else:
+            row.addWidget(input_widget, 1)
         for button in action_buttons:
             row.addWidget(button, 0)
+        if centered:
+            row.addStretch(1)
         layout.addLayout(row)
         return layout
 
