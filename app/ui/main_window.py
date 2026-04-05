@@ -410,11 +410,23 @@ class MainWindow(QMainWindow):
 
         self.selected_credential_id: str | None = None
         self.selected_credential_current_version: int | None = None
+        self._credential_items_cache: list[dict] = []
+        self.current_credential_filter = "active"
         self.selected_note_id: str | None = None
         self.selected_note_current_version: int | None = None
 
         self.credentials_list = QListWidget()
         self.credentials_list.itemDoubleClicked.connect(lambda _: self.load_credential_detail())
+        self.credentials_active_filter_button = QPushButton("Active")
+        self.credentials_active_filter_button.setProperty("segment", "true")
+        self.credentials_active_filter_button.clicked.connect(
+            lambda: self._set_credential_filter("active")
+        )
+        self.credentials_deleted_filter_button = QPushButton("Deleted")
+        self.credentials_deleted_filter_button.setProperty("segment", "true")
+        self.credentials_deleted_filter_button.clicked.connect(
+            lambda: self._set_credential_filter("deleted")
+        )
 
         self.notes_list = QListWidget()
         self.notes_list.itemDoubleClicked.connect(lambda _: self.load_note_detail())
@@ -949,6 +961,7 @@ class MainWindow(QMainWindow):
         self._refresh_recovery_key_field_state()
         self._refresh_quick_crypto_method_state()
         self._refresh_workspace_nav_buttons()
+        self._refresh_credential_filter_buttons()
         self.refresh_session_label()
         self._refresh_system_state_indicators()
         self._refresh_action_states()
@@ -1023,6 +1036,13 @@ class MainWindow(QMainWindow):
         list_content.setSpacing(10)
         list_content.addLayout(list_actions)
         list_content.addWidget(self.credentials_list, 1)
+        filter_row = QHBoxLayout()
+        filter_row.setContentsMargins(0, 0, 0, 0)
+        filter_row.setSpacing(8)
+        filter_row.addWidget(self.credentials_active_filter_button)
+        filter_row.addWidget(self.credentials_deleted_filter_button)
+        filter_row.addStretch(1)
+        list_content.addLayout(filter_row)
 
         left_card = self._build_workspace_card(
             title=None,
@@ -1418,6 +1438,54 @@ class MainWindow(QMainWindow):
             button.setProperty("segmentCurrent", current_index == index)
             button.setEnabled(self.tabs.isTabEnabled(index))
             self._repolish(button)
+
+    def _refresh_credential_filter_buttons(self) -> None:
+        if not hasattr(self, "credentials_active_filter_button"):
+            return
+        is_active = self.current_credential_filter == "active"
+        self.credentials_active_filter_button.setProperty("segmentCurrent", is_active)
+        self.credentials_deleted_filter_button.setProperty("segmentCurrent", not is_active)
+        self._repolish(self.credentials_active_filter_button)
+        self._repolish(self.credentials_deleted_filter_button)
+
+    def _filtered_credential_items(self) -> list[dict]:
+        if self.current_credential_filter == "deleted":
+            return [
+                item for item in self._credential_items_cache
+                if str(item.get("state", "")).lower() == "deleted"
+            ]
+        return [
+            item for item in self._credential_items_cache
+            if str(item.get("state", "")).lower() != "deleted"
+        ]
+
+    def _apply_credential_list_filter(self) -> None:
+        filtered_items = self._filtered_credential_items()
+        selected_id = self.selected_credential_id
+        self.credentials_list.clear()
+        for entry in filtered_items:
+            widget_item = QListWidgetItem(credential_list_label(entry))
+            widget_item.setData(Qt.ItemDataRole.UserRole, entry.get("credential_id"))
+            self.credentials_list.addItem(widget_item)
+
+        if filtered_items:
+            if selected_id and self._select_credential_item_by_id(selected_id):
+                pass
+            else:
+                self.credentials_list.setCurrentRow(0)
+        else:
+            self.selected_credential_id = None
+            self.selected_credential_current_version = None
+
+        self.credentials_output.setPlainText(format_credentials_items(filtered_items))
+        self._refresh_credential_filter_buttons()
+        self._refresh_action_states()
+
+    def _set_credential_filter(self, filter_name: str) -> None:
+        if filter_name not in {"active", "deleted"}:
+            return
+        self.current_credential_filter = filter_name
+        self._apply_credential_list_filter()
 
     def _handle_workspace_tab_changed(self, index: int) -> None:
         if not hasattr(self, "tabs"):
@@ -4148,18 +4216,8 @@ class MainWindow(QMainWindow):
             self._refresh_action_states()
             return
 
-        self.credentials_list.clear()
-        for entry in result.items:
-            widget_item = QListWidgetItem(credential_list_label(entry))
-            widget_item.setData(Qt.ItemDataRole.UserRole, entry.get("credential_id"))
-            self.credentials_list.addItem(widget_item)
-
-        self.credentials_output.setPlainText(format_credentials_items(result.items))
-
-        if self.credentials_list.count() > 0:
-            self.credentials_list.setCurrentRow(0)
-
-        self._refresh_action_states()
+        self._credential_items_cache = list(result.items)
+        self._apply_credential_list_filter()
 
     def _render_notes(self, result: ObjectListResult) -> None:
         if result.error:
@@ -4890,12 +4948,13 @@ class MainWindow(QMainWindow):
 
         return parsed
 
-    def _select_credential_item_by_id(self, credential_id: str) -> None:
+    def _select_credential_item_by_id(self, credential_id: str) -> bool:
         for index in range(self.credentials_list.count()):
             item = self.credentials_list.item(index)
             if item.data(Qt.ItemDataRole.UserRole) == credential_id:
                 self.credentials_list.setCurrentRow(index)
-                return
+                return True
+        return False
 
     def _select_note_item_by_id(self, note_id: str) -> None:
         for index in range(self.notes_list.count()):

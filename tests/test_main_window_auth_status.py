@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPus
 from app.core.config import get_settings
 from app.core.local_settings import PersistedUiSettings
 from app.core.session import DesktopSession
+from app.services.api_client import ObjectListResult
 from app.ui.main_window import MainWindow
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -261,6 +262,39 @@ def test_workspace_nav_buttons_follow_selected_tab(app_fixture) -> None:
     assert window.workspace_notes_tab_button.property("segmentCurrent") is True
     assert window.workspace_credentials_tab_button.property("segmentCurrent") is False
     assert window.workspace_files_tab_button.property("segmentCurrent") is False
+
+
+def test_credentials_filter_buttons_switch_visible_items(app_fixture) -> None:
+    window = MainWindow(get_settings())
+    window._render_credentials(
+        ObjectListResult(
+            items=[
+                {
+                    "credential_id": "cred_active",
+                    "plaintext_app_name": "GitHub",
+                    "plaintext_username": "alice",
+                    "state": "active",
+                    "current_version": 1,
+                },
+                {
+                    "credential_id": "cred_deleted",
+                    "plaintext_app_name": "Legacy",
+                    "plaintext_username": "bob",
+                    "state": "deleted",
+                    "current_version": 2,
+                },
+            ]
+        )
+    )
+
+    assert window.credentials_list.count() == 1
+    assert "GitHub" in window.credentials_list.item(0).text()
+
+    window.credentials_deleted_filter_button.click()
+    app_fixture.processEvents()
+
+    assert window.credentials_list.count() == 1
+    assert "Legacy" in window.credentials_list.item(0).text()
 
 
 def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
