@@ -2236,7 +2236,11 @@ class MainWindow(QMainWindow):
                 color: #6f7584;
             }}
             #heroFrame,
-            #toolbarFrame,
+            #toolbarFrame {{
+                background: {surface};
+                border: 1px solid {border};
+                border-radius: 0;
+            }}
             #workspaceCard,
             #detailCard {{
                 background: {surface};
@@ -2251,7 +2255,7 @@ class MainWindow(QMainWindow):
             #surfacePanel {{
                 background: {panel};
                 border: 1px solid {border};
-                border-radius: 14px;
+                border-radius: 0;
             }}
             #surfacePanel[panelVariant="secondary"],
             #workspaceCard[cardVariant="secondary"],
