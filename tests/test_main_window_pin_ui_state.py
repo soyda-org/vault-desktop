@@ -507,6 +507,7 @@ def test_auto_unlock_with_pin_succeeds_when_correct_pin_is_entered(qapp, tmp_pat
     assert window.desktop_service.current_session_vault_master_key() == VALID_MASTER_KEY_B64
     assert "Vault unlocked with PIN." in window.status_label.text()
     assert window.current_screen == "vault"
+    assert window.current_vault_panel == "workspace"
 
 
 def test_enter_on_wrong_pin_clears_field_for_retry(qapp, tmp_path: Path) -> None:

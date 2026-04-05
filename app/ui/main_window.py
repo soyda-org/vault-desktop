@@ -3078,12 +3078,17 @@ class MainWindow(QMainWindow):
     def _handle_successful_vault_pin_unlock(self) -> None:
         self.vault_pin_input.clear()
         self.current_screen = "vault"
+        self.current_vault_panel = "workspace"
+        if hasattr(self, "vault_workspace_view"):
+            self.vault_workspace_view.set_current_panel("workspace")
         self.status_label.setText(
             "Vault unlocked with PIN.\n"
             "Credentials, notes, and files can now use the shared session vault state."
         )
         self.refresh_session_label()
         self._refresh_after_vault_unlock()
+        if hasattr(self, "_autoload_current_workspace_tab"):
+            self._autoload_current_workspace_tab()
         self._refresh_idle_policy()
         self._refresh_action_states()
 
