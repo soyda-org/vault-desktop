@@ -2095,7 +2095,7 @@ class MainWindow(QMainWindow):
                 background: {nav_bg};
                 border: 1px solid {border};
                 border-radius: 999px;
-                font-size: 8px;
+                font-size: 9px;
                 padding: 2px 8px;
             }}
             QPushButton[nav="true"][navLevel="success"] {{
@@ -2278,7 +2278,7 @@ class MainWindow(QMainWindow):
                 background: transparent;
                 border: 0;
                 color: {muted};
-                font-size: 8px;
+                font-size: 9px;
                 padding: 0 2px;
             }}
             #screenTitle {{
