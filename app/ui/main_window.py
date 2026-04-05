@@ -243,6 +243,10 @@ class MainWindow(QMainWindow):
         self.copy_activity_log_button.clicked.connect(self.run_copy_activity_log)
         self.clear_activity_log_button = QPushButton("Clear Log")
         self.clear_activity_log_button.clicked.connect(self.run_clear_activity_log)
+        self.system_messages_back_button = QPushButton("Back")
+        self.system_messages_back_button.clicked.connect(
+            lambda: self._switch_system_panel("service")
+        )
 
         self.identifier_input = QLineEdit()
         self.identifier_input.setText(self.persisted_ui_settings.identifier)
@@ -938,6 +942,7 @@ class MainWindow(QMainWindow):
             log_widgets={
                 "copy": self.copy_activity_log_button,
                 "clear": self.clear_activity_log_button,
+                "back": self.system_messages_back_button,
                 "list": self.activity_log_list,
             },
         )
