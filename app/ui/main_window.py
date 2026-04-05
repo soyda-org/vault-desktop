@@ -533,6 +533,7 @@ class MainWindow(QMainWindow):
         credential_detail_fields_layout = QVBoxLayout(credential_detail_fields_page)
         credential_detail_fields_layout.setContentsMargins(0, 0, 0, 0)
         credential_detail_fields_layout.setSpacing(10)
+        credential_detail_fields_layout.addStretch(1)
         credential_detail_fields_layout.addLayout(
             self._build_readonly_detail_row(
                 "Name",
