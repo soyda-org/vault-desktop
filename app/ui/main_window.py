@@ -547,9 +547,10 @@ class MainWindow(QMainWindow):
                 "Credential URL copied to clipboard.",
             )
         )
-        credential_detail_fields_page = QWidget()
+        credential_detail_fields_page = QFrame()
+        credential_detail_fields_page.setObjectName("credentialDetailOutline")
         credential_detail_fields_layout = QVBoxLayout(credential_detail_fields_page)
-        credential_detail_fields_layout.setContentsMargins(0, 0, 0, 0)
+        credential_detail_fields_layout.setContentsMargins(10, 10, 10, 10)
         credential_detail_fields_layout.setSpacing(10)
         credential_detail_fields_layout.addStretch(1)
         credential_detail_fields_layout.addLayout(
@@ -2287,8 +2288,13 @@ class MainWindow(QMainWindow):
             }}
             #flatWorkspacePanel {{
                 background: transparent;
-                border: 1px solid {panel};
+                border: 0;
                 border-radius: 0;
+            }}
+            #credentialDetailOutline {{
+                background: transparent;
+                border: 1px solid {panel};
+                border-radius: 18px;
             }}
             #workspaceBand {{
                 background: {panel};
