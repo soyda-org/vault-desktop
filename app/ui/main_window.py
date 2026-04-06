@@ -547,12 +547,15 @@ class MainWindow(QMainWindow):
                 "Credential URL copied to clipboard.",
             )
         )
-        credential_detail_fields_page = QFrame()
-        credential_detail_fields_page.setObjectName("credentialDetailOutline")
-        credential_detail_fields_layout = QVBoxLayout(credential_detail_fields_page)
+        credential_detail_outline = QFrame()
+        credential_detail_outline.setObjectName("credentialDetailOutline")
+        credential_detail_outline.setSizePolicy(
+            QSizePolicy.Policy.Maximum,
+            QSizePolicy.Policy.Maximum,
+        )
+        credential_detail_fields_layout = QVBoxLayout(credential_detail_outline)
         credential_detail_fields_layout.setContentsMargins(4, 4, 4, 4)
         credential_detail_fields_layout.setSpacing(10)
-        credential_detail_fields_layout.addStretch(1)
         credential_detail_fields_layout.addLayout(
             self._build_readonly_detail_row(
                 None,
@@ -584,7 +587,20 @@ class MainWindow(QMainWindow):
                 centered=True,
             )
         )
-        credential_detail_fields_layout.addStretch(1)
+        credential_detail_fields_page = QWidget()
+        credential_detail_fields_page.setObjectName("contentContainer")
+        credential_detail_page_layout = QVBoxLayout(credential_detail_fields_page)
+        credential_detail_page_layout.setContentsMargins(0, 0, 0, 0)
+        credential_detail_page_layout.setSpacing(0)
+        credential_detail_page_layout.addStretch(1)
+        center_row = QHBoxLayout()
+        center_row.setContentsMargins(0, 0, 0, 0)
+        center_row.setSpacing(0)
+        center_row.addStretch(1)
+        center_row.addWidget(credential_detail_outline, 0)
+        center_row.addStretch(1)
+        credential_detail_page_layout.addLayout(center_row)
+        credential_detail_page_layout.addStretch(1)
 
         self.credential_detail_stack.addWidget(self.credential_detail_message)
         self.credential_detail_stack.addWidget(credential_detail_fields_page)
