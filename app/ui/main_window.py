@@ -2293,7 +2293,7 @@ class MainWindow(QMainWindow):
             }}
             #credentialDetailOutline {{
                 background: transparent;
-                border: 1px solid {panel};
+                border: 1px solid #13233b;
                 border-radius: 18px;
             }}
             #workspaceBand {{
