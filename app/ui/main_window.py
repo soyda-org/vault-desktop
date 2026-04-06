@@ -2290,6 +2290,10 @@ class MainWindow(QMainWindow):
                 border: 1px solid {panel};
                 border-radius: 0;
             }}
+            #workspaceBand {{
+                background: {panel};
+                border: 0;
+            }}
             #surfacePanel {{
                 background: {panel};
                 border: 1px solid {border};
