@@ -2322,7 +2322,7 @@ class MainWindow(QMainWindow):
                 border-radius: 0;
             }}
             #surfacePanel[panelVariant="transparent"] {{
-                background: {window};
+                background: {surface};
                 border-color: {panel};
             }}
             #surfacePanel[panelVariant="secondary"],
