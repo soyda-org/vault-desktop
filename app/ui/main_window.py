@@ -1263,7 +1263,7 @@ class MainWindow(QMainWindow):
 
         list_content = QVBoxLayout()
         list_content.setContentsMargins(0, 0, 0, 0)
-        list_content.setSpacing(10)
+        list_content.setSpacing(14)
         list_content.addLayout(list_actions)
         list_content.addWidget(self.credentials_list, 1)
         filter_row = QHBoxLayout()
@@ -1284,7 +1284,7 @@ class MainWindow(QMainWindow):
 
         detail_content = QVBoxLayout()
         detail_content.setContentsMargins(0, 0, 0, 0)
-        detail_content.setSpacing(10)
+        detail_content.setSpacing(14)
         detail_content.addWidget(self.credential_detail_stack, 1)
 
         detail_card = self._build_workspace_card(
@@ -1305,7 +1305,7 @@ class MainWindow(QMainWindow):
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(12)
         layout.addWidget(splitter)
 
         widget = QWidget()
@@ -2300,7 +2300,7 @@ class MainWindow(QMainWindow):
             #detailCard {{
                 background: {surface};
                 border: 1px solid {border};
-                border-radius: 14px;
+                border-radius: 16px;
             }}
             #flatWorkspacePanel {{
                 background: transparent;
@@ -2309,12 +2309,18 @@ class MainWindow(QMainWindow):
             }}
             #credentialDetailOutline {{
                 background: transparent;
-                border: 1px solid #13233b;
-                border-radius: 18px;
+                border: 1px solid #213149;
+                border-radius: 20px;
             }}
             #workspaceBand {{
-                background: {panel};
+                background: transparent;
                 border: 0;
+            }}
+            #workspaceBand[bandRole="header"] {{
+                border-bottom: 1px solid #1d2b42;
+            }}
+            #workspaceBand[bandRole="footer"] {{
+                border-top: 1px solid #1d2b42;
             }}
             #surfacePanel {{
                 background: {panel};
@@ -2322,8 +2328,8 @@ class MainWindow(QMainWindow):
                 border-radius: 0;
             }}
             #surfacePanel[panelVariant="transparent"] {{
-                background: {input};
-                border-color: {panel};
+                background: #17263d;
+                border-color: #1f2d44;
             }}
             #surfacePanel[panelVariant="secondary"],
             #workspaceCard[cardVariant="secondary"],
@@ -2534,7 +2540,7 @@ class MainWindow(QMainWindow):
     def _refresh_navbar_labels(self) -> None:
         if not hasattr(self, "theme_toggle_button"):
             return
-        compact = self.width() < 860
+        compact = self.width() < 900
         theme_key = f"theme_{self.current_theme}"
         if compact:
             theme_key = f"{theme_key}_compact"
@@ -4560,7 +4566,8 @@ class MainWindow(QMainWindow):
             self.credential_detail_password_input.setEchoMode(QLineEdit.EchoMode.Normal)
         if hasattr(self, "toggle_credential_password_button"):
             self.toggle_credential_password_button.setText("Show")
-        self._refresh_credential_detail_field_widths()
+        if hasattr(self, "_refresh_credential_detail_field_widths"):
+            self._refresh_credential_detail_field_widths()
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
 
