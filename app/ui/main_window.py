@@ -1241,8 +1241,8 @@ class MainWindow(QMainWindow):
         list_actions.setSpacing(8)
         list_actions.addWidget(self.create_credential_button)
         list_actions.addWidget(self.update_credential_button)
-        list_actions.addWidget(self.delete_credential_button)
         list_actions.addStretch(1)
+        list_actions.addWidget(self.delete_credential_button)
 
         list_content = QVBoxLayout()
         list_content.setContentsMargins(0, 0, 0, 0)
