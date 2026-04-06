@@ -550,7 +550,7 @@ class MainWindow(QMainWindow):
         credential_detail_fields_page = QFrame()
         credential_detail_fields_page.setObjectName("credentialDetailOutline")
         credential_detail_fields_layout = QVBoxLayout(credential_detail_fields_page)
-        credential_detail_fields_layout.setContentsMargins(10, 10, 10, 10)
+        credential_detail_fields_layout.setContentsMargins(4, 4, 4, 4)
         credential_detail_fields_layout.setSpacing(10)
         credential_detail_fields_layout.addStretch(1)
         credential_detail_fields_layout.addLayout(
