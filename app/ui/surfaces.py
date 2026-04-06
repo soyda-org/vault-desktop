@@ -328,6 +328,7 @@ class VaultWorkspaceView(QWidget):
         access_layout.addLayout(meta_row)
 
         workspace_panel, workspace_layout = _panel_shell()
+        workspace_panel.setProperty("panelVariant", "transparent")
         workspace_nav_row = QHBoxLayout()
         workspace_nav_row.setContentsMargins(0, 0, 0, 0)
         workspace_nav_row.setSpacing(6)

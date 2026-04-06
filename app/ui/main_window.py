@@ -2287,13 +2287,17 @@ class MainWindow(QMainWindow):
             }}
             #flatWorkspacePanel {{
                 background: transparent;
-                border: 0;
+                border: 1px solid {panel};
                 border-radius: 0;
             }}
             #surfacePanel {{
                 background: {panel};
                 border: 1px solid {border};
                 border-radius: 0;
+            }}
+            #surfacePanel[panelVariant="transparent"] {{
+                background: transparent;
+                border-color: {panel};
             }}
             #surfacePanel[panelVariant="secondary"],
             #workspaceCard[cardVariant="secondary"],
