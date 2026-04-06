@@ -1279,6 +1279,7 @@ class MainWindow(QMainWindow):
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
+        splitter.setHandleWidth(0)
         splitter.addWidget(left_card)
         splitter.addWidget(detail_card)
         splitter.setStretchFactor(0, 1)
