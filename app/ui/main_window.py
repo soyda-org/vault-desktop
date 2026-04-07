@@ -669,6 +669,20 @@ class MainWindow(QMainWindow):
         self.note_detail_type_input.setProperty("ghostField", True)
         self.note_detail_type_input.setProperty("autoFilled", True)
 
+        self.note_detail_tags_input = QLineEdit()
+        self.note_detail_tags_input.setReadOnly(True)
+        self.note_detail_tags_input.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.note_detail_tags_input.setMinimumWidth(0)
+        self.note_detail_tags_input.setMaximumWidth(260)
+        self.note_detail_tags_input.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed,
+        )
+        self.note_detail_tags_input.setProperty("ghostField", True)
+        self.note_detail_tags_input.setProperty("autoFilled", True)
+
         self.note_detail_body_output = QTextEdit()
         self.note_detail_body_output.setReadOnly(True)
         self.note_detail_body_output.setPlaceholderText("Note content will appear here.")
@@ -708,6 +722,7 @@ class MainWindow(QMainWindow):
         note_header_row.setContentsMargins(0, 0, 0, 0)
         note_header_row.setSpacing(12)
         note_header_row.addWidget(self.note_detail_type_input, 0)
+        note_header_row.addWidget(self.note_detail_tags_input, 0)
         note_header_row.addWidget(self.note_detail_title_input, 1)
         note_detail_fields_layout.addLayout(note_header_row)
         note_detail_fields_layout.addWidget(self.note_detail_body_output, 1)
@@ -4790,6 +4805,7 @@ class MainWindow(QMainWindow):
         for attribute_name in (
             "note_detail_title_input",
             "note_detail_type_input",
+            "note_detail_tags_input",
         ):
             widget = getattr(self, attribute_name, None)
             if widget is not None:
@@ -4839,6 +4855,12 @@ class MainWindow(QMainWindow):
             self.note_detail_type_input.text(),
             minimum=48,
             maximum=120,
+        )
+        self._set_detail_input_width(
+            self.note_detail_tags_input,
+            self.note_detail_tags_input.text(),
+            minimum=60,
+            maximum=180,
         )
 
     def _encrypted_note_body_text(self, item: dict) -> str:
@@ -4909,6 +4931,12 @@ class MainWindow(QMainWindow):
             payload.get("note_type"),
             metadata.get("note_type"),
         ) or "note"
+        raw_tags = metadata.get("tags")
+        if isinstance(raw_tags, list):
+            tag_values = [str(tag).strip() for tag in raw_tags if str(tag).strip()]
+        else:
+            tag_values = []
+        tags_value = ", ".join(tag_values) if tag_values else "-"
         body_value = self._first_non_empty_string(
             payload.get("content"),
             payload.get("body"),
@@ -4925,9 +4953,11 @@ class MainWindow(QMainWindow):
 
         self.note_detail_title_input.setText(title_value)
         self.note_detail_type_input.setText(note_type_value.upper())
+        self.note_detail_tags_input.setText(tags_value)
         self._refresh_note_detail_field_widths()
         self.note_detail_title_input.setCursorPosition(0)
         self.note_detail_type_input.setCursorPosition(0)
+        self.note_detail_tags_input.setCursorPosition(0)
         self._note_detail_plaintext_body = body_value
         self._note_detail_ciphertext_body = self._encrypted_note_body_text(item)
         self._note_detail_body_is_hidden = True

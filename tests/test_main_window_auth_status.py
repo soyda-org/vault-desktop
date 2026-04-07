@@ -501,6 +501,9 @@ def test_note_detail_renders_readonly_fields_with_focused_body_panel(app_fixture
             "plaintext_payload": {
                 "content": "Buy milk\nShip patch",
             },
+            "plaintext_metadata": {
+                "tags": ["todo", "personal"],
+            },
             "encrypted_payload": {
                 "ciphertext_b64": "ZW5jcnlwdGVkLW5vdGU=",
             },
@@ -511,6 +514,7 @@ def test_note_detail_renders_readonly_fields_with_focused_body_panel(app_fixture
     assert window.note_detail_stack.currentIndex() == 1
     assert window.note_detail_title_input.text() == "Daily plan"
     assert window.note_detail_type_input.text() == "NOTE"
+    assert window.note_detail_tags_input.text() == "todo, personal"
     assert window.note_detail_body_output.toPlainText() == "ZW5jcnlwdGVkLW5vdGU="
     assert window.note_detail_title_input.property("ghostField") is True
     assert window.note_detail_title_input.alignment() == (
@@ -519,8 +523,12 @@ def test_note_detail_renders_readonly_fields_with_focused_body_panel(app_fixture
     assert window.note_detail_type_input.alignment() == (
         Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
     )
+    assert window.note_detail_tags_input.alignment() == (
+        Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+    )
     assert window.note_detail_title_input.isReadOnly()
     assert window.note_detail_type_input.isReadOnly()
+    assert window.note_detail_tags_input.isReadOnly()
     assert window.note_detail_body_output.isReadOnly()
     assert window.toggle_note_body_button.text() == "Show"
 
