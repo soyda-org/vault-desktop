@@ -4364,9 +4364,19 @@ class MainWindow(QMainWindow):
         selected_item = self.files_list.currentItem()
         default_name = current_target
         if not default_name and selected_item is not None:
-            selected_file_id = str(selected_item.data(Qt.ItemDataRole.UserRole) or "").strip()
-            if selected_file_id:
-                default_name = f"{selected_file_id}.bin"
+            selected_file_entry = selected_item.data(Qt.ItemDataRole.UserRole + 1)
+            if isinstance(selected_file_entry, dict):
+                selected_file_name = str(
+                    selected_file_entry.get("name")
+                    or selected_file_entry.get("plaintext_name")
+                    or ""
+                ).strip()
+                if selected_file_name:
+                    default_name = selected_file_name
+            if not default_name:
+                selected_file_id = str(selected_item.data(Qt.ItemDataRole.UserRole) or "").strip()
+                if selected_file_id:
+                    default_name = f"{selected_file_id}.bin"
 
         target_path, _ = QFileDialog.getSaveFileName(
             self,
@@ -5346,6 +5356,7 @@ class MainWindow(QMainWindow):
         for entry in result.items:
             widget_item = QListWidgetItem(file_list_label(entry))
             widget_item.setData(Qt.ItemDataRole.UserRole, entry.get("file_id"))
+            widget_item.setData(Qt.ItemDataRole.UserRole + 1, entry)
             self.files_list.addItem(widget_item)
 
         self.files_output.setPlainText(format_files_items(result.items))
