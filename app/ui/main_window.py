@@ -703,6 +703,7 @@ class MainWindow(QMainWindow):
         self.note_detail_tags_input.setProperty("ghostField", True)
         self.note_detail_tags_input.setProperty("autoFilled", True)
 
+        self.note_detail_body_stack = QStackedWidget()
         self.note_detail_body_output = QTextEdit()
         self.note_detail_body_output.setReadOnly(True)
         self.note_detail_body_output.setPlaceholderText("Note content will appear here.")
@@ -712,6 +713,16 @@ class MainWindow(QMainWindow):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding,
         )
+        self.note_detail_markdown_output = QTextEdit()
+        self.note_detail_markdown_output.setReadOnly(True)
+        self.note_detail_markdown_output.setMinimumWidth(0)
+        self.note_detail_markdown_output.setMinimumHeight(0)
+        self.note_detail_markdown_output.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
+        self.note_detail_body_stack.addWidget(self.note_detail_body_output)
+        self.note_detail_body_stack.addWidget(self.note_detail_markdown_output)
         self._note_detail_plaintext_body = ""
         self._note_detail_ciphertext_body = ""
         self._note_detail_body_is_hidden = False
@@ -754,7 +765,7 @@ class MainWindow(QMainWindow):
         note_header_row.addWidget(self.note_detail_tags_input, 0)
         note_header_row.addWidget(self.note_detail_title_input, 1)
         note_detail_fields_layout.addLayout(note_header_row)
-        note_detail_fields_layout.addWidget(self.note_detail_body_output, 1)
+        note_detail_fields_layout.addWidget(self.note_detail_body_stack, 1)
         note_detail_footer_row = QHBoxLayout()
         note_detail_footer_row.setContentsMargins(0, 0, 0, 0)
         note_detail_footer_row.setSpacing(8)
@@ -3243,6 +3254,7 @@ class MainWindow(QMainWindow):
     def _render_note_detail_body(self) -> None:
         if self._note_detail_body_is_hidden:
             self.note_detail_body_output.setPlainText(self._note_detail_ciphertext_body)
+            self.note_detail_body_stack.setCurrentWidget(self.note_detail_body_output)
             self.note_detail_body_output.moveCursor(
                 self.note_detail_body_output.textCursor().MoveOperation.Start
             )
@@ -3250,12 +3262,17 @@ class MainWindow(QMainWindow):
             return
 
         if self._note_detail_markdown_enabled and self._note_detail_has_markdown:
-            self.note_detail_body_output.setMarkdown(self._note_detail_plaintext_body)
+            self.note_detail_markdown_output.setMarkdown(self._note_detail_plaintext_body)
+            self.note_detail_body_stack.setCurrentWidget(self.note_detail_markdown_output)
+            self.note_detail_markdown_output.moveCursor(
+                self.note_detail_markdown_output.textCursor().MoveOperation.Start
+            )
         else:
             self.note_detail_body_output.setPlainText(self._note_detail_plaintext_body)
-        self.note_detail_body_output.moveCursor(
-            self.note_detail_body_output.textCursor().MoveOperation.Start
-        )
+            self.note_detail_body_stack.setCurrentWidget(self.note_detail_body_output)
+            self.note_detail_body_output.moveCursor(
+                self.note_detail_body_output.textCursor().MoveOperation.Start
+            )
         self._refresh_note_markdown_button_state()
 
     def run_copy_note_body(self) -> None:
@@ -4937,6 +4954,10 @@ class MainWindow(QMainWindow):
                 widget.clear()
         if hasattr(self, "note_detail_body_output"):
             self.note_detail_body_output.clear()
+        if hasattr(self, "note_detail_markdown_output"):
+            self.note_detail_markdown_output.clear()
+        if hasattr(self, "note_detail_body_stack") and hasattr(self, "note_detail_body_output"):
+            self.note_detail_body_stack.setCurrentWidget(self.note_detail_body_output)
         if hasattr(self, "toggle_note_body_button"):
             self.toggle_note_body_button.setText("Hide")
         if hasattr(self, "toggle_note_markdown_button"):

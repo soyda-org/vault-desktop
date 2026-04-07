@@ -630,14 +630,42 @@ def test_note_markdown_toggle_switches_between_plaintext_and_rendered_preview(ap
 
     assert window._note_detail_markdown_enabled is True
     assert window.toggle_note_markdown_button.text() == "Plain"
-    assert "Daily plan" in window.note_detail_body_output.toPlainText()
-    assert "Buy milk" in window.note_detail_body_output.toPlainText()
+    assert window.note_detail_body_stack.currentWidget() is window.note_detail_markdown_output
+    assert "Daily plan" in window.note_detail_markdown_output.toPlainText()
+    assert "Buy milk" in window.note_detail_markdown_output.toPlainText()
 
     window.run_toggle_note_markdown_view()
 
     assert window._note_detail_markdown_enabled is False
     assert window.toggle_note_markdown_button.text() == "Markdown"
+    assert window.note_detail_body_stack.currentWidget() is window.note_detail_body_output
     assert window.note_detail_body_output.toPlainText() == "# Daily plan\n\n- Buy milk"
+
+
+def test_note_body_hides_to_raw_ciphertext_after_markdown_preview(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window._render_note_detail_fields(
+        {
+            "note_id": "note_1",
+            "note_type": "note",
+            "plaintext_title": "Daily plan",
+            "plaintext_payload": {
+                "content": "# Daily plan\n\n- Buy milk",
+            },
+            "encrypted_payload": {
+                "ciphertext_b64": "ZW5jcnlwdGVkLW5vdGU=",
+            },
+        }
+    )
+
+    window.run_toggle_note_body_visibility()
+    window.run_toggle_note_markdown_view()
+    window.run_toggle_note_body_visibility()
+
+    assert window.note_detail_body_stack.currentWidget() is window.note_detail_body_output
+    assert window.note_detail_body_output.toPlainText() == "ZW5jcnlwdGVkLW5vdGU="
+    assert window.toggle_note_markdown_button.isEnabled() is False
 
 
 def test_note_copy_feedback_shows_inline_message(app_fixture, monkeypatch) -> None:
