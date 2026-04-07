@@ -20,8 +20,13 @@ if [[ ! -d "$ROOT_DIR/../vault-crypto" ]]; then
   exit 1
 fi
 
-"$VENV_PYTHON" -m pip install -q -e "$ROOT_DIR/../vault-crypto"
-"$VENV_PYTHON" -m pip install -q -e "$ROOT_DIR[build]"
+if ! "$VENV_PYTHON" -c "import vault_crypto" >/dev/null 2>&1; then
+  "$VENV_PYTHON" -m pip install -q --no-build-isolation -e "$ROOT_DIR/../vault-crypto"
+fi
+
+if ! "$VENV_PYTHON" -c "import PyInstaller" >/dev/null 2>&1; then
+  "$VENV_PYTHON" -m pip install -q pyinstaller
+fi
 
 rm -rf "$DIST_DIR" "$BUILD_DIR" "$RELEASE_DIR"
 mkdir -p "$RELEASE_DIR"
