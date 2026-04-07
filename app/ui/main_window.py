@@ -3232,14 +3232,8 @@ class MainWindow(QMainWindow):
         return metadata_text, payload_text
 
     def _reset_note_editor_defaults(self) -> tuple[str, str, str]:
-        metadata_text = json.dumps({"tags": ["todo"]}, indent=2)
-        payload_text = json.dumps(
-            {
-                "title": "todo",
-                "content": "buy milk",
-            },
-            indent=2,
-        )
+        metadata_text = json.dumps({}, indent=2)
+        payload_text = json.dumps({}, indent=2)
         return "note", metadata_text, payload_text
 
     def run_open_create_credential_dialog(self) -> None:

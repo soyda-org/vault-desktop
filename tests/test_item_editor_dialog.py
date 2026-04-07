@@ -118,3 +118,19 @@ def test_note_item_editor_dialog_can_lock_note_type_in_edit_mode(app_fixture) ->
 
     assert dialog.note_type_input.isReadOnly() is True
     assert dialog.note_type_text() == "note"
+
+
+def test_note_item_editor_dialog_empty_defaults_render_blank_fields(app_fixture) -> None:
+    dialog = NoteItemEditorDialog(
+        title="New Note",
+        summary="Create note",
+        action_text="Create Note",
+        note_type="note",
+        metadata_text="{}",
+        payload_text="{}",
+    )
+
+    assert dialog.note_type_text() == "note"
+    assert dialog.title_input.text() == ""
+    assert dialog.tags_input.text() == ""
+    assert dialog.content_input.toPlainText() == ""
