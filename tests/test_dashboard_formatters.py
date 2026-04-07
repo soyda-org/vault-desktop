@@ -165,6 +165,7 @@ def test_format_file_detail() -> None:
 
     assert "File detail loaded successfully." in text
     assert "archive.zip" in text
+    assert "Size: 1 234" in text
     assert "object_key" not in text
 
 

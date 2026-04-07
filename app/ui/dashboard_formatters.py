@@ -161,7 +161,7 @@ def format_files_items(items: list[dict]) -> str:
             [
                 f"[{index}] File",
                 f"  Name: {item.get('plaintext_filename', '-')}",
-                f"  Size: {item.get('plaintext_size_bytes', '-')}",
+                f"  Size: {_group_digits(int(item['plaintext_size_bytes'])) if item.get('plaintext_size_bytes') is not None else '-'}",
                 f"  ID: {item.get('file_id', '-')}",
                 f"  State: {item.get('state', '-')}",
                 f"  Current version: {item.get('current_version', '-')}",
@@ -245,10 +245,12 @@ def format_note_detail(item: dict) -> str:
 
 
 def format_file_detail(item: dict) -> str:
+    size = item.get("plaintext_size_bytes")
+    size_text = _group_digits(int(size)) if size is not None else "-"
     return (
         "File detail loaded successfully.\n\n"
         f"Name: {item.get('plaintext_filename', '-')}\n"
-        f"Size: {item.get('plaintext_size_bytes', '-')}\n"
+        f"Size: {size_text}\n"
         f"State: {item.get('state', '-')}\n"
         f"Current version: {item.get('current_version', '-')}"
     )
