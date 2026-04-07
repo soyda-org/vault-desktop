@@ -74,7 +74,11 @@ from app.services.quick_text_crypto import (
 from app.services.vault_gateway import AuthenticatedVaultGateway
 from app.ui.file_download_worker import FileDownloadWorker
 from app.ui.file_upload_worker import FileUploadWorker
-from app.ui.item_editor_dialog import JsonItemEditorDialog, NoteItemEditorDialog
+from app.ui.item_editor_dialog import (
+    CredentialItemEditorDialog,
+    JsonItemEditorDialog,
+    NoteItemEditorDialog,
+)
 from app.ui.surfaces import (
     GeneratorWorkspaceView,
     SystemWorkspaceView,
@@ -3429,14 +3433,13 @@ class MainWindow(QMainWindow):
 
     def run_open_create_credential_dialog(self) -> None:
         metadata_text, payload_text = self._reset_credential_editor_defaults()
-        dialog = JsonItemEditorDialog(
+        dialog = CredentialItemEditorDialog(
             title="New Credential",
             summary="Create a new encrypted credential. Labels stay human-readable in the list, while payload content is encrypted before upload.",
             action_text="Create Credential",
             metadata_text=metadata_text,
             payload_text=payload_text,
-            header_text=self.credential_header_input.toPlainText(),
-            reset_callback=lambda: (*self._reset_credential_editor_defaults(), None),
+            reset_callback=self._reset_credential_editor_defaults,
             parent=self,
         )
         if dialog.exec():
@@ -3448,14 +3451,13 @@ class MainWindow(QMainWindow):
         if not self.selected_credential_id:
             self.status_label.setText("Load a credential detail first.")
             return
-        dialog = JsonItemEditorDialog(
+        dialog = CredentialItemEditorDialog(
             title="Edit Credential",
             summary="Review the current decrypted draft, make changes, then save a new encrypted version.",
             action_text="Save Credential",
             metadata_text=self.credential_metadata_input.toPlainText(),
             payload_text=self.credential_payload_input.toPlainText(),
-            header_text=self.credential_header_input.toPlainText(),
-            reset_callback=lambda: (*self._reset_credential_editor_defaults(), None),
+            reset_callback=self._reset_credential_editor_defaults,
             parent=self,
         )
         if dialog.exec():

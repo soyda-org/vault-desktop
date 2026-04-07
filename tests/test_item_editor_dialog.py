@@ -6,7 +6,82 @@ import os
 import pytest
 from PySide6.QtWidgets import QApplication
 
-from app.ui.item_editor_dialog import NoteItemEditorDialog
+from app.ui.item_editor_dialog import CredentialItemEditorDialog, NoteItemEditorDialog
+
+
+def test_credential_item_editor_dialog_prefills_and_emits_json(app_fixture) -> None:
+    dialog = CredentialItemEditorDialog(
+        title="Edit Credential",
+        summary="Edit credential",
+        action_text="Save Credential",
+        metadata_text=json.dumps(
+            {"label": "Personal", "color": "blue"},
+            indent=2,
+        ),
+        payload_text=json.dumps(
+            {
+                "username": "alice",
+                "secret": "s3cr3t",
+                "url": "https://example.com",
+                "pinned": True,
+            },
+            indent=2,
+        ),
+    )
+
+    assert dialog.label_input.text() == "Personal"
+    assert dialog.username_input.text() == "alice"
+    assert dialog.secret_input.text() == "s3cr3t"
+    assert dialog.url_input.text() == "https://example.com"
+
+    dialog.label_input.setText("Work")
+    dialog.username_input.setText("bob")
+    dialog.secret_input.setText("n3wsecret")
+    dialog.url_input.setText("https://corp.example.com")
+
+    assert json.loads(dialog.metadata_text()) == {
+        "label": "Work",
+        "color": "blue",
+    }
+    assert json.loads(dialog.payload_text()) == {
+        "username": "bob",
+        "secret": "n3wsecret",
+        "url": "https://corp.example.com",
+        "pinned": True,
+    }
+
+
+def test_credential_item_editor_dialog_reset_restores_friendly_fields(app_fixture) -> None:
+    dialog = CredentialItemEditorDialog(
+        title="New Credential",
+        summary="Create credential",
+        action_text="Create Credential",
+        metadata_text="{}",
+        payload_text="{}",
+        reset_callback=lambda: (
+            json.dumps({"label": "Personal"}, indent=2),
+            json.dumps(
+                {
+                    "username": "alice",
+                    "secret": "s3cr3t",
+                    "url": "https://example.com",
+                },
+                indent=2,
+            ),
+        ),
+    )
+
+    dialog.label_input.setText("Temp")
+    dialog.username_input.setText("tmp")
+    dialog.secret_input.setText("throwaway")
+    dialog.url_input.setText("https://tmp.example.com")
+
+    dialog.reset_button.click()
+
+    assert dialog.label_input.text() == "Personal"
+    assert dialog.username_input.text() == "alice"
+    assert dialog.secret_input.text() == "s3cr3t"
+    assert dialog.url_input.text() == "https://example.com"
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 

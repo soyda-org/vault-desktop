@@ -174,6 +174,190 @@ class JsonItemEditorDialog(QDialog):
         return self.note_type_input.text()
 
 
+class CredentialItemEditorDialog(QDialog):
+    def __init__(
+        self,
+        *,
+        title: str,
+        summary: str,
+        action_text: str,
+        metadata_text: str,
+        payload_text: str,
+        reset_callback=None,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.resize(760, 520)
+
+        self._extra_metadata: dict = {}
+        self._extra_payload: dict = {}
+        self._secret_key = "secret"
+        self._url_key = "url"
+        self._username_key = "username"
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
+
+        summary_label = QLabel(summary)
+        summary_label.setObjectName("dialogSummary")
+        summary_label.setWordWrap(True)
+        layout.addWidget(summary_label)
+
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(10)
+        form.setVerticalSpacing(8)
+
+        self.label_input = QLineEdit()
+        form.addRow("Label", self.label_input)
+
+        self.username_input = QLineEdit()
+        form.addRow("Username", self.username_input)
+
+        self.secret_input = QLineEdit()
+        self.secret_input.setEchoMode(QLineEdit.EchoMode.Password)
+        form.addRow("Secret", self.secret_input)
+
+        self.url_input = QLineEdit()
+        form.addRow("URL", self.url_input)
+
+        layout.addLayout(form)
+
+        actions = QHBoxLayout()
+        actions.setContentsMargins(0, 0, 0, 0)
+        actions.setSpacing(8)
+
+        if reset_callback is not None:
+            self.reset_button = QPushButton("Reset Draft")
+            self.reset_button.clicked.connect(lambda: self._reset_from_callback(reset_callback))
+            actions.addWidget(self.reset_button)
+        else:
+            self.reset_button = None
+
+        actions.addStretch(1)
+
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
+        self.save_button = self.button_box.addButton(action_text, QDialogButtonBox.ButtonRole.AcceptRole)
+        self.save_button.setProperty("tone", "primary")
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        actions.addWidget(self.button_box)
+        layout.addLayout(actions)
+
+        self._apply_json_defaults(
+            metadata_text=metadata_text,
+            payload_text=payload_text,
+        )
+
+    def _parse_json_object(self, text: str) -> dict:
+        raw = text.strip()
+        if not raw:
+            return {}
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        if isinstance(parsed, dict):
+            return parsed
+        return {}
+
+    def _apply_json_defaults(
+        self,
+        *,
+        metadata_text: str,
+        payload_text: str,
+    ) -> None:
+        metadata = self._parse_json_object(metadata_text)
+        payload = self._parse_json_object(payload_text)
+
+        label_value = ""
+        candidate = metadata.get("label")
+        if isinstance(candidate, str):
+            label_value = candidate
+        self._extra_metadata = {
+            key: value for key, value in metadata.items() if key != "label"
+        }
+
+        username_value = ""
+        self._username_key = "username"
+        for key in ("username", "login", "email", "account"):
+            candidate = payload.get(key)
+            if isinstance(candidate, str):
+                username_value = candidate
+                self._username_key = key
+                break
+
+        secret_value = ""
+        self._secret_key = "secret"
+        for key in ("secret", "password", "token", "api_key"):
+            candidate = payload.get(key)
+            if isinstance(candidate, str):
+                secret_value = candidate
+                self._secret_key = key
+                break
+
+        url_value = ""
+        self._url_key = "url"
+        for key in ("url", "site", "uri"):
+            candidate = payload.get(key)
+            if isinstance(candidate, str):
+                url_value = candidate
+                self._url_key = key
+                break
+
+        self._extra_payload = {
+            key: value
+            for key, value in payload.items()
+            if key not in {
+                "username",
+                "login",
+                "email",
+                "account",
+                "secret",
+                "password",
+                "token",
+                "api_key",
+                "url",
+                "site",
+                "uri",
+            }
+        }
+
+        self.label_input.setText(label_value)
+        self.username_input.setText(username_value)
+        self.secret_input.setText(secret_value)
+        self.url_input.setText(url_value)
+
+    def _reset_from_callback(self, reset_callback) -> None:
+        metadata_text, payload_text = reset_callback()
+        self._apply_json_defaults(
+            metadata_text=metadata_text,
+            payload_text=payload_text,
+        )
+
+    def metadata_text(self) -> str:
+        metadata = dict(self._extra_metadata)
+        label = self.label_input.text().strip()
+        if label:
+            metadata["label"] = label
+        return json.dumps(metadata, indent=2)
+
+    def payload_text(self) -> str:
+        payload = dict(self._extra_payload)
+        username = self.username_input.text().strip()
+        secret = self.secret_input.text()
+        url = self.url_input.text().strip()
+        if username:
+            payload[self._username_key] = username
+        if secret:
+            payload[self._secret_key] = secret
+        if url:
+            payload[self._url_key] = url
+        return json.dumps(payload, indent=2)
+
+
 class NoteItemEditorDialog(QDialog):
     def __init__(
         self,
