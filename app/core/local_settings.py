@@ -25,6 +25,7 @@ class PersistedUiSettings:
     identifier: str = "alice"
     device_name: str = "vault-desktop"
     platform: str = "unknown"
+    window_geometry_b64: str | None = None
     window_x: int | None = None
     window_y: int | None = None
     window_width: int = 1180
@@ -53,6 +54,11 @@ class LocalSettingsStore:
             identifier=data.get("identifier", defaults.identifier),
             device_name=data.get("device_name", defaults.device_name),
             platform=data.get("platform", defaults.platform),
+            window_geometry_b64=(
+                str(data["window_geometry_b64"])
+                if data.get("window_geometry_b64") is not None
+                else defaults.window_geometry_b64
+            ),
             window_x=(
                 int(data["window_x"])
                 if data.get("window_x") is not None

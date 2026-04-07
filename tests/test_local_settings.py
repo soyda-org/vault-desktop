@@ -19,6 +19,7 @@ def test_load_returns_detected_defaults_when_file_missing(tmp_path: Path, monkey
     assert settings.identifier == "alice"
     assert settings.device_name == "workstation-01"
     assert settings.platform == "linux"
+    assert settings.window_geometry_b64 is None
     assert settings.window_x is None
     assert settings.window_y is None
     assert settings.window_width == 1180
@@ -66,6 +67,7 @@ def test_save_then_load_round_trip(tmp_path: Path) -> None:
         identifier="bob",
         device_name="workstation",
         platform="linux",
+        window_geometry_b64="ZmFrZS1nZW9tZXRyeQ==",
         window_x=40,
         window_y=50,
         window_width=960,
@@ -101,6 +103,7 @@ def test_save_does_not_persist_session_vault_key_material(tmp_path: Path) -> Non
             identifier="alice",
             device_name="vault-desktop-dev",
             platform="linux",
+            window_geometry_b64=None,
             window_x=None,
             window_y=None,
             window_width=1180,
@@ -200,3 +203,19 @@ def test_load_restores_window_position(tmp_path: Path) -> None:
 
     assert loaded.window_x == 120
     assert loaded.window_y == 80
+
+
+def test_load_restores_window_geometry_blob(tmp_path: Path) -> None:
+    config_path = tmp_path / "settings.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "window_geometry_b64": "ZmFrZS1nZW9tZXRyeQ==",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loaded = LocalSettingsStore(config_path=config_path).load()
+
+    assert loaded.window_geometry_b64 == "ZmFrZS1nZW9tZXRyeQ=="

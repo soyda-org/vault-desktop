@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import secrets
 
-from PySide6.QtCore import QThread, Qt, QEvent, QTimer
+from PySide6.QtCore import QByteArray, QThread, Qt, QEvent, QTimer
 from PySide6.QtGui import QColor, QFont, QFontDatabase
 
 from PySide6.QtWidgets import (
@@ -207,7 +207,13 @@ class MainWindow(QMainWindow):
             max(600, self.persisted_ui_settings.window_width),
             max(400, self.persisted_ui_settings.window_height),
         )
-        if (
+        if self.persisted_ui_settings.window_geometry_b64:
+            self.restoreGeometry(
+                QByteArray.fromBase64(
+                    self.persisted_ui_settings.window_geometry_b64.encode("ascii")
+                )
+            )
+        elif (
             self.persisted_ui_settings.window_x is not None
             and self.persisted_ui_settings.window_y is not None
         ):
@@ -2716,6 +2722,7 @@ class MainWindow(QMainWindow):
             identifier=self.identifier_input.text().strip() or "alice",
             device_name=self.device_name_input.text().strip() or default_device_name,
             platform=self.platform_input.text().strip() or default_platform,
+            window_geometry_b64=bytes(self.saveGeometry().toBase64()).decode("ascii"),
             window_x=self.x(),
             window_y=self.y(),
             window_width=self.width(),
