@@ -634,8 +634,12 @@ class MainWindow(QMainWindow):
         self.note_detail_title_input = QLineEdit()
         self.note_detail_title_input.setReadOnly(True)
         self.note_detail_title_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.note_detail_title_input.setMinimumWidth(320)
+        self.note_detail_title_input.setMinimumWidth(0)
         self.note_detail_title_input.setMaximumWidth(520)
+        self.note_detail_title_input.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
         self.note_detail_title_input.setProperty("ghostField", True)
         self.note_detail_title_input.setProperty("autoFilled", True)
 
@@ -647,20 +651,15 @@ class MainWindow(QMainWindow):
         self.note_detail_type_input.setProperty("ghostField", True)
         self.note_detail_type_input.setProperty("autoFilled", True)
 
-        self.note_detail_state_input = QLineEdit()
-        self.note_detail_state_input.setReadOnly(True)
-        self.note_detail_state_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.note_detail_state_input.setMinimumWidth(180)
-        self.note_detail_state_input.setMaximumWidth(280)
-        self.note_detail_state_input.setProperty("ghostField", True)
-        self.note_detail_state_input.setProperty("autoFilled", True)
-
         self.note_detail_body_output = QTextEdit()
         self.note_detail_body_output.setReadOnly(True)
         self.note_detail_body_output.setPlaceholderText("Note content will appear here.")
-        self.note_detail_body_output.setMinimumWidth(420)
-        self.note_detail_body_output.setMinimumHeight(220)
-        self.note_detail_body_output.setMaximumHeight(280)
+        self.note_detail_body_output.setMinimumWidth(0)
+        self.note_detail_body_output.setMinimumHeight(0)
+        self.note_detail_body_output.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
 
         self.copy_note_title_button = QPushButton("Copy")
         self.copy_note_title_button.setProperty("tone", "secondary")
@@ -685,8 +684,8 @@ class MainWindow(QMainWindow):
         note_detail_outline = QFrame()
         note_detail_outline.setObjectName("credentialDetailOutline")
         note_detail_outline.setSizePolicy(
-            QSizePolicy.Policy.Maximum,
-            QSizePolicy.Policy.Maximum,
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
         )
         note_detail_fields_layout = QVBoxLayout(note_detail_outline)
         note_detail_fields_layout.setContentsMargins(16, 16, 16, 16)
@@ -706,14 +705,12 @@ class MainWindow(QMainWindow):
                 centered=True,
             )
         )
-        note_detail_fields_layout.addWidget(self.note_detail_body_output, 0, Qt.AlignmentFlag.AlignCenter)
+        note_detail_fields_layout.addWidget(self.note_detail_body_output, 1)
         note_detail_footer_row = QHBoxLayout()
         note_detail_footer_row.setContentsMargins(0, 0, 0, 0)
         note_detail_footer_row.setSpacing(8)
         note_detail_footer_row.addStretch(1)
-        note_detail_footer_row.addWidget(self.note_detail_state_input, 0)
         note_detail_footer_row.addWidget(self.copy_note_body_button, 0)
-        note_detail_footer_row.addStretch(1)
         note_detail_fields_layout.addLayout(note_detail_footer_row)
 
         note_detail_fields_page = QWidget()
@@ -725,11 +722,8 @@ class MainWindow(QMainWindow):
         note_center_row = QHBoxLayout()
         note_center_row.setContentsMargins(0, 0, 0, 0)
         note_center_row.setSpacing(0)
-        note_center_row.addStretch(1)
-        note_center_row.addWidget(note_detail_outline, 0)
-        note_center_row.addStretch(1)
-        note_detail_page_layout.addLayout(note_center_row)
-        note_detail_page_layout.addStretch(1)
+        note_center_row.addWidget(note_detail_outline, 1)
+        note_detail_page_layout.addLayout(note_center_row, 1)
 
         self.note_detail_stack.addWidget(self.note_detail_message)
         self.note_detail_stack.addWidget(note_detail_fields_page)
@@ -4752,7 +4746,6 @@ class MainWindow(QMainWindow):
         for attribute_name in (
             "note_detail_title_input",
             "note_detail_type_input",
-            "note_detail_state_input",
         ):
             widget = getattr(self, attribute_name, None)
             if widget is not None:
@@ -4846,8 +4839,6 @@ class MainWindow(QMainWindow):
             payload.get("note_type"),
             metadata.get("note_type"),
         ) or "note"
-        version_value = item.get("current_version", "-")
-        state_value = self._first_non_empty_string(item.get("state")) or "-"
         body_value = self._first_non_empty_string(
             payload.get("content"),
             payload.get("body"),
@@ -4864,7 +4855,6 @@ class MainWindow(QMainWindow):
 
         self.note_detail_title_input.setText(title_value)
         self.note_detail_type_input.setText(note_type_value.upper())
-        self.note_detail_state_input.setText(f"{state_value} · v{version_value}")
         self.note_detail_body_output.setPlainText(body_value)
         self.note_detail_body_output.moveCursor(
             self.note_detail_body_output.textCursor().MoveOperation.Start
