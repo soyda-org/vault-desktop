@@ -164,6 +164,11 @@ class NoteItemEditorDialog(QDialog):
 
         self.note_type_input = QLineEdit(note_type)
         self.note_type_input.setReadOnly(note_type_read_only)
+        if note_type_read_only:
+            self.note_type_input.setProperty("ghostField", True)
+            self.note_type_input.setStyleSheet(
+                "color: #94a3b8; background-color: rgba(148, 163, 184, 0.10);"
+            )
         form.addRow("Note type", self.note_type_input)
 
         self.title_input = QLineEdit()
