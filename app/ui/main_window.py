@@ -654,7 +654,7 @@ class MainWindow(QMainWindow):
         )
         self.note_detail_title_input.setProperty("ghostField", True)
         self.note_detail_title_input.setProperty("autoFilled", True)
-        self.note_detail_title_input.setStyleSheet("font-weight: 700;")
+        self.note_detail_title_input.setStyleSheet("font-weight: 700; color: #e2e8f0;")
 
         self.note_detail_type_input = QLineEdit()
         self.note_detail_type_input.setReadOnly(True)
