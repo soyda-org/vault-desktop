@@ -674,12 +674,10 @@ class MainWindow(QMainWindow):
         self.copy_note_body_button = QPushButton("Copy")
         self.copy_note_body_button.setProperty("tone", "secondary")
         self.copy_note_body_button.setProperty("hoverGlow", "light")
-        self.copy_note_body_button.clicked.connect(
-            lambda: self._copy_text_value(
-                self.note_detail_body_output.toPlainText(),
-                "Note content copied to clipboard.",
-            )
-        )
+        self.copy_note_body_button.clicked.connect(self.run_copy_note_body)
+        self.note_copy_feedback_label = QLabel("")
+        self.note_copy_feedback_label.setObjectName("sectionHint")
+        self.note_copy_feedback_label.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         note_detail_outline = QFrame()
         note_detail_outline.setObjectName("credentialDetailOutline")
@@ -710,6 +708,7 @@ class MainWindow(QMainWindow):
         note_detail_footer_row.setContentsMargins(0, 0, 0, 0)
         note_detail_footer_row.setSpacing(8)
         note_detail_footer_row.addStretch(1)
+        note_detail_footer_row.addWidget(self.note_copy_feedback_label, 0)
         note_detail_footer_row.addWidget(self.copy_note_body_button, 0)
         note_detail_fields_layout.addLayout(note_detail_footer_row)
 
@@ -3098,6 +3097,19 @@ class MainWindow(QMainWindow):
 
         app.clipboard().setText(value)
         self.status_label.setText(success_message)
+
+    def run_copy_note_body(self) -> None:
+        value = self.note_detail_body_output.toPlainText()
+        self._copy_text_value(value, "Note content copied to clipboard.")
+        if not value or value == "-":
+            self.note_copy_feedback_label.setText("")
+            return
+        self.note_copy_feedback_label.setText("Note copied to clipboard.")
+        QTimer.singleShot(1800, self._clear_note_copy_feedback)
+
+    def _clear_note_copy_feedback(self) -> None:
+        if hasattr(self, "note_copy_feedback_label"):
+            self.note_copy_feedback_label.setText("")
 
     def _refresh_quick_crypto_method_state(self) -> None:
         method_key = str(self.quick_crypto_method_select.currentData())

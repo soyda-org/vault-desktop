@@ -499,6 +499,27 @@ def test_note_detail_renders_readonly_fields_with_focused_body_panel(app_fixture
     assert window.note_detail_body_output.isReadOnly()
 
 
+def test_note_copy_feedback_shows_inline_message(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    callbacks: list[object] = []
+
+    def fake_single_shot(delay: int, callback) -> None:
+        callbacks.append(callback)
+
+    monkeypatch.setattr(main_window_module.QTimer, "singleShot", fake_single_shot)
+
+    window = MainWindow(get_settings())
+    window.note_detail_body_output.setPlainText("buy milk")
+
+    window.run_copy_note_body()
+
+    assert window.note_copy_feedback_label.text() == "Note copied to clipboard."
+    assert callbacks
+    callbacks[0]()
+    assert window.note_copy_feedback_label.text() == ""
+
+
 def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.new_vault_pin_input.clear()
