@@ -1607,9 +1607,9 @@ class MainWindow(QMainWindow):
         upload_actions_layout.setContentsMargins(0, 0, 0, 0)
         upload_actions_layout.setSpacing(8)
         upload_actions_layout.addWidget(self.cancel_file_upload_button)
+        upload_actions_layout.addStretch(1)
         upload_actions_layout.addWidget(QLabel("Chunk size"), 0)
         upload_actions_layout.addWidget(self.file_chunk_size_kib_input, 0)
-        upload_actions_layout.addStretch(1)
 
         upload_path_row = QHBoxLayout()
         upload_path_row.setContentsMargins(0, 0, 0, 0)
