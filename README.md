@@ -66,3 +66,10 @@ Prerequisites:
 
 That script installs `vault-crypto` into the desktop virtualenv, installs the desktop build dependencies,
 and produces a bundled app under `dist/vault-desktop/`.
+
+## Related docs
+
+For a full newcomer and operator view of the whole system, start with:
+
+- `vault-docs/getting-started/newcomer-guide.md`
+- `vault-docs/operations/operator-runbook.md`
