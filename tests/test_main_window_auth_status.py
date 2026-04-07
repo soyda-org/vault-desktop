@@ -184,6 +184,18 @@ def test_file_chunk_size_input_snaps_to_16_kib_steps(app_fixture) -> None:
     assert window.file_chunk_size_kib_input.text() == "33 328 KiB"
 
 
+def test_file_chunk_size_input_manual_entry_rounds_to_nearest_step(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    line_edit = window.file_chunk_size_kib_input.lineEdit()
+    assert line_edit is not None
+    line_edit.setText("33335")
+    window.file_chunk_size_kib_input.editingFinished.emit()
+
+    assert window.file_chunk_size_kib_input.value() == 33328
+    assert window.file_chunk_size_kib_input.text() == "33 328 KiB"
+
+
 def test_main_window_restores_persisted_size(app_fixture, monkeypatch) -> None:
     from app.ui import main_window as main_window_module
 

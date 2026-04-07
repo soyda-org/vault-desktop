@@ -12,6 +12,7 @@ from PySide6.QtCore import QByteArray, QThread, Qt, QEvent, QTimer
 from PySide6.QtGui import QColor, QFont, QFontDatabase, QTextDocument, QValidator
 
 from PySide6.QtWidgets import (
+    QAbstractSpinBox,
     QApplication,
     QCheckBox,
     QComboBox,
@@ -928,6 +929,13 @@ class MainWindow(QMainWindow):
         self.file_chunk_size_kib_input.setSingleStep(16)
         self.file_chunk_size_kib_input.setValue(8192)
         self.file_chunk_size_kib_input.setSuffix(" KiB")
+        self.file_chunk_size_kib_input.setKeyboardTracking(False)
+        self.file_chunk_size_kib_input.setCorrectionMode(
+            QAbstractSpinBox.CorrectionMode.CorrectToNearestValue
+        )
+        self.file_chunk_size_kib_input.editingFinished.connect(
+            self._normalize_file_chunk_size_input
+        )
 
         self.vault_pin_input = QLineEdit()
         self.vault_pin_input.setEchoMode(QLineEdit.EchoMode.Password)
@@ -5674,6 +5682,14 @@ class MainWindow(QMainWindow):
 
     def _on_file_download_progress_value(self, value: int) -> None:
         self.file_download_progress.setValue(max(0, min(100, value)))
+
+    def _normalize_file_chunk_size_input(self) -> None:
+        line_edit = self.file_chunk_size_kib_input.lineEdit()
+        if line_edit is None:
+            return
+        self.file_chunk_size_kib_input.setValue(
+            self.file_chunk_size_kib_input.valueFromText(line_edit.text())
+        )
 
     def _on_file_download_success(self, item: object) -> None:
         result_item = item if isinstance(item, dict) else {}
