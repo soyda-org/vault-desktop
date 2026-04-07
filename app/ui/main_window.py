@@ -633,7 +633,9 @@ class MainWindow(QMainWindow):
 
         self.note_detail_title_input = QLineEdit()
         self.note_detail_title_input.setReadOnly(True)
-        self.note_detail_title_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.note_detail_title_input.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
         self.note_detail_title_input.setMinimumWidth(0)
         self.note_detail_title_input.setMaximumWidth(520)
         self.note_detail_title_input.setSizePolicy(
@@ -645,7 +647,9 @@ class MainWindow(QMainWindow):
 
         self.note_detail_type_input = QLineEdit()
         self.note_detail_type_input.setReadOnly(True)
-        self.note_detail_type_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.note_detail_type_input.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
         self.note_detail_type_input.setMinimumWidth(120)
         self.note_detail_type_input.setMaximumWidth(220)
         self.note_detail_type_input.setProperty("ghostField", True)
@@ -659,16 +663,6 @@ class MainWindow(QMainWindow):
         self.note_detail_body_output.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding,
-        )
-
-        self.copy_note_title_button = QPushButton("Copy")
-        self.copy_note_title_button.setProperty("tone", "secondary")
-        self.copy_note_title_button.setProperty("hoverGlow", "light")
-        self.copy_note_title_button.clicked.connect(
-            lambda: self._copy_text_value(
-                self.note_detail_title_input.text(),
-                "Note title copied to clipboard.",
-            )
         )
 
         self.copy_note_body_button = QPushButton("Copy")
@@ -688,21 +682,12 @@ class MainWindow(QMainWindow):
         note_detail_fields_layout = QVBoxLayout(note_detail_outline)
         note_detail_fields_layout.setContentsMargins(16, 16, 16, 16)
         note_detail_fields_layout.setSpacing(12)
-        note_detail_fields_layout.addLayout(
-            self._build_readonly_detail_row(
-                None,
-                self.note_detail_title_input,
-                centered=True,
-            )
-        )
-        note_detail_fields_layout.addLayout(
-            self._build_readonly_detail_row(
-                None,
-                self.note_detail_type_input,
-                self.copy_note_title_button,
-                centered=True,
-            )
-        )
+        note_header_row = QHBoxLayout()
+        note_header_row.setContentsMargins(0, 0, 0, 0)
+        note_header_row.setSpacing(12)
+        note_header_row.addWidget(self.note_detail_type_input, 0)
+        note_header_row.addWidget(self.note_detail_title_input, 1)
+        note_detail_fields_layout.addLayout(note_header_row)
         note_detail_fields_layout.addWidget(self.note_detail_body_output, 1)
         note_detail_footer_row = QHBoxLayout()
         note_detail_footer_row.setContentsMargins(0, 0, 0, 0)

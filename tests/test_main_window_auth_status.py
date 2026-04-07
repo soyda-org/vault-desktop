@@ -492,8 +492,12 @@ def test_note_detail_renders_readonly_fields_with_focused_body_panel(app_fixture
     assert window.note_detail_type_input.text() == "NOTE"
     assert window.note_detail_body_output.toPlainText() == "Buy milk\nShip patch"
     assert window.note_detail_title_input.property("ghostField") is True
-    assert window.note_detail_title_input.alignment() == Qt.AlignmentFlag.AlignCenter
-    assert window.note_detail_type_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.note_detail_title_input.alignment() == (
+        Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+    )
+    assert window.note_detail_type_input.alignment() == (
+        Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+    )
     assert window.note_detail_title_input.isReadOnly()
     assert window.note_detail_type_input.isReadOnly()
     assert window.note_detail_body_output.isReadOnly()
