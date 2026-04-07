@@ -717,7 +717,6 @@ class MainWindow(QMainWindow):
         note_detail_page_layout = QVBoxLayout(note_detail_fields_page)
         note_detail_page_layout.setContentsMargins(0, 0, 0, 0)
         note_detail_page_layout.setSpacing(0)
-        note_detail_page_layout.addStretch(1)
         note_center_row = QHBoxLayout()
         note_center_row.setContentsMargins(0, 0, 0, 0)
         note_center_row.setSpacing(0)
