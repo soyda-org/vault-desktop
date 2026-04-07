@@ -470,7 +470,7 @@ class MainWindow(QMainWindow):
         self.reset_note_payload_button.clicked.connect(self.reset_note_create_fields)
         self.reset_note_payload_button.setProperty("tone", "secondary")
 
-        self.load_file_detail_button = QPushButton("Load Selected File")
+        self.load_file_detail_button = QPushButton("Load File")
         self.load_file_detail_button.clicked.connect(self.load_file_detail)
         self.load_file_detail_button.setEnabled(False)
 
@@ -488,7 +488,7 @@ class MainWindow(QMainWindow):
         self.cancel_file_upload_button.setEnabled(False)
         self.cancel_file_upload_button.setProperty("tone", "danger")
 
-        self.pick_download_target_button = QPushButton("Pick Save Path")
+        self.pick_download_target_button = QPushButton("Save Path")
         self.pick_download_target_button.clicked.connect(self.run_pick_download_target)
         self.pick_download_target_button.setProperty("tone", "secondary")
 
@@ -502,7 +502,7 @@ class MainWindow(QMainWindow):
         self.cancel_file_download_button.setEnabled(False)
         self.cancel_file_download_button.setProperty("tone", "danger")
 
-        self.reset_file_payload_button = QPushButton("Reset Payload")
+        self.reset_file_payload_button = QPushButton("Reset Draft")
         self.reset_file_payload_button.clicked.connect(self.reset_file_create_fields)
         self.reset_file_payload_button.setProperty("tone", "secondary")
 
@@ -1624,12 +1624,6 @@ class MainWindow(QMainWindow):
         secondary_actions_layout.addWidget(self.reset_file_payload_button)
         secondary_actions_layout.addStretch(1)
 
-        create_hint_label = QLabel(
-            "Pick a local file for encrypted upload, or select a vault file and download/decrypt it locally. "
-            "Use the global Vault controls above to unlock once per session; that same unlock state applies to credentials, notes, and files."
-        )
-        create_hint_label.setWordWrap(True)
-
         path_row = QHBoxLayout()
         path_row.setContentsMargins(0, 0, 0, 0)
         path_row.setSpacing(8)
@@ -1660,19 +1654,19 @@ class MainWindow(QMainWindow):
         manifest_layout = QVBoxLayout()
         manifest_layout.setContentsMargins(0, 0, 0, 0)
         manifest_layout.setSpacing(2)
-        manifest_layout.addWidget(QLabel("Manifest JSON"))
+        manifest_layout.addWidget(QLabel("Manifest"))
         manifest_layout.addWidget(self.file_manifest_input)
 
         header_layout = QVBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(2)
-        header_layout.addWidget(QLabel("Header JSON"))
+        header_layout.addWidget(QLabel("Header"))
         header_layout.addWidget(self.file_header_input)
 
         chunks_layout = QVBoxLayout()
         chunks_layout.setContentsMargins(0, 0, 0, 0)
         chunks_layout.setSpacing(2)
-        chunks_layout.addWidget(QLabel("Chunks JSON"))
+        chunks_layout.addWidget(QLabel("Chunks"))
         chunks_layout.addWidget(self.file_chunks_input)
 
         previews_row = QHBoxLayout()
@@ -1687,7 +1681,6 @@ class MainWindow(QMainWindow):
         left_layout.setSpacing(10)
         left_layout.addLayout(primary_actions_layout)
         left_layout.addLayout(secondary_actions_layout)
-        left_layout.addWidget(create_hint_label)
         left_layout.addLayout(path_row)
         left_layout.addLayout(target_row)
         left_layout.addLayout(runtime_row)
@@ -1696,10 +1689,11 @@ class MainWindow(QMainWindow):
         left_layout.addWidget(self.files_list)
 
         left_widget = self._build_workspace_card(
-            title="Files workflow",
-            hint="Pick a local file to encrypt and upload, or select a vault file and download it to a local path.",
+            title=None,
+            hint=None,
             content_layout=left_layout,
         )
+        left_widget.setObjectName("flatWorkspacePanel")
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
@@ -1709,11 +1703,11 @@ class MainWindow(QMainWindow):
         file_detail_layout.setSpacing(10)
         file_detail_layout.addWidget(self.files_output, 1)
         file_detail_card = self._build_workspace_card(
-            title="File detail",
-            hint="Use the list and progress controls on the left, and review file metadata or download status here.",
+            title=None,
+            hint=None,
             content_layout=file_detail_layout,
         )
-        file_detail_card.setObjectName("detailCard")
+        file_detail_card.setObjectName("flatWorkspacePanel")
         splitter.addWidget(file_detail_card)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 4)

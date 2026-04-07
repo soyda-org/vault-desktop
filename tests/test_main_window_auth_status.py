@@ -391,6 +391,14 @@ def test_note_action_buttons_compact_when_window_is_narrow(app_fixture) -> None:
     assert window.delete_note_button.text() == "Delete Note"
 
 
+def test_file_action_buttons_use_cleaner_labels(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    assert window.load_file_detail_button.text() == "Load File"
+    assert window.pick_download_target_button.text() == "Save Path"
+    assert window.reset_file_payload_button.text() == "Reset Draft"
+
+
 def test_credentials_filter_buttons_switch_visible_items(app_fixture) -> None:
     window = MainWindow(get_settings())
     window._render_credentials(
