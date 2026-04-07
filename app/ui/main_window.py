@@ -85,7 +85,6 @@ from app.ui.dashboard_formatters import (
     format_credentials_items,
     format_file_detail,
     format_files_items,
-    format_note_detail,
     format_notes_items,
     note_list_label,
 )
@@ -629,6 +628,111 @@ class MainWindow(QMainWindow):
         self.notes_output = QTextEdit()
         self.notes_output.setReadOnly(True)
         self.notes_output.setPlaceholderText("Note details will appear here.")
+        self.note_detail_stack = QStackedWidget()
+        self.note_detail_message = self.notes_output
+
+        self.note_detail_title_input = QLineEdit()
+        self.note_detail_title_input.setReadOnly(True)
+        self.note_detail_title_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.note_detail_title_input.setMinimumWidth(320)
+        self.note_detail_title_input.setMaximumWidth(520)
+        self.note_detail_title_input.setProperty("ghostField", True)
+        self.note_detail_title_input.setProperty("autoFilled", True)
+
+        self.note_detail_type_input = QLineEdit()
+        self.note_detail_type_input.setReadOnly(True)
+        self.note_detail_type_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.note_detail_type_input.setMinimumWidth(120)
+        self.note_detail_type_input.setMaximumWidth(220)
+        self.note_detail_type_input.setProperty("ghostField", True)
+        self.note_detail_type_input.setProperty("autoFilled", True)
+
+        self.note_detail_state_input = QLineEdit()
+        self.note_detail_state_input.setReadOnly(True)
+        self.note_detail_state_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.note_detail_state_input.setMinimumWidth(180)
+        self.note_detail_state_input.setMaximumWidth(280)
+        self.note_detail_state_input.setProperty("ghostField", True)
+        self.note_detail_state_input.setProperty("autoFilled", True)
+
+        self.note_detail_body_output = QTextEdit()
+        self.note_detail_body_output.setReadOnly(True)
+        self.note_detail_body_output.setPlaceholderText("Note content will appear here.")
+        self.note_detail_body_output.setMinimumWidth(420)
+        self.note_detail_body_output.setMinimumHeight(220)
+        self.note_detail_body_output.setMaximumHeight(280)
+
+        self.copy_note_title_button = QPushButton("Copy")
+        self.copy_note_title_button.setProperty("tone", "secondary")
+        self.copy_note_title_button.setProperty("hoverGlow", "light")
+        self.copy_note_title_button.clicked.connect(
+            lambda: self._copy_text_value(
+                self.note_detail_title_input.text(),
+                "Note title copied to clipboard.",
+            )
+        )
+
+        self.copy_note_body_button = QPushButton("Copy")
+        self.copy_note_body_button.setProperty("tone", "secondary")
+        self.copy_note_body_button.setProperty("hoverGlow", "light")
+        self.copy_note_body_button.clicked.connect(
+            lambda: self._copy_text_value(
+                self.note_detail_body_output.toPlainText(),
+                "Note content copied to clipboard.",
+            )
+        )
+
+        note_detail_outline = QFrame()
+        note_detail_outline.setObjectName("credentialDetailOutline")
+        note_detail_outline.setSizePolicy(
+            QSizePolicy.Policy.Maximum,
+            QSizePolicy.Policy.Maximum,
+        )
+        note_detail_fields_layout = QVBoxLayout(note_detail_outline)
+        note_detail_fields_layout.setContentsMargins(16, 16, 16, 16)
+        note_detail_fields_layout.setSpacing(12)
+        note_detail_fields_layout.addLayout(
+            self._build_readonly_detail_row(
+                None,
+                self.note_detail_title_input,
+                centered=True,
+            )
+        )
+        note_detail_fields_layout.addLayout(
+            self._build_readonly_detail_row(
+                None,
+                self.note_detail_type_input,
+                self.copy_note_title_button,
+                centered=True,
+            )
+        )
+        note_detail_fields_layout.addWidget(self.note_detail_body_output, 0, Qt.AlignmentFlag.AlignCenter)
+        note_detail_footer_row = QHBoxLayout()
+        note_detail_footer_row.setContentsMargins(0, 0, 0, 0)
+        note_detail_footer_row.setSpacing(8)
+        note_detail_footer_row.addStretch(1)
+        note_detail_footer_row.addWidget(self.note_detail_state_input, 0)
+        note_detail_footer_row.addWidget(self.copy_note_body_button, 0)
+        note_detail_footer_row.addStretch(1)
+        note_detail_fields_layout.addLayout(note_detail_footer_row)
+
+        note_detail_fields_page = QWidget()
+        note_detail_fields_page.setObjectName("contentContainer")
+        note_detail_page_layout = QVBoxLayout(note_detail_fields_page)
+        note_detail_page_layout.setContentsMargins(0, 0, 0, 0)
+        note_detail_page_layout.setSpacing(0)
+        note_detail_page_layout.addStretch(1)
+        note_center_row = QHBoxLayout()
+        note_center_row.setContentsMargins(0, 0, 0, 0)
+        note_center_row.setSpacing(0)
+        note_center_row.addStretch(1)
+        note_center_row.addWidget(note_detail_outline, 0)
+        note_center_row.addStretch(1)
+        note_detail_page_layout.addLayout(note_center_row)
+        note_detail_page_layout.addStretch(1)
+
+        self.note_detail_stack.addWidget(self.note_detail_message)
+        self.note_detail_stack.addWidget(note_detail_fields_page)
 
         self.files_output = QTextEdit()
         self.files_output.setReadOnly(True)
@@ -1129,6 +1233,7 @@ class MainWindow(QMainWindow):
 
         self.credentials_list.currentItemChanged.connect(lambda *_: self._refresh_action_states())
         self.notes_list.currentItemChanged.connect(lambda *_: self._refresh_action_states())
+        self.notes_list.currentItemChanged.connect(self._handle_note_selection_changed)
         self.files_list.currentItemChanged.connect(lambda *_: self._refresh_action_states())
         self.file_path_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.file_download_target_input.textChanged.connect(lambda *_: self._refresh_action_states())
@@ -1341,54 +1446,56 @@ class MainWindow(QMainWindow):
         list_actions = QHBoxLayout()
         list_actions.setContentsMargins(0, 0, 0, 0)
         list_actions.setSpacing(8)
-        list_actions.addWidget(self.load_note_detail_button)
+        list_actions.addWidget(self.create_note_button)
+        list_actions.addWidget(self.update_note_button)
         list_actions.addStretch(1)
+        list_actions.addWidget(self.delete_note_button)
 
         list_content = QVBoxLayout()
         list_content.setContentsMargins(0, 0, 0, 0)
-        list_content.setSpacing(10)
+        list_content.setSpacing(14)
         list_content.addLayout(list_actions)
         list_content.addWidget(self.notes_list, 1)
 
         left_card = self._build_workspace_card(
-            title="Notes list",
-            hint="Browse note titles first, then load the selected item to review or revise it.",
+            title=None,
+            hint=None,
             content_layout=list_content,
         )
+        left_card.setObjectName("flatWorkspacePanel")
 
         detail_actions = QHBoxLayout()
         detail_actions.setContentsMargins(0, 0, 0, 0)
         detail_actions.setSpacing(8)
-        detail_actions.addWidget(self.create_note_button)
-        detail_actions.addWidget(self.update_note_button)
-        detail_actions.addWidget(self.delete_note_button)
+        detail_actions.addWidget(self.load_note_detail_button)
         detail_actions.addStretch(1)
         detail_actions.addWidget(self.reset_note_payload_button)
 
         detail_content = QVBoxLayout()
         detail_content.setContentsMargins(0, 0, 0, 0)
-        detail_content.setSpacing(10)
+        detail_content.setSpacing(14)
         detail_content.addLayout(detail_actions)
-        detail_content.addWidget(self.notes_output, 1)
+        detail_content.addWidget(self.note_detail_stack, 1)
 
         detail_card = self._build_workspace_card(
-            title="Note detail",
-            hint="Keep the everyday view calm and readable. Open a focused draft dialog when you need to create or edit content.",
+            title=None,
+            hint=None,
             content_layout=detail_content,
         )
-        detail_card.setObjectName("detailCard")
+        detail_card.setObjectName("flatWorkspacePanel")
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
+        splitter.setHandleWidth(0)
         splitter.addWidget(left_card)
         splitter.addWidget(detail_card)
-        splitter.setStretchFactor(0, 2)
-        splitter.setStretchFactor(1, 3)
-        splitter.setSizes([320, 760])
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        splitter.setSizes([540, 540])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(12)
         layout.addWidget(splitter)
 
         widget = QWidget()
@@ -3323,7 +3430,7 @@ class MainWindow(QMainWindow):
             note_type=note_type,
         )
         if prepare_result.error:
-            self.notes_output.setPlainText(
+            self._show_note_detail_message(
                 f"Note prepare failed.\nError: {prepare_result.error}"
             )
             self.status_label.setText(
@@ -4416,7 +4523,8 @@ class MainWindow(QMainWindow):
             )
 
         if self.selected_note_id:
-            self.notes_output.setPlainText(
+            MainWindow._show_note_detail_message(
+                self,
                 self._locked_detail_text(
                     "Note",
                     {
@@ -4426,7 +4534,8 @@ class MainWindow(QMainWindow):
                 )
             )
         else:
-            self.notes_output.setPlainText(
+            MainWindow._show_note_detail_message(
+                self,
                 self._locked_placeholder_text("Note")
             )
 
@@ -4590,7 +4699,8 @@ class MainWindow(QMainWindow):
         self.files_list.clear()
         MainWindow._show_credential_detail_message(self, "")
         MainWindow._clear_credential_detail_fields(self)
-        self.notes_output.clear()
+        MainWindow._show_note_detail_message(self, "")
+        MainWindow._clear_note_detail_fields(self)
         self.files_output.clear()
         self.recovery_key_b64_input.clear()
         self.selected_credential_id = None
@@ -4620,6 +4730,11 @@ class MainWindow(QMainWindow):
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
 
+    def _show_note_detail_message(self, text: str) -> None:
+        self.notes_output.setPlainText(text)
+        if hasattr(self, "note_detail_stack"):
+            self.note_detail_stack.setCurrentWidget(self.note_detail_message)
+
     def _clear_credential_detail_fields(self) -> None:
         self._credential_detail_password_plaintext = ""
         for attribute_name in (
@@ -4640,6 +4755,20 @@ class MainWindow(QMainWindow):
             self._refresh_credential_detail_field_widths()
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
+
+    def _clear_note_detail_fields(self) -> None:
+        for attribute_name in (
+            "note_detail_title_input",
+            "note_detail_type_input",
+            "note_detail_state_input",
+        ):
+            widget = getattr(self, attribute_name, None)
+            if widget is not None:
+                widget.clear()
+        if hasattr(self, "note_detail_body_output"):
+            self.note_detail_body_output.clear()
+        if hasattr(self, "note_detail_stack"):
+            self.note_detail_stack.setCurrentWidget(self.note_detail_message)
 
     def _random_password_mask(self) -> str:
         return "\u2022" * (8 + secrets.randbelow(7))
@@ -4711,6 +4840,46 @@ class MainWindow(QMainWindow):
         if hasattr(self, "credential_detail_stack"):
             self.credential_detail_stack.setCurrentIndex(1)
 
+    def _render_note_detail_fields(self, item: dict) -> None:
+        payload = item.get("plaintext_payload") or {}
+        metadata = item.get("plaintext_metadata") or {}
+        title_value = self._first_non_empty_string(
+            item.get("plaintext_title"),
+            payload.get("title"),
+            metadata.get("label"),
+            metadata.get("title"),
+        ) or "-"
+        note_type_value = self._first_non_empty_string(
+            item.get("note_type"),
+            payload.get("note_type"),
+            metadata.get("note_type"),
+        ) or "note"
+        version_value = item.get("current_version", "-")
+        state_value = self._first_non_empty_string(item.get("state")) or "-"
+        body_value = self._first_non_empty_string(
+            payload.get("content"),
+            payload.get("body"),
+            payload.get("text"),
+            payload.get("summary"),
+        )
+        if body_value is None:
+            body_source = payload if payload else metadata
+            body_value = (
+                json.dumps(body_source, indent=2)
+                if body_source
+                else "No decrypted note content available."
+            )
+
+        self.note_detail_title_input.setText(title_value)
+        self.note_detail_type_input.setText(note_type_value.upper())
+        self.note_detail_state_input.setText(f"{state_value} · v{version_value}")
+        self.note_detail_body_output.setPlainText(body_value)
+        self.note_detail_body_output.moveCursor(
+            self.note_detail_body_output.textCursor().MoveOperation.Start
+        )
+        if hasattr(self, "note_detail_stack"):
+            self.note_detail_stack.setCurrentIndex(1)
+
     def _toggle_credential_password_visibility(self) -> None:
         if self.toggle_credential_password_button.text() == "Show":
             self.credential_detail_password_input.setText(
@@ -4778,6 +4947,15 @@ class MainWindow(QMainWindow):
         result = self.desktop_service.fetch_note_detail(note_id)
         self._render_note_detail(result)
 
+    def _handle_note_selection_changed(self, current, previous) -> None:
+        if current is None:
+            self.selected_note_id = None
+            self.selected_note_current_version = None
+            self._bind_note_item_to_editors({})
+            self._clear_note_detail_fields()
+            return
+        self.load_note_detail()
+
     def load_file_detail(self) -> None:
         item = self.files_list.currentItem()
         if item is None:
@@ -4801,7 +4979,7 @@ class MainWindow(QMainWindow):
 
     def _render_notes(self, result: ObjectListResult) -> None:
         if result.error:
-            self.notes_output.setPlainText(
+            self._show_note_detail_message(
                 f"Notes fetch failed.\nError: {result.error}"
             )
             self._refresh_action_states()
@@ -4813,10 +4991,12 @@ class MainWindow(QMainWindow):
             widget_item.setData(Qt.ItemDataRole.UserRole, entry.get("note_id"))
             self.notes_list.addItem(widget_item)
 
-        self.notes_output.setPlainText(format_notes_items(result.items))
+        self._show_note_detail_message(format_notes_items(result.items))
 
         if self.notes_list.count() > 0:
             self.notes_list.setCurrentRow(0)
+        else:
+            self._clear_note_detail_fields()
 
         self._refresh_action_states()
 
@@ -4879,7 +5059,7 @@ class MainWindow(QMainWindow):
 
     def _render_note_create_result(self, result: ObjectCreateResult) -> None:
         if result.error:
-            self.notes_output.setPlainText(
+            self._show_note_detail_message(
                 f"Note create failed.\nError: {result.error}"
             )
             self.status_label.setText(
@@ -4899,7 +5079,7 @@ class MainWindow(QMainWindow):
             self._select_note_item_by_id(note_id)
 
         self._bind_note_item_to_editors(display_item)
-        self.notes_output.setPlainText(format_note_detail(display_item))
+        self._render_note_detail_fields(display_item)
         self.tabs.setCurrentIndex(1)
 
         status_lines = [
@@ -4948,7 +5128,7 @@ class MainWindow(QMainWindow):
 
     def _render_note_delete_result(self, result: ObjectCreateResult) -> None:
         if result.error:
-            self.notes_output.setPlainText(
+            self._show_note_detail_message(
                 f"Note delete failed.\nError: {result.error}"
             )
             self.status_label.setText(
@@ -4966,6 +5146,7 @@ class MainWindow(QMainWindow):
         self.selected_note_id = None
         self.selected_note_current_version = None
         self.reset_note_create_fields()
+        self._clear_note_detail_fields()
         self.tabs.setCurrentIndex(1)
 
         status_lines = [
@@ -5018,7 +5199,7 @@ class MainWindow(QMainWindow):
 
     def _render_note_update_result(self, result: ObjectCreateResult) -> None:
         if result.error:
-            self.notes_output.setPlainText(
+            self._show_note_detail_message(
                 f"Note update failed.\nError: {result.error}"
             )
             self.status_label.setText(
@@ -5038,7 +5219,7 @@ class MainWindow(QMainWindow):
             self._select_note_item_by_id(note_id)
 
         self._bind_note_item_to_editors(display_item)
-        self.notes_output.setPlainText(format_note_detail(display_item))
+        self._render_note_detail_fields(display_item)
         self.tabs.setCurrentIndex(1)
 
         status_lines = [
@@ -5298,7 +5479,7 @@ class MainWindow(QMainWindow):
         if result.error:
             self.selected_note_id = None
             self.selected_note_current_version = None
-            self.notes_output.setPlainText(
+            self._show_note_detail_message(
                 f"Note detail fetch failed.\nError: {result.error}"
             )
             self._refresh_action_states()
@@ -5315,13 +5496,13 @@ class MainWindow(QMainWindow):
             self.selected_note_current_version = (
                 current_version if current_version is not None and current_version >= 1 else None
             )
-            self.notes_output.setPlainText(self._locked_detail_text("Note", item))
+            self._show_note_detail_message(self._locked_detail_text("Note", item))
             self._refresh_action_states()
             return
 
         display_item = self._decorate_item_detail_for_local_display(item)
         self._bind_note_item_to_editors(display_item)
-        self.notes_output.setPlainText(format_note_detail(display_item))
+        self._render_note_detail_fields(display_item)
         self._refresh_action_states()
 
     def _decorate_item_detail_for_local_display(self, item: dict) -> dict:

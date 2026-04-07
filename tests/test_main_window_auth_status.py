@@ -471,6 +471,37 @@ def test_credential_password_toggle_reveals_and_hides_value(app_fixture) -> None
     assert window.toggle_credential_password_button.text() == "Show"
 
 
+def test_note_detail_renders_readonly_fields_with_focused_body_panel(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window._render_note_detail_fields(
+        {
+            "note_id": "note_1",
+            "state": "active",
+            "note_type": "note",
+            "plaintext_title": "Daily plan",
+            "plaintext_payload": {
+                "content": "Buy milk\nShip patch",
+            },
+            "current_version": 3,
+        }
+    )
+
+    assert window.note_detail_stack.currentIndex() == 1
+    assert window.note_detail_title_input.text() == "Daily plan"
+    assert window.note_detail_type_input.text() == "NOTE"
+    assert window.note_detail_state_input.text() == "active · v3"
+    assert window.note_detail_body_output.toPlainText() == "Buy milk\nShip patch"
+    assert window.note_detail_title_input.property("ghostField") is True
+    assert window.note_detail_title_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.note_detail_type_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.note_detail_state_input.alignment() == Qt.AlignmentFlag.AlignCenter
+    assert window.note_detail_title_input.isReadOnly()
+    assert window.note_detail_type_input.isReadOnly()
+    assert window.note_detail_state_input.isReadOnly()
+    assert window.note_detail_body_output.isReadOnly()
+
+
 def test_new_vault_pin_field_uses_default_rendered_size(app_fixture) -> None:
     window = MainWindow(get_settings())
     window.new_vault_pin_input.clear()
