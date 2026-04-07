@@ -2154,6 +2154,8 @@ class MainWindow(QMainWindow):
             }}
             QPushButton[workspaceCompact="true"] {{
                 font-size: 8px;
+                min-height: 14px;
+                padding: 0 8px;
             }}
             QCheckBox[workspaceFooterText="true"],
             QLabel[workspaceFooterText="true"] {{
