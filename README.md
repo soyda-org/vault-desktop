@@ -53,3 +53,16 @@ The desktop app now follows this model:
 Probe API, Login, and Sign Up are intended to remain responsive even when the backend is slow,
 so network-bound work should stay off the UI thread.
 <!-- END:OPENAI_DESKTOP_AUTH_UX -->
+
+## Packaging
+
+Current recommended release path is Linux-first packaging via PyInstaller in one-folder mode.
+
+Prerequisites:
+
+1. create the desktop virtual environment
+2. ensure the sibling `vault-crypto` repository is present
+3. run `scripts/package-linux.sh`
+
+That script installs `vault-crypto` into the desktop virtualenv, installs the desktop build dependencies,
+and produces a bundled app under `dist/vault-desktop/`.
