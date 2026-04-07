@@ -1607,6 +1607,8 @@ class MainWindow(QMainWindow):
         upload_actions_layout.setContentsMargins(0, 0, 0, 0)
         upload_actions_layout.setSpacing(8)
         upload_actions_layout.addWidget(self.cancel_file_upload_button)
+        upload_actions_layout.addWidget(QLabel("Chunk size"), 0)
+        upload_actions_layout.addWidget(self.file_chunk_size_kib_input, 0)
         upload_actions_layout.addStretch(1)
 
         upload_path_row = QHBoxLayout()
@@ -1614,13 +1616,6 @@ class MainWindow(QMainWindow):
         upload_path_row.setSpacing(8)
         upload_path_row.addWidget(self.pick_file_button, 0)
         upload_path_row.addWidget(self.file_path_input, 1)
-
-        upload_runtime_row = QHBoxLayout()
-        upload_runtime_row.setContentsMargins(0, 0, 0, 0)
-        upload_runtime_row.setSpacing(8)
-        upload_runtime_row.addWidget(QLabel("Chunk size"))
-        upload_runtime_row.addWidget(self.file_chunk_size_kib_input)
-        upload_runtime_row.addStretch(1)
 
         upload_progress_row = QHBoxLayout()
         upload_progress_row.setContentsMargins(0, 0, 0, 0)
@@ -1634,7 +1629,6 @@ class MainWindow(QMainWindow):
         upload_layout.addStretch(1)
         upload_layout.addLayout(upload_actions_layout)
         upload_layout.addLayout(upload_path_row)
-        upload_layout.addLayout(upload_runtime_row)
         upload_layout.addLayout(upload_progress_row)
         upload_card = self._build_workspace_card(
             title=None,
