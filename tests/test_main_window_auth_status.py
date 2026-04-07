@@ -777,6 +777,75 @@ def test_run_login_rejects_empty_password_before_network(app_fixture) -> None:
     assert window.status_label.text() == "Login failed.\nError: Password is required."
 
 
+def test_logout_clears_password_input(app_fixture) -> None:
+    window = MainWindow(get_settings())
+    window.password_input.setText("super-secret")
+
+    window._perform_local_logout("Session cleared locally.")
+
+    assert window.password_input.text() == ""
+
+
+def test_create_credential_uses_friendly_editor_dialog(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    captured: dict[str, object] = {}
+
+    class FakeCredentialDialog:
+        def __init__(self, **kwargs) -> None:
+            captured["kwargs"] = kwargs
+
+        def exec(self) -> bool:
+            captured["exec_called"] = True
+            return False
+
+    monkeypatch.setattr(
+        main_window_module,
+        "CredentialItemEditorDialog",
+        FakeCredentialDialog,
+    )
+
+    window = MainWindow(get_settings())
+    window.run_open_create_credential_dialog()
+
+    assert captured["exec_called"] is True
+    kwargs = captured["kwargs"]
+    assert kwargs["title"] == "New Credential"
+    assert kwargs["action_text"] == "Create Credential"
+
+
+def test_edit_credential_uses_friendly_editor_dialog(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    captured: dict[str, object] = {}
+
+    class FakeCredentialDialog:
+        def __init__(self, **kwargs) -> None:
+            captured["kwargs"] = kwargs
+
+        def exec(self) -> bool:
+            captured["exec_called"] = True
+            return False
+
+    monkeypatch.setattr(
+        main_window_module,
+        "CredentialItemEditorDialog",
+        FakeCredentialDialog,
+    )
+
+    window = MainWindow(get_settings())
+    window.selected_credential_id = "cred_1"
+    window.credential_metadata_input.setPlainText('{"label": "Personal"}')
+    window.credential_payload_input.setPlainText('{"username": "alice", "secret": "s3cr3t"}')
+
+    window.run_open_update_credential_dialog()
+
+    assert captured["exec_called"] is True
+    kwargs = captured["kwargs"]
+    assert kwargs["title"] == "Edit Credential"
+    assert kwargs["action_text"] == "Save Credential"
+
+
 def test_append_activity_log_keeps_newest_first_and_dedupes(app_fixture) -> None:
     window = SimpleNamespace(
         activity_log_list=QListWidget(),
