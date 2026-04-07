@@ -187,6 +187,7 @@ class MainWindow(QMainWindow):
         self.settings = settings
         self.local_settings_store = LocalSettingsStore()
         self.persisted_ui_settings = self.local_settings_store.load()
+        self._pending_window_position: tuple[int, int] | None = None
 
         self.api_client = VaultApiClient(self.persisted_ui_settings.api_base_url)
         self.desktop_service = VaultDesktopService(
@@ -213,14 +214,15 @@ class MainWindow(QMainWindow):
                     self.persisted_ui_settings.window_geometry_b64.encode("ascii")
                 )
             )
-        elif (
+        if (
             self.persisted_ui_settings.window_x is not None
             and self.persisted_ui_settings.window_y is not None
         ):
-            self.move(
+            self._pending_window_position = (
                 self.persisted_ui_settings.window_x,
                 self.persisted_ui_settings.window_y,
             )
+            self.move(*self._pending_window_position)
         self._apply_theme()
 
         self._last_activity_message = ""
@@ -2572,6 +2574,14 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         self._refresh_navbar_labels()
 
+    def showEvent(self, event) -> None:  # type: ignore[override]
+        super().showEvent(event)
+        if self._pending_window_position is not None:
+            # Re-apply the persisted position after the first show because
+            # restoreGeometry can override the pre-show move on some platforms.
+            self.move(*self._pending_window_position)
+            self._pending_window_position = None
+
     def _refresh_navbar_labels(self) -> None:
         if not hasattr(self, "theme_toggle_button"):
             return
@@ -2717,16 +2727,25 @@ class MainWindow(QMainWindow):
 
     def _save_ui_preferences(self) -> None:
         default_device_name, default_platform = detect_local_device_defaults()
+        normal_geometry = self.normalGeometry()
+        window_x = normal_geometry.x() if normal_geometry.isValid() else self.x()
+        window_y = normal_geometry.y() if normal_geometry.isValid() else self.y()
+        window_width = (
+            normal_geometry.width() if normal_geometry.isValid() else self.width()
+        )
+        window_height = (
+            normal_geometry.height() if normal_geometry.isValid() else self.height()
+        )
         updated_settings = PersistedUiSettings(
             api_base_url=self.persisted_ui_settings.api_base_url,
             identifier=self.identifier_input.text().strip() or "alice",
             device_name=self.device_name_input.text().strip() or default_device_name,
             platform=self.platform_input.text().strip() or default_platform,
             window_geometry_b64=bytes(self.saveGeometry().toBase64()).decode("ascii"),
-            window_x=self.x(),
-            window_y=self.y(),
-            window_width=self.width(),
-            window_height=self.height(),
+            window_x=window_x,
+            window_y=window_y,
+            window_width=window_width,
+            window_height=window_height,
             last_tab_index=self.tabs.currentIndex(),
             theme=self.current_theme,
             remember_session=(

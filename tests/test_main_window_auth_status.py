@@ -193,6 +193,27 @@ def test_main_window_restores_persisted_position(app_fixture, monkeypatch) -> No
     assert window.y() == 90
 
 
+def test_main_window_restores_persisted_position_even_with_geometry_blob(
+    app_fixture, monkeypatch
+) -> None:
+    from app.ui import main_window as main_window_module
+
+    monkeypatch.setattr(
+        main_window_module.LocalSettingsStore,
+        "load",
+        lambda self: PersistedUiSettings(
+            window_geometry_b64="ZmFrZS1nZW9tZXRyeQ==",
+            window_x=140,
+            window_y=110,
+        ),
+    )
+
+    window = MainWindow(get_settings())
+
+    assert window.x() == 140
+    assert window.y() == 110
+
+
 def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
     window = MainWindow(get_settings())
 
