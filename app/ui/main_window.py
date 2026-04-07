@@ -264,6 +264,7 @@ class MainWindow(QMainWindow):
         )
         self.keep_vault_open_checkbox = QCheckBox("Keep vault open on this device")
         self.keep_vault_open_checkbox.setObjectName("keepVaultOpenCheckbox")
+        self.keep_vault_open_checkbox.setProperty("workspaceFooterText", True)
         self.keep_vault_open_checkbox.setChecked(
             self.persisted_ui_settings.keep_vault_open
         )
@@ -272,6 +273,7 @@ class MainWindow(QMainWindow):
         )
         self.vault_auto_lock_countdown_label = QLabel()
         self.vault_auto_lock_countdown_label.setObjectName("vaultAutoLockCountdown")
+        self.vault_auto_lock_countdown_label.setProperty("workspaceFooterText", True)
 
         self.copy_activity_log_button = QPushButton("Copy Diagnostics")
         self.copy_activity_log_button.clicked.connect(self.run_copy_activity_log)
@@ -911,16 +913,19 @@ class MainWindow(QMainWindow):
         self.tabs.currentChanged.connect(self._handle_workspace_tab_changed)
         self.workspace_credentials_tab_button = QPushButton("Credentials")
         self.workspace_credentials_tab_button.setProperty("segment", "true")
+        self.workspace_credentials_tab_button.setProperty("workspaceCompact", True)
         self.workspace_credentials_tab_button.clicked.connect(
             lambda: self.tabs.setCurrentIndex(0)
         )
         self.workspace_notes_tab_button = QPushButton("Notes")
         self.workspace_notes_tab_button.setProperty("segment", "true")
+        self.workspace_notes_tab_button.setProperty("workspaceCompact", True)
         self.workspace_notes_tab_button.clicked.connect(
             lambda: self.tabs.setCurrentIndex(1)
         )
         self.workspace_files_tab_button = QPushButton("Files")
         self.workspace_files_tab_button.setProperty("segment", "true")
+        self.workspace_files_tab_button.setProperty("workspaceCompact", True)
         self.workspace_files_tab_button.clicked.connect(
             lambda: self.tabs.setCurrentIndex(2)
         )
@@ -2146,6 +2151,13 @@ class MainWindow(QMainWindow):
                 font-size: 10px;
                 padding: 1px 6px;
                 min-height: 16px;
+            }}
+            QPushButton[workspaceCompact="true"] {{
+                font-size: 8px;
+            }}
+            QCheckBox[workspaceFooterText="true"],
+            QLabel[workspaceFooterText="true"] {{
+                font-size: 8px;
             }}
             QPushButton[nav="true"][navLevel="success"] {{
                 border-color: {success};
