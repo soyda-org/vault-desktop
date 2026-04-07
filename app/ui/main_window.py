@@ -1606,7 +1606,6 @@ class MainWindow(QMainWindow):
         upload_actions_layout = QHBoxLayout()
         upload_actions_layout.setContentsMargins(0, 0, 0, 0)
         upload_actions_layout.setSpacing(8)
-        upload_actions_layout.addWidget(self.create_file_button)
         upload_actions_layout.addWidget(self.cancel_file_upload_button)
         upload_actions_layout.addStretch(1)
 
@@ -1626,7 +1625,7 @@ class MainWindow(QMainWindow):
         upload_progress_row = QHBoxLayout()
         upload_progress_row.setContentsMargins(0, 0, 0, 0)
         upload_progress_row.setSpacing(8)
-        upload_progress_row.addWidget(QLabel("Upload"))
+        upload_progress_row.addWidget(self.create_file_button, 0)
         upload_progress_row.addWidget(self.file_upload_progress, 1)
 
         upload_layout = QVBoxLayout()
@@ -1647,7 +1646,6 @@ class MainWindow(QMainWindow):
         download_actions_layout = QHBoxLayout()
         download_actions_layout.setContentsMargins(0, 0, 0, 0)
         download_actions_layout.setSpacing(8)
-        download_actions_layout.addWidget(self.download_file_button)
         download_actions_layout.addWidget(self.cancel_file_download_button)
         download_actions_layout.addStretch(1)
 
@@ -1660,7 +1658,7 @@ class MainWindow(QMainWindow):
         download_progress_row = QHBoxLayout()
         download_progress_row.setContentsMargins(0, 0, 0, 0)
         download_progress_row.setSpacing(8)
-        download_progress_row.addWidget(QLabel("Download"))
+        download_progress_row.addWidget(self.download_file_button, 0)
         download_progress_row.addWidget(self.file_download_progress, 1)
 
         download_layout = QVBoxLayout()
