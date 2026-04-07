@@ -564,6 +564,8 @@ def test_note_detail_renders_readonly_fields_with_focused_body_panel(app_fixture
     assert window.note_detail_tags_input.isReadOnly()
     assert window.note_detail_body_output.isReadOnly()
     assert window.toggle_note_body_button.text() == "Show"
+    assert window.toggle_note_markdown_button.text() == "Markdown"
+    assert window.toggle_note_markdown_button.isEnabled() is False
 
 
 def test_note_body_toggle_switches_between_plaintext_and_ciphertext(app_fixture) -> None:
@@ -590,11 +592,52 @@ def test_note_body_toggle_switches_between_plaintext_and_ciphertext(app_fixture)
 
     assert window.note_detail_body_output.toPlainText() == "Buy milk\nShip patch"
     assert window.toggle_note_body_button.text() == "Hide"
+    assert window.toggle_note_markdown_button.isEnabled() is False
 
     window.run_toggle_note_body_visibility()
 
     assert window.note_detail_body_output.toPlainText() == "ZW5jcnlwdGVkLW5vdGU="
     assert window.toggle_note_body_button.text() == "Show"
+    assert window.toggle_note_markdown_button.isEnabled() is False
+
+
+def test_note_markdown_toggle_switches_between_plaintext_and_rendered_preview(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window._render_note_detail_fields(
+        {
+            "note_id": "note_1",
+            "note_type": "note",
+            "plaintext_title": "Daily plan",
+            "plaintext_payload": {
+                "content": "# Daily plan\n\n- Buy milk",
+            },
+            "encrypted_payload": {
+                "ciphertext_b64": "ZW5jcnlwdGVkLW5vdGU=",
+            },
+        }
+    )
+
+    assert window.toggle_note_markdown_button.isEnabled() is False
+
+    window.run_toggle_note_body_visibility()
+
+    assert window.toggle_note_markdown_button.isEnabled() is True
+    assert window.toggle_note_markdown_button.text() == "Markdown"
+    assert window.note_detail_body_output.toPlainText() == "# Daily plan\n\n- Buy milk"
+
+    window.run_toggle_note_markdown_view()
+
+    assert window._note_detail_markdown_enabled is True
+    assert window.toggle_note_markdown_button.text() == "Plain"
+    assert "Daily plan" in window.note_detail_body_output.toPlainText()
+    assert "Buy milk" in window.note_detail_body_output.toPlainText()
+
+    window.run_toggle_note_markdown_view()
+
+    assert window._note_detail_markdown_enabled is False
+    assert window.toggle_note_markdown_button.text() == "Markdown"
+    assert window.note_detail_body_output.toPlainText() == "# Daily plan\n\n- Buy milk"
 
 
 def test_note_copy_feedback_shows_inline_message(app_fixture, monkeypatch) -> None:

@@ -4,6 +4,7 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
+import re
 import secrets
 
 from PySide6.QtCore import QByteArray, QThread, Qt, QEvent, QTimer
@@ -98,6 +99,12 @@ class ActivityStatusLabel(QLabel):
     def setText(self, text: str) -> None:  # type: ignore[override]
         super().setText(text)
         self._on_change(text)
+
+
+_MARKDOWN_PATTERN = re.compile(
+    r"(^#{1,6}\s)|(^[-*+]\s)|(^\d+\.\s)|(```)|(`[^`]+`)|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(^>\s)",
+    re.MULTILINE,
+)
 
 
 def _theme_palette(theme: str) -> dict[str, str]:
@@ -708,11 +715,20 @@ class MainWindow(QMainWindow):
         self._note_detail_plaintext_body = ""
         self._note_detail_ciphertext_body = ""
         self._note_detail_body_is_hidden = False
+        self._note_detail_markdown_enabled = False
+        self._note_detail_has_markdown = False
 
         self.toggle_note_body_button = QPushButton("Hide")
         self.toggle_note_body_button.setProperty("tone", "secondary")
         self.toggle_note_body_button.setProperty("hoverGlow", "light")
         self.toggle_note_body_button.clicked.connect(self.run_toggle_note_body_visibility)
+        self.toggle_note_markdown_button = QPushButton("Markdown")
+        self.toggle_note_markdown_button.setProperty("tone", "secondary")
+        self.toggle_note_markdown_button.setProperty("hoverGlow", "light")
+        self.toggle_note_markdown_button.setEnabled(False)
+        self.toggle_note_markdown_button.clicked.connect(
+            self.run_toggle_note_markdown_view
+        )
 
         self.copy_note_body_button = QPushButton("Copy")
         self.copy_note_body_button.setProperty("tone", "secondary")
@@ -743,6 +759,7 @@ class MainWindow(QMainWindow):
         note_detail_footer_row.setContentsMargins(0, 0, 0, 0)
         note_detail_footer_row.setSpacing(8)
         note_detail_footer_row.addWidget(self.toggle_note_body_button, 0)
+        note_detail_footer_row.addWidget(self.toggle_note_markdown_button, 0)
         note_detail_footer_row.addStretch(1)
         note_detail_footer_row.addWidget(self.note_copy_feedback_label, 0)
         note_detail_footer_row.addWidget(self.copy_note_body_button, 0)
@@ -3213,8 +3230,42 @@ class MainWindow(QMainWindow):
         app.clipboard().setText(value)
         self.status_label.setText(success_message)
 
+    def _looks_like_markdown(self, text: str) -> bool:
+        return bool(_MARKDOWN_PATTERN.search(text or ""))
+
+    def _refresh_note_markdown_button_state(self) -> None:
+        is_enabled = (not self._note_detail_body_is_hidden) and self._note_detail_has_markdown
+        self.toggle_note_markdown_button.setEnabled(is_enabled)
+        self.toggle_note_markdown_button.setText(
+            "Plain" if self._note_detail_markdown_enabled else "Markdown"
+        )
+
+    def _render_note_detail_body(self) -> None:
+        if self._note_detail_body_is_hidden:
+            self.note_detail_body_output.setPlainText(self._note_detail_ciphertext_body)
+            self.note_detail_body_output.moveCursor(
+                self.note_detail_body_output.textCursor().MoveOperation.Start
+            )
+            self._refresh_note_markdown_button_state()
+            return
+
+        if self._note_detail_markdown_enabled and self._note_detail_has_markdown:
+            self.note_detail_body_output.setMarkdown(self._note_detail_plaintext_body)
+        else:
+            self.note_detail_body_output.setPlainText(self._note_detail_plaintext_body)
+        self.note_detail_body_output.moveCursor(
+            self.note_detail_body_output.textCursor().MoveOperation.Start
+        )
+        self._refresh_note_markdown_button_state()
+
     def run_copy_note_body(self) -> None:
-        value = self.note_detail_body_output.toPlainText()
+        value = (
+            self._note_detail_ciphertext_body
+            if self._note_detail_body_is_hidden
+            else self._note_detail_plaintext_body
+        )
+        if not value:
+            value = self.note_detail_body_output.toPlainText()
         self._copy_text_value(value, "Note content copied to clipboard.")
         if not value or value == "-":
             self.note_copy_feedback_label.setText("")
@@ -3225,6 +3276,12 @@ class MainWindow(QMainWindow):
     def _clear_note_copy_feedback(self) -> None:
         if hasattr(self, "note_copy_feedback_label"):
             self.note_copy_feedback_label.setText("")
+
+    def run_toggle_note_markdown_view(self) -> None:
+        if self._note_detail_body_is_hidden or not self._note_detail_has_markdown:
+            return
+        self._note_detail_markdown_enabled = not self._note_detail_markdown_enabled
+        self._render_note_detail_body()
 
     def _refresh_quick_crypto_method_state(self) -> None:
         method_key = str(self.quick_crypto_method_select.currentData())
@@ -4868,6 +4925,8 @@ class MainWindow(QMainWindow):
         self._note_detail_plaintext_body = ""
         self._note_detail_ciphertext_body = ""
         self._note_detail_body_is_hidden = False
+        self._note_detail_markdown_enabled = False
+        self._note_detail_has_markdown = False
         for attribute_name in (
             "note_detail_title_input",
             "note_detail_type_input",
@@ -4880,6 +4939,9 @@ class MainWindow(QMainWindow):
             self.note_detail_body_output.clear()
         if hasattr(self, "toggle_note_body_button"):
             self.toggle_note_body_button.setText("Hide")
+        if hasattr(self, "toggle_note_markdown_button"):
+            self.toggle_note_markdown_button.setText("Markdown")
+            self.toggle_note_markdown_button.setEnabled(False)
         if hasattr(self, "note_detail_stack"):
             self.note_detail_stack.setCurrentWidget(self.note_detail_message)
 
@@ -5026,12 +5088,11 @@ class MainWindow(QMainWindow):
         self.note_detail_tags_input.setCursorPosition(0)
         self._note_detail_plaintext_body = body_value
         self._note_detail_ciphertext_body = self._encrypted_note_body_text(item)
+        self._note_detail_has_markdown = self._looks_like_markdown(body_value)
         self._note_detail_body_is_hidden = True
-        self.note_detail_body_output.setPlainText(self._note_detail_ciphertext_body)
+        self._note_detail_markdown_enabled = False
+        self._render_note_detail_body()
         self.toggle_note_body_button.setText("Show")
-        self.note_detail_body_output.moveCursor(
-            self.note_detail_body_output.textCursor().MoveOperation.Start
-        )
         if hasattr(self, "note_detail_stack"):
             self.note_detail_stack.setCurrentIndex(1)
 
@@ -5040,14 +5101,11 @@ class MainWindow(QMainWindow):
             return
         self._note_detail_body_is_hidden = not self._note_detail_body_is_hidden
         if self._note_detail_body_is_hidden:
-            self.note_detail_body_output.setPlainText(self._note_detail_ciphertext_body)
             self.toggle_note_body_button.setText("Show")
+            self._note_detail_markdown_enabled = False
         else:
-            self.note_detail_body_output.setPlainText(self._note_detail_plaintext_body)
             self.toggle_note_body_button.setText("Hide")
-        self.note_detail_body_output.moveCursor(
-            self.note_detail_body_output.textCursor().MoveOperation.Start
-        )
+        self._render_note_detail_body()
 
     def _toggle_credential_password_visibility(self) -> None:
         if self.toggle_credential_password_button.text() == "Show":

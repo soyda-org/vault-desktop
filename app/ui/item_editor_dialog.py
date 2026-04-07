@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from PySide6.QtWidgets import (
     QDialog,
@@ -11,8 +12,20 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QPlainTextEdit,
+    QStackedWidget,
+    QTextEdit,
     QVBoxLayout,
 )
+
+
+_MARKDOWN_PATTERN = re.compile(
+    r"(^#{1,6}\s)|(^[-*+]\s)|(^\d+\.\s)|(```)|(`[^`]+`)|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(^>\s)",
+    re.MULTILINE,
+)
+
+
+def _looks_like_markdown(text: str) -> bool:
+    return bool(_MARKDOWN_PATTERN.search(text or ""))
 
 
 class JsonItemEditorDialog(QDialog):
@@ -182,9 +195,16 @@ class NoteItemEditorDialog(QDialog):
         content_label.setObjectName("fieldLabel")
         layout.addWidget(content_label)
 
+        self.content_stack = QStackedWidget()
         self.content_input = QPlainTextEdit()
         self.content_input.setMinimumHeight(260)
-        layout.addWidget(self.content_input, 1)
+        self.content_preview = QTextEdit()
+        self.content_preview.setReadOnly(True)
+        self.content_preview.setMinimumHeight(260)
+        self.content_stack.addWidget(self.content_input)
+        self.content_stack.addWidget(self.content_preview)
+        layout.addWidget(self.content_stack, 1)
+        self._content_preview_enabled = False
 
         actions = QHBoxLayout()
         actions.setContentsMargins(0, 0, 0, 0)
@@ -196,6 +216,11 @@ class NoteItemEditorDialog(QDialog):
             actions.addWidget(self.reset_button)
         else:
             self.reset_button = None
+
+        self.preview_button = QPushButton("Preview")
+        self.preview_button.setProperty("tone", "secondary")
+        self.preview_button.clicked.connect(self.toggle_preview_mode)
+        actions.addWidget(self.preview_button)
 
         actions.addStretch(1)
 
@@ -212,6 +237,24 @@ class NoteItemEditorDialog(QDialog):
             metadata_text=metadata_text,
             payload_text=payload_text,
         )
+
+    def _refresh_preview_content(self) -> None:
+        content = self.content_input.toPlainText()
+        if _looks_like_markdown(content):
+            self.content_preview.setMarkdown(content)
+        else:
+            self.content_preview.setPlainText(content)
+
+    def toggle_preview_mode(self) -> None:
+        self._content_preview_enabled = not self._content_preview_enabled
+        if self._content_preview_enabled:
+            self._refresh_preview_content()
+            self.content_stack.setCurrentWidget(self.content_preview)
+            self.preview_button.setText("Edit")
+            return
+
+        self.content_stack.setCurrentWidget(self.content_input)
+        self.preview_button.setText("Preview")
 
     def _parse_json_object(self, text: str) -> dict:
         raw = text.strip()
@@ -278,6 +321,8 @@ class NoteItemEditorDialog(QDialog):
             metadata_text=metadata_text,
             payload_text=payload_text,
         )
+        if self._content_preview_enabled:
+            self.toggle_preview_mode()
 
     def metadata_text(self) -> str:
         metadata = dict(self._extra_metadata)

@@ -134,3 +134,32 @@ def test_note_item_editor_dialog_empty_defaults_render_blank_fields(app_fixture)
     assert dialog.title_input.text() == ""
     assert dialog.tags_input.text() == ""
     assert dialog.content_input.toPlainText() == ""
+
+
+def test_note_item_editor_dialog_preview_toggles_markdown_render(app_fixture) -> None:
+    dialog = NoteItemEditorDialog(
+        title="New Note",
+        summary="Create note",
+        action_text="Create Note",
+        note_type="note",
+        metadata_text="{}",
+        payload_text=json.dumps(
+            {"content": "# Title\n\n- buy milk"},
+            indent=2,
+        ),
+    )
+
+    assert dialog.preview_button.text() == "Preview"
+    assert dialog.content_stack.currentWidget() is dialog.content_input
+
+    dialog.preview_button.click()
+
+    assert dialog.preview_button.text() == "Edit"
+    assert dialog.content_stack.currentWidget() is dialog.content_preview
+    assert "Title" in dialog.content_preview.toPlainText()
+    assert "buy milk" in dialog.content_preview.toPlainText()
+
+    dialog.preview_button.click()
+
+    assert dialog.preview_button.text() == "Preview"
+    assert dialog.content_stack.currentWidget() is dialog.content_input
