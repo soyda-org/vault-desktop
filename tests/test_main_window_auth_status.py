@@ -394,9 +394,24 @@ def test_note_action_buttons_compact_when_window_is_narrow(app_fixture) -> None:
 def test_file_action_buttons_use_cleaner_labels(app_fixture) -> None:
     window = MainWindow(get_settings())
 
-    assert window.load_file_detail_button.text() == "Load File"
     assert window.pick_download_target_button.text() == "Save Path"
     assert window.reset_file_payload_button.text() == "Reset Draft"
+
+
+def test_file_selection_auto_loads_detail(app_fixture, monkeypatch) -> None:
+    window = MainWindow(get_settings())
+    called = {"value": False}
+
+    def fake_load_file_detail() -> None:
+        called["value"] = True
+
+    monkeypatch.setattr(window, "load_file_detail", fake_load_file_detail)
+
+    window.files_list.addItem("file-1")
+    window.files_list.setCurrentRow(0)
+    app_fixture.processEvents()
+
+    assert called["value"] is True
 
 
 def test_credentials_filter_buttons_switch_visible_items(app_fixture) -> None:

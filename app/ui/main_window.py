@@ -470,10 +470,6 @@ class MainWindow(QMainWindow):
         self.reset_note_payload_button.clicked.connect(self.reset_note_create_fields)
         self.reset_note_payload_button.setProperty("tone", "secondary")
 
-        self.load_file_detail_button = QPushButton("Load File")
-        self.load_file_detail_button.clicked.connect(self.load_file_detail)
-        self.load_file_detail_button.setEnabled(False)
-
         self.pick_file_button = QPushButton("Pick File")
         self.pick_file_button.clicked.connect(self.run_pick_file)
         self.pick_file_button.setProperty("tone", "secondary")
@@ -1330,6 +1326,7 @@ class MainWindow(QMainWindow):
         self.notes_list.currentItemChanged.connect(lambda *_: self._refresh_action_states())
         self.notes_list.currentItemChanged.connect(self._handle_note_selection_changed)
         self.files_list.currentItemChanged.connect(lambda *_: self._refresh_action_states())
+        self.files_list.currentItemChanged.connect(self._handle_file_selection_changed)
         self.file_path_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.file_download_target_input.textChanged.connect(lambda *_: self._refresh_action_states())
         self.vault_pin_input.textChanged.connect(lambda *_: self._refresh_action_states())
@@ -1609,7 +1606,6 @@ class MainWindow(QMainWindow):
         primary_actions_layout = QHBoxLayout()
         primary_actions_layout.setContentsMargins(0, 0, 0, 0)
         primary_actions_layout.setSpacing(8)
-        primary_actions_layout.addWidget(self.load_file_detail_button)
         primary_actions_layout.addWidget(self.pick_file_button)
         primary_actions_layout.addWidget(self.create_file_button)
         primary_actions_layout.addWidget(self.cancel_file_upload_button)
@@ -4681,7 +4677,6 @@ class MainWindow(QMainWindow):
         file_source_ready = bool(self.file_path_input.text().strip())
         file_target_ready = bool(self.file_download_target_input.text().strip())
 
-        self.load_file_detail_button.setEnabled(file_jobs_idle and file_item_selected)
         self.create_file_button.setEnabled(file_jobs_idle and vault_unlocked and file_source_ready)
         self.download_file_button.setEnabled(
             file_jobs_idle and vault_unlocked and file_item_selected and file_target_ready
@@ -5241,6 +5236,12 @@ class MainWindow(QMainWindow):
             return
         self.load_note_detail()
 
+    def _handle_file_selection_changed(self, current, previous) -> None:
+        if current is None:
+            self.files_output.clear()
+            return
+        self.load_file_detail()
+
     def load_file_detail(self) -> None:
         item = self.files_list.currentItem()
         if item is None:
@@ -5536,7 +5537,6 @@ class MainWindow(QMainWindow):
             self.pick_download_target_button,
             self.download_file_button,
             self.reset_file_payload_button,
-            self.load_file_detail_button,
             self.file_chunk_size_kib_input,
             self.recovery_key_b64_input,
             self.unlock_with_recovery_key_button,
