@@ -502,6 +502,42 @@ def test_pick_download_target_prefills_selected_filename(app_fixture, monkeypatc
     assert captured["default_name"] == "courier-code.zip"
 
 
+def test_pick_download_target_replaces_existing_target_filename(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    window = MainWindow(get_settings())
+    captured = {"default_name": None}
+
+    def fake_get_save_file_name(parent, title, default_name, file_filter):
+        captured["default_name"] = default_name
+        return ("", "")
+
+    monkeypatch.setattr(
+        main_window_module.QFileDialog,
+        "getSaveFileName",
+        fake_get_save_file_name,
+    )
+
+    window._render_files(
+        ObjectListResult(
+            items=[
+                {
+                    "file_id": "file_1",
+                    "plaintext_filename": "courier-code.zip",
+                    "plaintext_size_bytes": 62181,
+                    "state": "active",
+                    "current_version": 1,
+                }
+            ]
+        )
+    )
+    window.file_download_target_input.setText("/tmp/old-file-id.bin")
+
+    window.run_pick_download_target()
+
+    assert captured["default_name"] == "/tmp/courier-code.zip"
+
+
 def test_credentials_filter_buttons_switch_visible_items(app_fixture) -> None:
     window = MainWindow(get_settings())
     window._render_credentials(

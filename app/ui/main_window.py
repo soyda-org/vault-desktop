@@ -4363,7 +4363,8 @@ class MainWindow(QMainWindow):
         current_target = self.file_download_target_input.text().strip()
         selected_item = self.files_list.currentItem()
         default_name = current_target
-        if not default_name and selected_item is not None:
+        selected_file_name = ""
+        if selected_item is not None:
             selected_file_entry = selected_item.data(Qt.ItemDataRole.UserRole + 1)
             if isinstance(selected_file_entry, dict):
                 selected_file_name = str(
@@ -4372,7 +4373,10 @@ class MainWindow(QMainWindow):
                     or selected_file_entry.get("plaintext_name")
                     or ""
                 ).strip()
-                if selected_file_name:
+            if selected_file_name:
+                if current_target:
+                    default_name = str(Path(current_target).expanduser().with_name(selected_file_name))
+                else:
                     default_name = selected_file_name
             if not default_name:
                 selected_file_id = str(selected_item.data(Qt.ItemDataRole.UserRole) or "").strip()
