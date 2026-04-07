@@ -107,6 +107,28 @@ _MARKDOWN_PATTERN = re.compile(
 )
 
 
+def _markdown_preview_stylesheet(palette: dict[str, str]) -> str:
+    return f"""
+        pre {{
+            background-color: #0b1220;
+            border: 1px solid {palette["border"]};
+            border-radius: 10px;
+            padding: 12px;
+            color: {palette["text"]};
+            white-space: pre-wrap;
+            font-family: "Courier New";
+        }}
+        code {{
+            background-color: {palette["surface_alt"]};
+            border: 1px solid {palette["border"]};
+            border-radius: 6px;
+            padding: 2px 4px;
+            color: #dbeafe;
+            font-family: "Courier New";
+        }}
+    """
+
+
 def _theme_palette(theme: str) -> dict[str, str]:
     if theme == "dark":
         return {
@@ -720,6 +742,9 @@ class MainWindow(QMainWindow):
         self.note_detail_markdown_output.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding,
+        )
+        self.note_detail_markdown_output.document().setDefaultStyleSheet(
+            _markdown_preview_stylesheet(_theme_palette(self.current_theme))
         )
         self.note_detail_body_stack.addWidget(self.note_detail_body_output)
         self.note_detail_body_stack.addWidget(self.note_detail_markdown_output)
@@ -2788,6 +2813,10 @@ class MainWindow(QMainWindow):
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(self._build_stylesheet())
+        if hasattr(self, "note_detail_markdown_output"):
+            self.note_detail_markdown_output.document().setDefaultStyleSheet(
+                _markdown_preview_stylesheet(_theme_palette(self.current_theme))
+            )
         self._refresh_navbar_labels()
 
     def resizeEvent(self, event) -> None:  # type: ignore[override]

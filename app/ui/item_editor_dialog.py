@@ -28,6 +28,28 @@ def _looks_like_markdown(text: str) -> bool:
     return bool(_MARKDOWN_PATTERN.search(text or ""))
 
 
+def _markdown_preview_stylesheet() -> str:
+    return """
+        pre {
+            background-color: #0b1220;
+            border: 1px solid #243247;
+            border-radius: 10px;
+            padding: 12px;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            font-family: "Courier New";
+        }
+        code {
+            background-color: #111c2e;
+            border: 1px solid #243247;
+            border-radius: 6px;
+            padding: 2px 4px;
+            color: #dbeafe;
+            font-family: "Courier New";
+        }
+    """
+
+
 class JsonItemEditorDialog(QDialog):
     def __init__(
         self,
@@ -201,6 +223,9 @@ class NoteItemEditorDialog(QDialog):
         self.content_preview = QTextEdit()
         self.content_preview.setReadOnly(True)
         self.content_preview.setMinimumHeight(260)
+        self.content_preview.document().setDefaultStyleSheet(
+            _markdown_preview_stylesheet()
+        )
         self.content_stack.addWidget(self.content_input)
         self.content_stack.addWidget(self.content_preview)
         layout.addWidget(self.content_stack, 1)
