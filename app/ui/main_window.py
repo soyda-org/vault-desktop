@@ -8,7 +8,7 @@ import re
 import secrets
 
 from PySide6.QtCore import QByteArray, QThread, Qt, QEvent, QTimer
-from PySide6.QtGui import QColor, QFont, QFontDatabase
+from PySide6.QtGui import QColor, QFont, QFontDatabase, QTextDocument
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -109,6 +109,9 @@ _MARKDOWN_PATTERN = re.compile(
 
 def _markdown_preview_stylesheet(palette: dict[str, str]) -> str:
     return f"""
+        body {{
+            color: {palette["text"]};
+        }}
         pre {{
             background-color: #0b1220;
             border: 1px solid {palette["border"]};
@@ -127,6 +130,16 @@ def _markdown_preview_stylesheet(palette: dict[str, str]) -> str:
             font-family: "Courier New";
         }}
     """
+
+
+def _render_markdown_preview_html(text: str, palette: dict[str, str]) -> str:
+    document = QTextDocument()
+    document.setMarkdown(text or "")
+    html = document.toHtml()
+    style_block = f"<style>{_markdown_preview_stylesheet(palette)}</style>"
+    if "<head>" in html:
+        return html.replace("<head>", f"<head>{style_block}", 1)
+    return f"{style_block}{html}"
 
 
 def _theme_palette(theme: str) -> dict[str, str]:
@@ -742,9 +755,6 @@ class MainWindow(QMainWindow):
         self.note_detail_markdown_output.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding,
-        )
-        self.note_detail_markdown_output.document().setDefaultStyleSheet(
-            _markdown_preview_stylesheet(_theme_palette(self.current_theme))
         )
         self.note_detail_body_stack.addWidget(self.note_detail_body_output)
         self.note_detail_body_stack.addWidget(self.note_detail_markdown_output)
@@ -2813,10 +2823,13 @@ class MainWindow(QMainWindow):
 
     def _apply_theme(self) -> None:
         self.setStyleSheet(self._build_stylesheet())
-        if hasattr(self, "note_detail_markdown_output"):
-            self.note_detail_markdown_output.document().setDefaultStyleSheet(
-                _markdown_preview_stylesheet(_theme_palette(self.current_theme))
-            )
+        if (
+            hasattr(self, "note_detail_markdown_output")
+            and self._note_detail_markdown_enabled
+            and not self._note_detail_body_is_hidden
+            and self._note_detail_has_markdown
+        ):
+            self._render_note_detail_body()
         self._refresh_navbar_labels()
 
     def resizeEvent(self, event) -> None:  # type: ignore[override]
@@ -3291,7 +3304,12 @@ class MainWindow(QMainWindow):
             return
 
         if self._note_detail_markdown_enabled and self._note_detail_has_markdown:
-            self.note_detail_markdown_output.setMarkdown(self._note_detail_plaintext_body)
+            self.note_detail_markdown_output.setHtml(
+                _render_markdown_preview_html(
+                    self._note_detail_plaintext_body,
+                    _theme_palette(self.current_theme),
+                )
+            )
             self.note_detail_body_stack.setCurrentWidget(self.note_detail_markdown_output)
             self.note_detail_markdown_output.moveCursor(
                 self.note_detail_markdown_output.textCursor().MoveOperation.Start

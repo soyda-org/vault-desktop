@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 
+from PySide6.QtGui import QTextDocument
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -30,6 +31,9 @@ def _looks_like_markdown(text: str) -> bool:
 
 def _markdown_preview_stylesheet() -> str:
     return """
+        body {
+            color: #e2e8f0;
+        }
         pre {
             background-color: #0b1220;
             border: 1px solid #243247;
@@ -48,6 +52,16 @@ def _markdown_preview_stylesheet() -> str:
             font-family: "Courier New";
         }
     """
+
+
+def _render_markdown_preview_html(text: str) -> str:
+    document = QTextDocument()
+    document.setMarkdown(text or "")
+    html = document.toHtml()
+    style_block = f"<style>{_markdown_preview_stylesheet()}</style>"
+    if "<head>" in html:
+        return html.replace("<head>", f"<head>{style_block}", 1)
+    return f"{style_block}{html}"
 
 
 class JsonItemEditorDialog(QDialog):
@@ -266,7 +280,7 @@ class NoteItemEditorDialog(QDialog):
     def _refresh_preview_content(self) -> None:
         content = self.content_input.toPlainText()
         if _looks_like_markdown(content):
-            self.content_preview.setMarkdown(content)
+            self.content_preview.setHtml(_render_markdown_preview_html(content))
         else:
             self.content_preview.setPlainText(content)
 
