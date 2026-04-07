@@ -46,15 +46,12 @@ def test_note_list_label() -> None:
 def test_file_list_label() -> None:
     text = file_list_label(
         {
-            "file_id": "file_001",
-            "state": "active",
-            "current_version": 1,
+            "plaintext_filename": "archive.zip",
+            "plaintext_size_bytes": 33333,
         }
     )
 
-    assert "file_001" in text
-    assert "active" in text
-    assert "v1" in text
+    assert text == "archive.zip | 33 333 B"
 
 
 def test_format_credentials_items_with_empty_list() -> None:

@@ -16,6 +16,10 @@ def _shorten(value: str, limit: int = 24) -> str:
     return f"{text[: limit - 1]}…"
 
 
+def _group_digits(value: int) -> str:
+    return f"{value:,}".replace(",", " ")
+
+
 def _append_local_decrypt_sections(lines: list[str], item: dict) -> None:
     has_plaintext = "plaintext_metadata" in item or "plaintext_payload" in item
     has_error = bool(item.get("decryption_error"))
@@ -84,13 +88,8 @@ def note_list_label(item: dict) -> str:
 def file_list_label(item: dict) -> str:
     filename = item.get("plaintext_filename") or item.get("file_id", "-")
     size = item.get("plaintext_size_bytes")
-    size_text = f"{size} B" if size is not None else "size unknown"
-    return (
-        f"{filename}"
-        f" | {size_text}"
-        f" | {item.get('state', '-')}"
-        f" | v{item.get('current_version', '-')}"
-    )
+    size_text = f"{_group_digits(int(size))} B" if size is not None else "size unknown"
+    return f"{filename} | {size_text}"
 
 
 def format_credentials_items(items: list[dict]) -> str:
