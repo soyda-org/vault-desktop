@@ -112,7 +112,13 @@ class QuickTextCryptoError(ValueError):
 
 
 def available_method_labels() -> tuple[tuple[str, str], ...]:
-    return tuple((method.label, method.key) for method in METHODS)
+    return tuple(
+        (
+            f"{method.label} - one-way" if method.family == "hash" else method.label,
+            method.key,
+        )
+        for method in METHODS
+    )
 
 
 def passphrase_mode_for_method(method_key: str) -> str:
