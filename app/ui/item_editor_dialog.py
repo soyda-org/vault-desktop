@@ -188,7 +188,7 @@ class CredentialItemEditorDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.resize(620, 310)
+        self.resize(560, 310)
 
         self._extra_metadata: dict = {}
         self._extra_payload: dict = {}
