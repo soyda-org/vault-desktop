@@ -1647,31 +1647,6 @@ class MainWindow(QMainWindow):
         progress_row.addWidget(QLabel("Download"))
         progress_row.addWidget(self.file_download_progress, 1)
 
-        manifest_layout = QVBoxLayout()
-        manifest_layout.setContentsMargins(0, 0, 0, 0)
-        manifest_layout.setSpacing(2)
-        manifest_layout.addWidget(QLabel("Manifest"))
-        manifest_layout.addWidget(self.file_manifest_input)
-
-        header_layout = QVBoxLayout()
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(2)
-        header_layout.addWidget(QLabel("Header"))
-        header_layout.addWidget(self.file_header_input)
-
-        chunks_layout = QVBoxLayout()
-        chunks_layout.setContentsMargins(0, 0, 0, 0)
-        chunks_layout.setSpacing(2)
-        chunks_layout.addWidget(QLabel("Chunks"))
-        chunks_layout.addWidget(self.file_chunks_input)
-
-        previews_row = QHBoxLayout()
-        previews_row.setContentsMargins(0, 0, 0, 0)
-        previews_row.setSpacing(8)
-        previews_row.addLayout(manifest_layout, 1)
-        previews_row.addLayout(header_layout, 1)
-        previews_row.addLayout(chunks_layout, 1)
-
         left_layout = QVBoxLayout()
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(10)
@@ -1681,7 +1656,6 @@ class MainWindow(QMainWindow):
         left_layout.addLayout(target_row)
         left_layout.addLayout(runtime_row)
         left_layout.addLayout(progress_row)
-        left_layout.addLayout(previews_row)
         left_layout.addWidget(self.files_list)
 
         left_widget = self._build_workspace_card(
