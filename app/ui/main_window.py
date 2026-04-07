@@ -474,12 +474,12 @@ class MainWindow(QMainWindow):
         self.pick_file_button.clicked.connect(self.run_pick_file)
         self.pick_file_button.setProperty("tone", "secondary")
 
-        self.create_file_button = QPushButton("Create File")
+        self.create_file_button = QPushButton("Upload.")
         self.create_file_button.clicked.connect(self.run_create_file)
         self.create_file_button.setEnabled(False)
         self.create_file_button.setProperty("tone", "primary")
 
-        self.cancel_file_upload_button = QPushButton("Cancel Upload")
+        self.cancel_file_upload_button = QPushButton("Cancel.")
         self.cancel_file_upload_button.clicked.connect(self.run_cancel_file_upload)
         self.cancel_file_upload_button.setEnabled(False)
         self.cancel_file_upload_button.setProperty("tone", "danger")
@@ -488,12 +488,12 @@ class MainWindow(QMainWindow):
         self.pick_download_target_button.clicked.connect(self.run_pick_download_target)
         self.pick_download_target_button.setProperty("tone", "secondary")
 
-        self.download_file_button = QPushButton("Download File")
+        self.download_file_button = QPushButton("Download.")
         self.download_file_button.clicked.connect(self.run_download_file)
         self.download_file_button.setEnabled(False)
         self.download_file_button.setProperty("tone", "primary")
 
-        self.cancel_file_download_button = QPushButton("Cancel Download")
+        self.cancel_file_download_button = QPushButton("Cancel.")
         self.cancel_file_download_button.clicked.connect(self.run_cancel_file_download)
         self.cancel_file_download_button.setEnabled(False)
         self.cancel_file_download_button.setProperty("tone", "danger")
