@@ -25,7 +25,6 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QProgressBar,
-    QScrollArea,
     QSpinBox,
     QSplitter,
     QStackedWidget,
@@ -1603,71 +1602,93 @@ class MainWindow(QMainWindow):
         return widget
 
     def _build_files_tab(self) -> QWidget:
-        primary_actions_layout = QHBoxLayout()
-        primary_actions_layout.setContentsMargins(0, 0, 0, 0)
-        primary_actions_layout.setSpacing(8)
-        primary_actions_layout.addWidget(self.pick_file_button)
-        primary_actions_layout.addWidget(self.create_file_button)
-        primary_actions_layout.addWidget(self.cancel_file_upload_button)
-        primary_actions_layout.addStretch(1)
+        upload_actions_layout = QHBoxLayout()
+        upload_actions_layout.setContentsMargins(0, 0, 0, 0)
+        upload_actions_layout.setSpacing(8)
+        upload_actions_layout.addWidget(self.pick_file_button)
+        upload_actions_layout.addWidget(self.create_file_button)
+        upload_actions_layout.addWidget(self.cancel_file_upload_button)
+        upload_actions_layout.addWidget(self.reset_file_payload_button)
+        upload_actions_layout.addStretch(1)
 
-        secondary_actions_layout = QHBoxLayout()
-        secondary_actions_layout.setContentsMargins(0, 0, 0, 0)
-        secondary_actions_layout.setSpacing(8)
-        secondary_actions_layout.addWidget(self.pick_download_target_button)
-        secondary_actions_layout.addWidget(self.download_file_button)
-        secondary_actions_layout.addWidget(self.cancel_file_download_button)
-        secondary_actions_layout.addWidget(self.reset_file_payload_button)
-        secondary_actions_layout.addStretch(1)
+        upload_path_row = QHBoxLayout()
+        upload_path_row.setContentsMargins(0, 0, 0, 0)
+        upload_path_row.setSpacing(8)
+        upload_path_row.addWidget(QLabel("Selected file"))
+        upload_path_row.addWidget(self.file_path_input, 1)
 
-        path_row = QHBoxLayout()
-        path_row.setContentsMargins(0, 0, 0, 0)
-        path_row.setSpacing(8)
-        path_row.addWidget(QLabel("Selected file"))
-        path_row.addWidget(self.file_path_input, 1)
+        upload_runtime_row = QHBoxLayout()
+        upload_runtime_row.setContentsMargins(0, 0, 0, 0)
+        upload_runtime_row.setSpacing(8)
+        upload_runtime_row.addWidget(QLabel("Chunk size"))
+        upload_runtime_row.addWidget(self.file_chunk_size_kib_input)
+        upload_runtime_row.addStretch(1)
 
-        target_row = QHBoxLayout()
-        target_row.setContentsMargins(0, 0, 0, 0)
-        target_row.setSpacing(8)
-        target_row.addWidget(QLabel("Download target"))
-        target_row.addWidget(self.file_download_target_input, 1)
+        upload_progress_row = QHBoxLayout()
+        upload_progress_row.setContentsMargins(0, 0, 0, 0)
+        upload_progress_row.setSpacing(8)
+        upload_progress_row.addWidget(QLabel("Upload"))
+        upload_progress_row.addWidget(self.file_upload_progress, 1)
 
-        runtime_row = QHBoxLayout()
-        runtime_row.setContentsMargins(0, 0, 0, 0)
-        runtime_row.setSpacing(8)
-        runtime_row.addWidget(QLabel("Chunk size"))
-        runtime_row.addWidget(self.file_chunk_size_kib_input)
-        runtime_row.addStretch(1)
-
-        progress_row = QHBoxLayout()
-        progress_row.setContentsMargins(0, 0, 0, 0)
-        progress_row.setSpacing(8)
-        progress_row.addWidget(QLabel("Upload"))
-        progress_row.addWidget(self.file_upload_progress, 1)
-        progress_row.addWidget(QLabel("Download"))
-        progress_row.addWidget(self.file_download_progress, 1)
-
-        left_layout = QVBoxLayout()
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(10)
-        left_layout.addLayout(primary_actions_layout)
-        left_layout.addLayout(secondary_actions_layout)
-        left_layout.addLayout(path_row)
-        left_layout.addLayout(target_row)
-        left_layout.addLayout(runtime_row)
-        left_layout.addLayout(progress_row)
-        left_layout.addWidget(self.files_list)
-
-        left_widget = self._build_workspace_card(
+        upload_layout = QVBoxLayout()
+        upload_layout.setContentsMargins(0, 0, 0, 0)
+        upload_layout.setSpacing(10)
+        upload_layout.addLayout(upload_actions_layout)
+        upload_layout.addLayout(upload_path_row)
+        upload_layout.addLayout(upload_runtime_row)
+        upload_layout.addLayout(upload_progress_row)
+        upload_card = self._build_workspace_card(
             title=None,
             hint=None,
-            content_layout=left_layout,
+            content_layout=upload_layout,
         )
-        left_widget.setObjectName("flatWorkspacePanel")
+        upload_card.setObjectName("flatWorkspacePanel")
 
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setChildrenCollapsible(False)
-        splitter.addWidget(left_widget)
+        download_actions_layout = QHBoxLayout()
+        download_actions_layout.setContentsMargins(0, 0, 0, 0)
+        download_actions_layout.setSpacing(8)
+        download_actions_layout.addWidget(self.pick_download_target_button)
+        download_actions_layout.addWidget(self.download_file_button)
+        download_actions_layout.addWidget(self.cancel_file_download_button)
+        download_actions_layout.addStretch(1)
+
+        download_target_row = QHBoxLayout()
+        download_target_row.setContentsMargins(0, 0, 0, 0)
+        download_target_row.setSpacing(8)
+        download_target_row.addWidget(QLabel("Download target"))
+        download_target_row.addWidget(self.file_download_target_input, 1)
+
+        download_progress_row = QHBoxLayout()
+        download_progress_row.setContentsMargins(0, 0, 0, 0)
+        download_progress_row.setSpacing(8)
+        download_progress_row.addWidget(QLabel("Download"))
+        download_progress_row.addWidget(self.file_download_progress, 1)
+
+        download_layout = QVBoxLayout()
+        download_layout.setContentsMargins(0, 0, 0, 0)
+        download_layout.setSpacing(10)
+        download_layout.addLayout(download_actions_layout)
+        download_layout.addLayout(download_target_row)
+        download_layout.addLayout(download_progress_row)
+        download_layout.addStretch(1)
+        download_card = self._build_workspace_card(
+            title=None,
+            hint=None,
+            content_layout=download_layout,
+        )
+        download_card.setObjectName("flatWorkspacePanel")
+
+        file_list_layout = QVBoxLayout()
+        file_list_layout.setContentsMargins(0, 0, 0, 0)
+        file_list_layout.setSpacing(10)
+        file_list_layout.addWidget(self.files_list, 1)
+        file_list_card = self._build_workspace_card(
+            title=None,
+            hint=None,
+            content_layout=file_list_layout,
+        )
+        file_list_card.setObjectName("flatWorkspacePanel")
+
         file_detail_layout = QVBoxLayout()
         file_detail_layout.setContentsMargins(0, 0, 0, 0)
         file_detail_layout.setSpacing(10)
@@ -1678,23 +1699,29 @@ class MainWindow(QMainWindow):
             content_layout=file_detail_layout,
         )
         file_detail_card.setObjectName("flatWorkspacePanel")
-        splitter.addWidget(file_detail_card)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 4)
-        splitter.setSizes([460, 700])
+
+        top_row = QHBoxLayout()
+        top_row.setContentsMargins(0, 0, 0, 0)
+        top_row.setSpacing(12)
+        top_row.addWidget(upload_card, 3)
+        top_row.addWidget(download_card, 2)
+
+        bottom_row = QHBoxLayout()
+        bottom_row.setContentsMargins(0, 0, 0, 0)
+        bottom_row.setSpacing(12)
+        bottom_row.addWidget(file_list_card, 3)
+        bottom_row.addWidget(file_detail_card, 2)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
-        layout.addWidget(splitter)
+        layout.setSpacing(12)
+        layout.addLayout(top_row, 0)
+        layout.addLayout(bottom_row, 1)
 
         widget = QWidget()
+        widget.setObjectName("contentContainer")
         widget.setLayout(layout)
-
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setWidget(widget)
-        return scroll_area
+        return widget
 
     def _resolve_active_screen(self) -> str:
         current = getattr(self, "current_screen", "system")
