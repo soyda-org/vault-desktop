@@ -73,7 +73,7 @@ from app.services.quick_text_crypto import (
 from app.services.vault_gateway import AuthenticatedVaultGateway
 from app.ui.file_download_worker import FileDownloadWorker
 from app.ui.file_upload_worker import FileUploadWorker
-from app.ui.item_editor_dialog import JsonItemEditorDialog
+from app.ui.item_editor_dialog import JsonItemEditorDialog, NoteItemEditorDialog
 from app.ui.surfaces import (
     GeneratorWorkspaceView,
     SystemWorkspaceView,
@@ -3264,7 +3264,7 @@ class MainWindow(QMainWindow):
 
     def run_open_create_note_dialog(self) -> None:
         note_type, metadata_text, payload_text = self._reset_note_editor_defaults()
-        dialog = JsonItemEditorDialog(
+        dialog = NoteItemEditorDialog(
             title="New Note",
             summary="Create a new encrypted note. The note title remains readable in the list while the note body is encrypted.",
             action_text="Create Note",
@@ -3285,7 +3285,7 @@ class MainWindow(QMainWindow):
         if not self.selected_note_id:
             self.status_label.setText("Load a note detail first.")
             return
-        dialog = JsonItemEditorDialog(
+        dialog = NoteItemEditorDialog(
             title="Edit Note",
             summary="Review the current decrypted draft, make changes, then save a new encrypted version of the note.",
             action_text="Save Note",
