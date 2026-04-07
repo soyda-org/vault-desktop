@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import html
 import json
 import os
 from pathlib import Path
@@ -3286,6 +3287,30 @@ class MainWindow(QMainWindow):
         app.clipboard().setText(value)
         self.status_label.setText(success_message)
 
+    def _set_files_output_message(
+        self,
+        headline: str,
+        *,
+        level: str,
+        details: list[str] | None = None,
+    ) -> None:
+        palette = _theme_palette(self.current_theme)
+        accent = palette["success"] if level == "success" else palette["danger"]
+        escaped_headline = html.escape(headline)
+        detail_lines = details or []
+        escaped_details = "<br/>".join(html.escape(line) for line in detail_lines)
+        details_html = (
+            f'<div style="color: {palette["text"]}; margin-top: 10px;">{escaped_details}</div>'
+            if escaped_details
+            else ""
+        )
+        self.files_output.setHtml(
+            (
+                f'<div style="color: {accent}; font-weight: 700;">{escaped_headline}</div>'
+                f"{details_html}"
+            )
+        )
+
     def _looks_like_markdown(self, text: str) -> bool:
         return bool(_MARKDOWN_PATTERN.search(text or ""))
 
@@ -5599,8 +5624,10 @@ class MainWindow(QMainWindow):
         )
 
     def _on_file_upload_failure(self, error: str) -> None:
-        self.files_output.setPlainText(
-            f"File create failed.\nError: {error}"
+        self._set_files_output_message(
+            "File create failed.",
+            level="error",
+            details=[f"Error: {error}"],
         )
         self.status_label.setText(
             "File creation failed.\n"
@@ -5608,8 +5635,10 @@ class MainWindow(QMainWindow):
         )
 
     def _on_file_upload_canceled(self, message: str) -> None:
-        self.files_output.setPlainText(
-            f"File upload canceled.\nReason: {message}"
+        self._set_files_output_message(
+            "File upload canceled.",
+            level="error",
+            details=[f"Reason: {message}"],
         )
         self.status_label.setText(
             "File upload canceled.\n"
@@ -5632,16 +5661,15 @@ class MainWindow(QMainWindow):
     def _on_file_download_success(self, item: object) -> None:
         result_item = item if isinstance(item, dict) else {}
         self.file_download_progress.setValue(100)
-        self.files_output.setPlainText(
-            "\n".join(
-                [
-                    "File downloaded.",
-                    f"File ID: {result_item.get('file_id', '<unknown>')}",
-                    f"Saved to: {result_item.get('target_path', '<unknown>')}",
-                    f"Bytes written: {result_item.get('bytes_written', '<unknown>')}",
-                    f"Chunk count: {result_item.get('chunk_count', '<unknown>')}",
-                ]
-            )
+        self._set_files_output_message(
+            "File downloaded.",
+            level="success",
+            details=[
+                f"File ID: {result_item.get('file_id', '<unknown>')}",
+                f"Saved to: {result_item.get('target_path', '<unknown>')}",
+                f"Bytes written: {result_item.get('bytes_written', '<unknown>')}",
+                f"Chunk count: {result_item.get('chunk_count', '<unknown>')}",
+            ],
         )
         self.status_label.setText(
             "File download completed.\n"
@@ -5651,8 +5679,10 @@ class MainWindow(QMainWindow):
         self._save_ui_preferences()
 
     def _on_file_download_failure(self, error: str) -> None:
-        self.files_output.setPlainText(
-            f"File download failed.\nError: {error}"
+        self._set_files_output_message(
+            "File download failed.",
+            level="error",
+            details=[f"Error: {error}"],
         )
         self.status_label.setText(
             "File download failed.\n"
@@ -5660,8 +5690,10 @@ class MainWindow(QMainWindow):
         )
 
     def _on_file_download_canceled(self, message: str) -> None:
-        self.files_output.setPlainText(
-            f"File download canceled.\nReason: {message}"
+        self._set_files_output_message(
+            "File download canceled.",
+            level="error",
+            details=[f"Reason: {message}"],
         )
         self.status_label.setText(
             "File download canceled.\n"
@@ -5878,13 +5910,23 @@ class MainWindow(QMainWindow):
 
     def _render_file_detail(self, result: ObjectDetailResult) -> None:
         if result.error:
-            self.files_output.setPlainText(
-                f"File detail fetch failed.\nError: {result.error}"
+            self._set_files_output_message(
+                "File detail fetch failed.",
+                level="error",
+                details=[f"Error: {result.error}"],
             )
             return
 
         item = result.item or {}
-        self.files_output.setPlainText(format_file_detail(item))
+        detail_text = format_file_detail(item)
+        lines = detail_text.splitlines()
+        headline = lines[0] if lines else "File detail loaded successfully."
+        details = lines[1:] if len(lines) > 1 else []
+        self._set_files_output_message(
+            headline,
+            level="success",
+            details=details,
+        )
 
     def _parse_json_object_text(
         self,
