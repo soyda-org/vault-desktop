@@ -1633,6 +1633,7 @@ class MainWindow(QMainWindow):
         upload_layout = QVBoxLayout()
         upload_layout.setContentsMargins(0, 0, 0, 0)
         upload_layout.setSpacing(10)
+        upload_layout.addStretch(1)
         upload_layout.addLayout(upload_actions_layout)
         upload_layout.addLayout(upload_path_row)
         upload_layout.addLayout(upload_runtime_row)
@@ -1666,10 +1667,10 @@ class MainWindow(QMainWindow):
         download_layout = QVBoxLayout()
         download_layout.setContentsMargins(0, 0, 0, 0)
         download_layout.setSpacing(10)
+        download_layout.addStretch(1)
         download_layout.addLayout(download_actions_layout)
         download_layout.addLayout(download_target_row)
         download_layout.addLayout(download_progress_row)
-        download_layout.addStretch(1)
         download_card = self._build_workspace_card(
             title=None,
             hint=None,
