@@ -3415,15 +3415,8 @@ class MainWindow(QMainWindow):
         self.status_label.setText("Quick text decrypted locally.")
 
     def _reset_credential_editor_defaults(self) -> tuple[str, str]:
-        metadata_text = json.dumps({"label": "Personal"}, indent=2)
-        payload_text = json.dumps(
-            {
-                "username": "alice",
-                "secret": "s3cr3t",
-                "url": "https://example.com",
-            },
-            indent=2,
-        )
+        metadata_text = json.dumps({}, indent=2)
+        payload_text = json.dumps({}, indent=2)
         return metadata_text, payload_text
 
     def _reset_note_editor_defaults(self) -> tuple[str, str, str]:

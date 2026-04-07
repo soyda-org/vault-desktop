@@ -83,6 +83,21 @@ def test_credential_item_editor_dialog_reset_restores_friendly_fields(app_fixtur
     assert dialog.secret_input.text() == "s3cr3t"
     assert dialog.url_input.text() == "https://example.com"
 
+
+def test_credential_item_editor_dialog_empty_defaults_render_blank_fields(app_fixture) -> None:
+    dialog = CredentialItemEditorDialog(
+        title="New Credential",
+        summary="Create credential",
+        action_text="Create Credential",
+        metadata_text="{}",
+        payload_text="{}",
+    )
+
+    assert dialog.label_input.text() == ""
+    assert dialog.username_input.text() == ""
+    assert dialog.secret_input.text() == ""
+    assert dialog.url_input.text() == ""
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
