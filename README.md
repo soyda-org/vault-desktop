@@ -65,7 +65,15 @@ Prerequisites:
 3. run `scripts/package-linux.sh`
 
 That script installs `vault-crypto` into the desktop virtualenv, installs the desktop build dependencies,
-and produces a bundled app under `dist/vault-desktop/`.
+and produces:
+
+- a bundled app under `dist/vault-desktop/`
+- a transferable archive under `release/vault-desktop-linux.tar.gz`
+- a SHA-256 checksum file under `release/vault-desktop-linux.tar.gz.sha256`
+
+For target-machine installation steps, see:
+
+- `docs/install-linux.md`
 
 ## Related docs
 
