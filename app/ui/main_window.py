@@ -2328,8 +2328,8 @@ class MainWindow(QMainWindow):
                 border-radius: 0;
             }}
             #surfacePanel[panelVariant="transparent"] {{
-                background: #17263d;
-                border-color: #1f2d44;
+                background: {window};
+                border-color: {border};
             }}
             #surfacePanel[panelVariant="secondary"],
             #workspaceCard[cardVariant="secondary"],
