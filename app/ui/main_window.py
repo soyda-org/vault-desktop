@@ -4930,9 +4930,9 @@ class MainWindow(QMainWindow):
         self.note_detail_type_input.setCursorPosition(0)
         self._note_detail_plaintext_body = body_value
         self._note_detail_ciphertext_body = self._encrypted_note_body_text(item)
-        self._note_detail_body_is_hidden = False
-        self.note_detail_body_output.setPlainText(self._note_detail_plaintext_body)
-        self.toggle_note_body_button.setText("Hide")
+        self._note_detail_body_is_hidden = True
+        self.note_detail_body_output.setPlainText(self._note_detail_ciphertext_body)
+        self.toggle_note_body_button.setText("Show")
         self.note_detail_body_output.moveCursor(
             self.note_detail_body_output.textCursor().MoveOperation.Start
         )
