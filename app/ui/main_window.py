@@ -180,6 +180,11 @@ class MainWindow(QMainWindow):
         "vault": "Vault",
         "vault_compact": "V",
     }
+    _NOTE_ACTION_LABELS = {
+        "create": ("New Note", "N"),
+        "update": ("Edit Note", "E"),
+        "delete": ("Delete Note", "D"),
+    }
 
     def __init__(self, settings: DesktopSettings) -> None:
         super().__init__()
@@ -1276,6 +1281,7 @@ class MainWindow(QMainWindow):
         self._refresh_action_states()
         self._refresh_idle_policy()
         self._refresh_navbar_labels()
+        self._refresh_note_action_labels()
 
     def _build_tab(
         self,
@@ -2664,6 +2670,7 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event) -> None:  # type: ignore[override]
         super().resizeEvent(event)
         self._refresh_navbar_labels()
+        self._refresh_note_action_labels()
 
     def showEvent(self, event) -> None:  # type: ignore[override]
         super().showEvent(event)
@@ -2700,6 +2707,20 @@ class MainWindow(QMainWindow):
         )
         self.nav_vault_button.setText(
             self._NAVBAR_LABELS["vault_compact" if compact else "vault"]
+        )
+
+    def _refresh_note_action_labels(self) -> None:
+        if not hasattr(self, "create_note_button"):
+            return
+        compact = self.width() < 760
+        self.create_note_button.setText(
+            self._NOTE_ACTION_LABELS["create"][1 if compact else 0]
+        )
+        self.update_note_button.setText(
+            self._NOTE_ACTION_LABELS["update"][1 if compact else 0]
+        )
+        self.delete_note_button.setText(
+            self._NOTE_ACTION_LABELS["delete"][1 if compact else 0]
         )
 
     def _refresh_vault_pin_field_style(self) -> None:

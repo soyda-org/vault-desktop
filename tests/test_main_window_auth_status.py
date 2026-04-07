@@ -373,6 +373,24 @@ def test_workspace_nav_buttons_follow_selected_tab(app_fixture) -> None:
     assert window.workspace_files_tab_button.property("segmentCurrent") is False
 
 
+def test_note_action_buttons_compact_when_window_is_narrow(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.resize(720, 780)
+    window._refresh_note_action_labels()
+
+    assert window.create_note_button.text() == "N"
+    assert window.update_note_button.text() == "E"
+    assert window.delete_note_button.text() == "D"
+
+    window.resize(1180, 780)
+    window._refresh_note_action_labels()
+
+    assert window.create_note_button.text() == "New Note"
+    assert window.update_note_button.text() == "Edit Note"
+    assert window.delete_note_button.text() == "Delete Note"
+
+
 def test_credentials_filter_buttons_switch_visible_items(app_fixture) -> None:
     window = MainWindow(get_settings())
     window._render_credentials(
