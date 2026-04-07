@@ -485,6 +485,11 @@ class MainWindow(QMainWindow):
         )
 
         self.notes_list = QListWidget()
+        self.notes_list.setMinimumWidth(0)
+        self.notes_list.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Expanding,
+        )
         self.notes_list.itemDoubleClicked.connect(lambda _: self.load_note_detail())
 
         self.files_list = QListWidget()
@@ -1440,6 +1445,10 @@ class MainWindow(QMainWindow):
             content_layout=list_content,
         )
         left_card.setObjectName("flatWorkspacePanel")
+        left_card.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Expanding,
+        )
 
         detail_actions = QHBoxLayout()
         detail_actions.setContentsMargins(0, 0, 0, 0)
@@ -1458,6 +1467,10 @@ class MainWindow(QMainWindow):
             content_layout=detail_content,
         )
         detail_card.setObjectName("flatWorkspacePanel")
+        detail_card.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
