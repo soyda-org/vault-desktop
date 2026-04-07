@@ -2877,7 +2877,7 @@ class MainWindow(QMainWindow):
     def _refresh_note_action_labels(self) -> None:
         if not hasattr(self, "create_note_button"):
             return
-        compact = self.width() < 760
+        compact = self.width() < 920
         self.create_note_button.setText(
             self._NOTE_ACTION_LABELS["create"][1 if compact else 0]
         )

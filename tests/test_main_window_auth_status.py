@@ -376,14 +376,14 @@ def test_workspace_nav_buttons_follow_selected_tab(app_fixture) -> None:
 def test_note_action_buttons_compact_when_window_is_narrow(app_fixture) -> None:
     window = MainWindow(get_settings())
 
-    window.resize(720, 780)
+    window.resize(900, 780)
     window._refresh_note_action_labels()
 
     assert window.create_note_button.text() == "N"
     assert window.update_note_button.text() == "E"
     assert window.delete_note_button.text() == "D"
 
-    window.resize(1180, 780)
+    window.resize(980, 780)
     window._refresh_note_action_labels()
 
     assert window.create_note_button.text() == "New Note"
