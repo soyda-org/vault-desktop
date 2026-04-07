@@ -202,8 +202,11 @@ class MainWindow(QMainWindow):
         self.ui_font_family = _load_embedded_font_family()
 
         self.setWindowTitle(settings.app_name)
-        self.resize(1180, 780)
         self.setMinimumSize(600, 400)
+        self.resize(
+            max(600, self.persisted_ui_settings.window_width),
+            max(400, self.persisted_ui_settings.window_height),
+        )
         self._apply_theme()
 
         self._last_activity_message = ""
@@ -2705,6 +2708,8 @@ class MainWindow(QMainWindow):
             identifier=self.identifier_input.text().strip() or "alice",
             device_name=self.device_name_input.text().strip() or default_device_name,
             platform=self.platform_input.text().strip() or default_platform,
+            window_width=self.width(),
+            window_height=self.height(),
             last_tab_index=self.tabs.currentIndex(),
             theme=self.current_theme,
             remember_session=(

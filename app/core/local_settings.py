@@ -25,6 +25,8 @@ class PersistedUiSettings:
     identifier: str = "alice"
     device_name: str = "vault-desktop"
     platform: str = "unknown"
+    window_width: int = 1180
+    window_height: int = 780
     last_tab_index: int = 0
     theme: str = "light"
     remember_session: bool = False
@@ -49,6 +51,8 @@ class LocalSettingsStore:
             identifier=data.get("identifier", defaults.identifier),
             device_name=data.get("device_name", defaults.device_name),
             platform=data.get("platform", defaults.platform),
+            window_width=int(data.get("window_width", defaults.window_width)),
+            window_height=int(data.get("window_height", defaults.window_height)),
             last_tab_index=int(data.get("last_tab_index", defaults.last_tab_index)),
             theme=data.get("theme", defaults.theme),
             remember_session=bool(

@@ -163,6 +163,21 @@ def test_shared_navbar_compacts_to_single_letters_when_window_is_narrow(app_fixt
     assert window.nav_vault_button.text() == "V"
 
 
+def test_main_window_restores_persisted_size(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    monkeypatch.setattr(
+        main_window_module.LocalSettingsStore,
+        "load",
+        lambda self: PersistedUiSettings(window_width=910, window_height=650),
+    )
+
+    window = MainWindow(get_settings())
+
+    assert window.width() == 910
+    assert window.height() == 650
+
+
 def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
     window = MainWindow(get_settings())
 
