@@ -2577,10 +2577,21 @@ class MainWindow(QMainWindow):
     def showEvent(self, event) -> None:  # type: ignore[override]
         super().showEvent(event)
         if self._pending_window_position is not None:
-            # Re-apply the persisted position after the first show because
-            # restoreGeometry can override the pre-show move on some platforms.
-            self.move(*self._pending_window_position)
-            self._pending_window_position = None
+            # Some window managers recenter after the initial show. Re-apply the
+            # persisted coordinates once immediately and again after the event
+            # loop starts so the saved position wins consistently.
+            self._apply_pending_window_position()
+            QTimer.singleShot(0, self._apply_pending_window_position)
+            QTimer.singleShot(75, self._finalize_pending_window_position)
+
+    def _apply_pending_window_position(self) -> None:
+        if self._pending_window_position is None:
+            return
+        self.move(*self._pending_window_position)
+
+    def _finalize_pending_window_position(self) -> None:
+        self._apply_pending_window_position()
+        self._pending_window_position = None
 
     def _refresh_navbar_labels(self) -> None:
         if not hasattr(self, "theme_toggle_button"):

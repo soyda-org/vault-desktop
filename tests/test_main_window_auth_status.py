@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QShowEvent
 from PySide6.QtWidgets import QApplication, QLabel, QLineEdit, QListWidget, QPushButton
 
 from app.core.config import get_settings
@@ -212,6 +213,31 @@ def test_main_window_restores_persisted_position_even_with_geometry_blob(
 
     assert window.x() == 140
     assert window.y() == 110
+
+
+def test_show_event_reapplies_pending_window_position_with_delayed_retry(
+    app_fixture, monkeypatch
+) -> None:
+    from app.ui import main_window as main_window_module
+
+    scheduled_delays: list[int] = []
+
+    def fake_single_shot(delay: int, callback) -> None:
+        scheduled_delays.append(delay)
+        callback()
+
+    monkeypatch.setattr(main_window_module.QTimer, "singleShot", fake_single_shot)
+
+    window = MainWindow(get_settings())
+    window._pending_window_position = (160, 130)
+
+    event = QShowEvent()
+    window.showEvent(event)
+
+    assert scheduled_delays == [0, 75]
+    assert window.x() == 160
+    assert window.y() == 130
+    assert window._pending_window_position is None
 
 
 def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
