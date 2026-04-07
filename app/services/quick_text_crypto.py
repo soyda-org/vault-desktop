@@ -87,6 +87,13 @@ class QuickTextCryptoMethod:
 METHODS: tuple[QuickTextCryptoMethod, ...] = (
     QuickTextCryptoMethod("base64", "Base64", "none", "base64", "Encodes plain text as Base64 text. It is reversible and gives no secrecy."),
     QuickTextCryptoMethod("hex", "Hex", "none", "hex", "Converts bytes to hexadecimal text. Easy to inspect, but not secure."),
+    QuickTextCryptoMethod("sha-1", "SHA-1", "none", "hash", "Computes a SHA-1 digest of the text. This is a one-way hash and cannot be decrypted."),
+    QuickTextCryptoMethod("sha-224", "SHA-224", "none", "hash", "Computes a SHA-224 digest of the text. This is a one-way hash and cannot be decrypted."),
+    QuickTextCryptoMethod("sha-256", "SHA-256", "none", "hash", "Computes a SHA-256 digest of the text. This is a one-way hash and cannot be decrypted."),
+    QuickTextCryptoMethod("sha-384", "SHA-384", "none", "hash", "Computes a SHA-384 digest of the text. This is a one-way hash and cannot be decrypted."),
+    QuickTextCryptoMethod("sha-512", "SHA-512", "none", "hash", "Computes a SHA-512 digest of the text. This is a one-way hash and cannot be decrypted."),
+    QuickTextCryptoMethod("sha3-256", "SHA3-256", "none", "hash", "Computes a SHA3-256 digest of the text. This is a one-way hash and cannot be decrypted."),
+    QuickTextCryptoMethod("sha3-512", "SHA3-512", "none", "hash", "Computes a SHA3-512 digest of the text. This is a one-way hash and cannot be decrypted."),
     QuickTextCryptoMethod("rot13", "ROT13", "none", "rot13", "Rotates letters by 13 positions. It only obscures text and is trivially reversible."),
     QuickTextCryptoMethod("morse", "Morse", "none", "morse", "Maps supported letters, digits, and punctuation into Morse code and back. This is a representation change, not encryption."),
     QuickTextCryptoMethod("caesar-shift", "Caesar Shift", "optional", "caesar", "Shifts letters through the alphabet. With no passphrase it uses a default shift; with one, the shift changes. This is obfuscation, not strong encryption."),
@@ -193,6 +200,22 @@ def _decode_utf8(data: bytes) -> str:
         raise QuickTextCryptoError("Decrypted payload is not valid UTF-8 text.") from exc
 
 
+def _hash_digest_hex(*, method_key: str, plaintext: str) -> str:
+    digest = hashes.Hash(
+        {
+            "sha-1": hashes.SHA1(),
+            "sha-224": hashes.SHA224(),
+            "sha-256": hashes.SHA256(),
+            "sha-384": hashes.SHA384(),
+            "sha-512": hashes.SHA512(),
+            "sha3-256": hashes.SHA3_256(),
+            "sha3-512": hashes.SHA3_512(),
+        }[method_key]
+    )
+    digest.update(plaintext.encode("utf-8"))
+    return digest.finalize().hex()
+
+
 def _aead_encrypt(*, method: QuickTextCryptoMethod, key: bytes, nonce: bytes, plaintext: bytes) -> bytes:
     if method.key in {"aes-256-gcm", "aes-128-gcm"}:
         return AESGCM(key).encrypt(nonce, plaintext, None)
@@ -237,6 +260,15 @@ def encrypt_text(*, plaintext: str, passphrase: str, method_key: str) -> str:
                 "format": "quick-text-v1",
                 "method": method.key,
                 "payload_text": plaintext.encode("utf-8").hex(),
+            },
+            indent=2,
+        )
+    if method.family == "hash":
+        return json.dumps(
+            {
+                "format": "quick-text-v1",
+                "method": method.key,
+                "digest_hex": _hash_digest_hex(method_key=method.key, plaintext=plaintext),
             },
             indent=2,
         )
@@ -320,6 +352,9 @@ def decrypt_text(*, envelope_text: str, passphrase: str) -> tuple[str, str]:
         raise QuickTextCryptoError("Unsupported encrypted payload format.")
 
     method = _method_for_key(str(envelope.get("method", "")))
+
+    if method.family == "hash":
+        raise QuickTextCryptoError("Hash methods are one-way and cannot be decrypted.")
 
     if method.family == "base64":
         try:
