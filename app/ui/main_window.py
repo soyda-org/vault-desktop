@@ -678,6 +678,14 @@ class MainWindow(QMainWindow):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding,
         )
+        self._note_detail_plaintext_body = ""
+        self._note_detail_ciphertext_body = ""
+        self._note_detail_body_is_hidden = False
+
+        self.toggle_note_body_button = QPushButton("Hide")
+        self.toggle_note_body_button.setProperty("tone", "secondary")
+        self.toggle_note_body_button.setProperty("hoverGlow", "light")
+        self.toggle_note_body_button.clicked.connect(self.run_toggle_note_body_visibility)
 
         self.copy_note_body_button = QPushButton("Copy")
         self.copy_note_body_button.setProperty("tone", "secondary")
@@ -706,6 +714,7 @@ class MainWindow(QMainWindow):
         note_detail_footer_row = QHBoxLayout()
         note_detail_footer_row.setContentsMargins(0, 0, 0, 0)
         note_detail_footer_row.setSpacing(8)
+        note_detail_footer_row.addWidget(self.toggle_note_body_button, 0)
         note_detail_footer_row.addStretch(1)
         note_detail_footer_row.addWidget(self.note_copy_feedback_label, 0)
         note_detail_footer_row.addWidget(self.copy_note_body_button, 0)
@@ -4775,6 +4784,9 @@ class MainWindow(QMainWindow):
             self.credential_detail_stack.setCurrentWidget(self.credential_detail_message)
 
     def _clear_note_detail_fields(self) -> None:
+        self._note_detail_plaintext_body = ""
+        self._note_detail_ciphertext_body = ""
+        self._note_detail_body_is_hidden = False
         for attribute_name in (
             "note_detail_title_input",
             "note_detail_type_input",
@@ -4784,6 +4796,8 @@ class MainWindow(QMainWindow):
                 widget.clear()
         if hasattr(self, "note_detail_body_output"):
             self.note_detail_body_output.clear()
+        if hasattr(self, "toggle_note_body_button"):
+            self.toggle_note_body_button.setText("Hide")
         if hasattr(self, "note_detail_stack"):
             self.note_detail_stack.setCurrentWidget(self.note_detail_message)
 
@@ -4826,6 +4840,20 @@ class MainWindow(QMainWindow):
             minimum=48,
             maximum=120,
         )
+
+    def _encrypted_note_body_text(self, item: dict) -> str:
+        encrypted_payload = item.get("encrypted_payload")
+        if isinstance(encrypted_payload, dict):
+            ciphertext = self._first_non_empty_string(
+                encrypted_payload.get("ciphertext_b64"),
+                encrypted_payload.get("ciphertext"),
+            )
+            if ciphertext:
+                return ciphertext
+            return json.dumps(encrypted_payload, indent=2)
+        if encrypted_payload not in (None, ""):
+            return str(encrypted_payload)
+        return "Encrypted note content unavailable."
 
     def _render_credential_detail_fields(self, item: dict) -> None:
         payload = item.get("plaintext_payload") or {}
@@ -4900,12 +4928,30 @@ class MainWindow(QMainWindow):
         self._refresh_note_detail_field_widths()
         self.note_detail_title_input.setCursorPosition(0)
         self.note_detail_type_input.setCursorPosition(0)
-        self.note_detail_body_output.setPlainText(body_value)
+        self._note_detail_plaintext_body = body_value
+        self._note_detail_ciphertext_body = self._encrypted_note_body_text(item)
+        self._note_detail_body_is_hidden = False
+        self.note_detail_body_output.setPlainText(self._note_detail_plaintext_body)
+        self.toggle_note_body_button.setText("Hide")
         self.note_detail_body_output.moveCursor(
             self.note_detail_body_output.textCursor().MoveOperation.Start
         )
         if hasattr(self, "note_detail_stack"):
             self.note_detail_stack.setCurrentIndex(1)
+
+    def run_toggle_note_body_visibility(self) -> None:
+        if not self._note_detail_plaintext_body and not self._note_detail_ciphertext_body:
+            return
+        self._note_detail_body_is_hidden = not self._note_detail_body_is_hidden
+        if self._note_detail_body_is_hidden:
+            self.note_detail_body_output.setPlainText(self._note_detail_ciphertext_body)
+            self.toggle_note_body_button.setText("Show")
+        else:
+            self.note_detail_body_output.setPlainText(self._note_detail_plaintext_body)
+            self.toggle_note_body_button.setText("Hide")
+        self.note_detail_body_output.moveCursor(
+            self.note_detail_body_output.textCursor().MoveOperation.Start
+        )
 
     def _toggle_credential_password_visibility(self) -> None:
         if self.toggle_credential_password_button.text() == "Show":

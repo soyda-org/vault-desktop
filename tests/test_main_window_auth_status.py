@@ -501,6 +501,9 @@ def test_note_detail_renders_readonly_fields_with_focused_body_panel(app_fixture
             "plaintext_payload": {
                 "content": "Buy milk\nShip patch",
             },
+            "encrypted_payload": {
+                "ciphertext_b64": "ZW5jcnlwdGVkLW5vdGU=",
+            },
             "current_version": 3,
         }
     )
@@ -519,6 +522,38 @@ def test_note_detail_renders_readonly_fields_with_focused_body_panel(app_fixture
     assert window.note_detail_title_input.isReadOnly()
     assert window.note_detail_type_input.isReadOnly()
     assert window.note_detail_body_output.isReadOnly()
+    assert window.toggle_note_body_button.text() == "Hide"
+
+
+def test_note_body_toggle_switches_between_plaintext_and_ciphertext(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window._render_note_detail_fields(
+        {
+            "note_id": "note_1",
+            "note_type": "note",
+            "plaintext_title": "Daily plan",
+            "plaintext_payload": {
+                "content": "Buy milk\nShip patch",
+            },
+            "encrypted_payload": {
+                "ciphertext_b64": "ZW5jcnlwdGVkLW5vdGU=",
+            },
+        }
+    )
+
+    assert window.note_detail_body_output.toPlainText() == "Buy milk\nShip patch"
+    assert window.toggle_note_body_button.text() == "Hide"
+
+    window.run_toggle_note_body_visibility()
+
+    assert window.note_detail_body_output.toPlainText() == "ZW5jcnlwdGVkLW5vdGU="
+    assert window.toggle_note_body_button.text() == "Show"
+
+    window.run_toggle_note_body_visibility()
+
+    assert window.note_detail_body_output.toPlainText() == "Buy milk\nShip patch"
+    assert window.toggle_note_body_button.text() == "Hide"
 
 
 def test_note_copy_feedback_shows_inline_message(app_fixture, monkeypatch) -> None:
