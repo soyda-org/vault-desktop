@@ -4977,7 +4977,8 @@ class MainWindow(QMainWindow):
 
     def _perform_local_logout(self, status_text: str) -> None:
         self.desktop_service.logout()
-        self.password_input.clear()
+        if hasattr(self, "password_input"):
+            self.password_input.clear()
         self.reset_credential_create_fields()
         self.reset_note_create_fields()
         self.file_manifest_input.clear()
