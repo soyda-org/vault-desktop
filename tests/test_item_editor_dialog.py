@@ -87,7 +87,22 @@ def test_note_item_editor_dialog_reset_callback_restores_friendly_fields(
     assert dialog.title_input.text() == "Thought"
     assert dialog.tags_input.text() == "ideas"
     assert dialog.content_input.toPlainText() == "Draft body"
-    assert dialog.header_input.toPlainText() == ""
+
+
+def test_note_item_editor_dialog_has_no_placeholders_or_header_preview(app_fixture) -> None:
+    dialog = NoteItemEditorDialog(
+        title="New Note",
+        summary="Create note",
+        action_text="Create Note",
+        note_type="note",
+        metadata_text="{}",
+        payload_text="{}",
+    )
+
+    assert dialog.title_input.placeholderText() == ""
+    assert dialog.tags_input.placeholderText() == ""
+    assert dialog.content_input.placeholderText() == ""
+    assert not hasattr(dialog, "header_input")
 
 
 def test_note_item_editor_dialog_can_lock_note_type_in_edit_mode(app_fixture) -> None:

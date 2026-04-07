@@ -172,11 +172,9 @@ class NoteItemEditorDialog(QDialog):
         form.addRow("Note type", self.note_type_input)
 
         self.title_input = QLineEdit()
-        self.title_input.setPlaceholderText("Short note title")
         form.addRow("Title", self.title_input)
 
         self.tags_input = QLineEdit()
-        self.tags_input.setPlaceholderText("Comma-separated tags, for example: todo, personal")
         form.addRow("Tags", self.tags_input)
         layout.addLayout(form)
 
@@ -185,20 +183,8 @@ class NoteItemEditorDialog(QDialog):
         layout.addWidget(content_label)
 
         self.content_input = QPlainTextEdit()
-        self.content_input.setPlaceholderText("Write the note body here.")
         self.content_input.setMinimumHeight(260)
         layout.addWidget(self.content_input, 1)
-
-        header_label = QLabel("Last generated header")
-        header_label.setObjectName("fieldLabel")
-        layout.addWidget(header_label)
-
-        self.header_input = QPlainTextEdit()
-        self.header_input.setReadOnly(True)
-        self.header_input.setPlainText(header_text)
-        self.header_input.setPlaceholderText("A generated encryption header will appear here after save.")
-        self.header_input.setMinimumHeight(90)
-        layout.addWidget(self.header_input)
 
         actions = QHBoxLayout()
         actions.setContentsMargins(0, 0, 0, 0)
@@ -292,7 +278,6 @@ class NoteItemEditorDialog(QDialog):
             metadata_text=metadata_text,
             payload_text=payload_text,
         )
-        self.header_input.clear()
 
     def metadata_text(self) -> str:
         metadata = dict(self._extra_metadata)
