@@ -88,3 +88,18 @@ def test_note_item_editor_dialog_reset_callback_restores_friendly_fields(
     assert dialog.tags_input.text() == "ideas"
     assert dialog.content_input.toPlainText() == "Draft body"
     assert dialog.header_input.toPlainText() == ""
+
+
+def test_note_item_editor_dialog_can_lock_note_type_in_edit_mode(app_fixture) -> None:
+    dialog = NoteItemEditorDialog(
+        title="Edit Note",
+        summary="Edit note",
+        action_text="Save Note",
+        note_type="note",
+        note_type_read_only=True,
+        metadata_text=json.dumps({"tags": ["todo"]}, indent=2),
+        payload_text=json.dumps({"title": "Daily plan", "content": "Buy milk"}, indent=2),
+    )
+
+    assert dialog.note_type_input.isReadOnly() is True
+    assert dialog.note_type_text() == "note"

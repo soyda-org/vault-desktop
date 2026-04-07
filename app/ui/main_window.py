@@ -3309,6 +3309,7 @@ class MainWindow(QMainWindow):
             payload_text=self.note_payload_input.toPlainText(),
             header_text=self.note_header_input.toPlainText(),
             note_type=self.note_type_input.text().strip() or "note",
+            note_type_read_only=True,
             reset_callback=self._reset_note_editor_defaults,
             parent=self,
         )

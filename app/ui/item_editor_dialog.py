@@ -136,6 +136,7 @@ class NoteItemEditorDialog(QDialog):
         payload_text: str,
         header_text: str = "",
         note_type: str = "note",
+        note_type_read_only: bool = False,
         reset_callback=None,
         parent=None,
     ) -> None:
@@ -162,6 +163,7 @@ class NoteItemEditorDialog(QDialog):
         form.setVerticalSpacing(8)
 
         self.note_type_input = QLineEdit(note_type)
+        self.note_type_input.setReadOnly(note_type_read_only)
         form.addRow("Note type", self.note_type_input)
 
         self.title_input = QLineEdit()
