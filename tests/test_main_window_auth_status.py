@@ -424,6 +424,39 @@ def test_credentials_filter_buttons_switch_visible_items(app_fixture) -> None:
     assert "Legacy" in window.credentials_list.item(0).text()
 
 
+def test_notes_filter_buttons_switch_visible_items(app_fixture) -> None:
+    window = MainWindow(get_settings())
+    window._render_notes(
+        ObjectListResult(
+            items=[
+                {
+                    "note_id": "note_active",
+                    "plaintext_title": "todo",
+                    "note_type": "note",
+                    "state": "active",
+                    "current_version": 1,
+                },
+                {
+                    "note_id": "note_deleted",
+                    "plaintext_title": "archive",
+                    "note_type": "note",
+                    "state": "deleted",
+                    "current_version": 2,
+                },
+            ]
+        )
+    )
+
+    assert window.notes_list.count() == 1
+    assert "todo" in window.notes_list.item(0).text()
+
+    window.notes_deleted_filter_button.click()
+    app_fixture.processEvents()
+
+    assert window.notes_list.count() == 1
+    assert "archive" in window.notes_list.item(0).text()
+
+
 def test_credential_detail_renders_readonly_fields_with_masked_password(app_fixture) -> None:
     window = MainWindow(get_settings())
 

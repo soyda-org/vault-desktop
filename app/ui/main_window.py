@@ -473,6 +473,8 @@ class MainWindow(QMainWindow):
         self.current_credential_filter = "active"
         self.selected_note_id: str | None = None
         self.selected_note_current_version: int | None = None
+        self._note_items_cache: list[dict] = []
+        self.current_note_filter = "active"
         self._credential_detail_password_plaintext = ""
 
         self.credentials_list = QListWidget()
@@ -496,6 +498,16 @@ class MainWindow(QMainWindow):
             QSizePolicy.Policy.Expanding,
         )
         self.notes_list.itemDoubleClicked.connect(lambda _: self.load_note_detail())
+        self.notes_active_filter_button = QPushButton("Active")
+        self.notes_active_filter_button.setProperty("segment", "true")
+        self.notes_active_filter_button.clicked.connect(
+            lambda: self._set_note_filter("active")
+        )
+        self.notes_deleted_filter_button = QPushButton("Deleted")
+        self.notes_deleted_filter_button.setProperty("segment", "true")
+        self.notes_deleted_filter_button.clicked.connect(
+            lambda: self._set_note_filter("deleted")
+        )
 
         self.files_list = QListWidget()
         self.files_list.itemDoubleClicked.connect(lambda _: self.load_file_detail())
@@ -1469,6 +1481,14 @@ class MainWindow(QMainWindow):
         list_content.setSpacing(14)
         list_content.addLayout(list_actions)
         list_content.addWidget(self.notes_list, 1)
+        filter_row = QHBoxLayout()
+        filter_row.setContentsMargins(0, 0, 0, 0)
+        filter_row.setSpacing(8)
+        filter_row.addStretch(1)
+        filter_row.addWidget(self.notes_active_filter_button)
+        filter_row.addWidget(self.notes_deleted_filter_button)
+        filter_row.addStretch(1)
+        list_content.addLayout(filter_row)
 
         left_card = self._build_workspace_card(
             title=None,
@@ -1856,6 +1876,15 @@ class MainWindow(QMainWindow):
         self._repolish(self.credentials_active_filter_button)
         self._repolish(self.credentials_deleted_filter_button)
 
+    def _refresh_note_filter_buttons(self) -> None:
+        if not hasattr(self, "notes_active_filter_button"):
+            return
+        is_active = self.current_note_filter == "active"
+        self.notes_active_filter_button.setProperty("segmentCurrent", is_active)
+        self.notes_deleted_filter_button.setProperty("segmentCurrent", not is_active)
+        self._repolish(self.notes_active_filter_button)
+        self._repolish(self.notes_deleted_filter_button)
+
     def _filtered_credential_items(self) -> list[dict]:
         if self.current_credential_filter == "deleted":
             return [
@@ -1864,6 +1893,17 @@ class MainWindow(QMainWindow):
             ]
         return [
             item for item in self._credential_items_cache
+            if str(item.get("state", "")).lower() != "deleted"
+        ]
+
+    def _filtered_note_items(self) -> list[dict]:
+        if self.current_note_filter == "deleted":
+            return [
+                item for item in self._note_items_cache
+                if str(item.get("state", "")).lower() == "deleted"
+            ]
+        return [
+            item for item in self._note_items_cache
             if str(item.get("state", "")).lower() != "deleted"
         ]
 
@@ -1895,6 +1935,36 @@ class MainWindow(QMainWindow):
             return
         self.current_credential_filter = filter_name
         self._apply_credential_list_filter()
+
+    def _apply_note_list_filter(self) -> None:
+        filtered_items = self._filtered_note_items()
+        selected_id = self.selected_note_id
+        self.notes_list.clear()
+        for entry in filtered_items:
+            widget_item = QListWidgetItem(note_list_label(entry))
+            widget_item.setData(Qt.ItemDataRole.UserRole, entry.get("note_id"))
+            self.notes_list.addItem(widget_item)
+
+        if filtered_items:
+            if selected_id and self._select_note_item_by_id(selected_id):
+                pass
+            else:
+                self.notes_list.setCurrentRow(0)
+        else:
+            self.selected_note_id = None
+            self.selected_note_current_version = None
+            self._clear_note_detail_fields()
+
+        if not filtered_items:
+            self._show_note_detail_message(format_notes_items(filtered_items))
+        self._refresh_note_filter_buttons()
+        self._refresh_action_states()
+
+    def _set_note_filter(self, filter_name: str) -> None:
+        if filter_name not in {"active", "deleted"}:
+            return
+        self.current_note_filter = filter_name
+        self._apply_note_list_filter()
 
     def _handle_workspace_tab_changed(self, index: int) -> None:
         if not hasattr(self, "tabs"):
@@ -5084,20 +5154,8 @@ class MainWindow(QMainWindow):
             self._refresh_action_states()
             return
 
-        self.notes_list.clear()
-        for entry in result.items:
-            widget_item = QListWidgetItem(note_list_label(entry))
-            widget_item.setData(Qt.ItemDataRole.UserRole, entry.get("note_id"))
-            self.notes_list.addItem(widget_item)
-
-        self._show_note_detail_message(format_notes_items(result.items))
-
-        if self.notes_list.count() > 0:
-            self.notes_list.setCurrentRow(0)
-        else:
-            self._clear_note_detail_fields()
-
-        self._refresh_action_states()
+        self._note_items_cache = list(result.items)
+        self._apply_note_list_filter()
 
     def _render_files(self, result: ObjectListResult) -> None:
         if result.error:
