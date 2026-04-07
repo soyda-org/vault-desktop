@@ -1456,9 +1456,7 @@ class MainWindow(QMainWindow):
         detail_actions = QHBoxLayout()
         detail_actions.setContentsMargins(0, 0, 0, 0)
         detail_actions.setSpacing(8)
-        detail_actions.addWidget(self.load_note_detail_button)
         detail_actions.addStretch(1)
-        detail_actions.addWidget(self.reset_note_payload_button)
 
         detail_content = QVBoxLayout()
         detail_content.setContentsMargins(0, 0, 0, 0)
