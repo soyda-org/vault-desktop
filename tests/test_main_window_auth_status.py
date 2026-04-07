@@ -164,6 +164,26 @@ def test_shared_navbar_compacts_to_single_letters_when_window_is_narrow(app_fixt
     assert window.nav_vault_button.text() == "V"
 
 
+def test_file_chunk_size_input_formats_grouped_digits(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.file_chunk_size_kib_input.setValue(33333)
+
+    assert window.file_chunk_size_kib_input.text() == "33 333 KiB"
+
+
+def test_file_chunk_size_input_snaps_to_16_kib_steps(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    line_edit = window.file_chunk_size_kib_input.lineEdit()
+    assert line_edit is not None
+    line_edit.setText("33 333 KiB")
+    window.file_chunk_size_kib_input.interpretText()
+
+    assert window.file_chunk_size_kib_input.value() == 33328
+    assert window.file_chunk_size_kib_input.text() == "33 328 KiB"
+
+
 def test_main_window_restores_persisted_size(app_fixture, monkeypatch) -> None:
     from app.ui import main_window as main_window_module
 

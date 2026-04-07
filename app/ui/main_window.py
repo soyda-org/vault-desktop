@@ -9,7 +9,7 @@ import re
 import secrets
 
 from PySide6.QtCore import QByteArray, QThread, Qt, QEvent, QTimer
-from PySide6.QtGui import QColor, QFont, QFontDatabase, QTextDocument
+from PySide6.QtGui import QColor, QFont, QFontDatabase, QTextDocument, QValidator
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -103,6 +103,31 @@ class ActivityStatusLabel(QLabel):
     def setText(self, text: str) -> None:  # type: ignore[override]
         super().setText(text)
         self._on_change(text)
+
+
+class GroupedKiBSpinBox(QSpinBox):
+    _STEP_KIB = 16
+
+    def textFromValue(self, value: int) -> str:  # type: ignore[override]
+        return f"{value:,}".replace(",", " ")
+
+    def validate(self, text: str, pos: int) -> object:  # type: ignore[override]
+        normalized = text.strip()
+        if not normalized:
+            return (QValidator.State.Intermediate, text, pos)
+        if re.fullmatch(r"[\d ]+(\s*KiB)?", normalized):
+            return (QValidator.State.Acceptable, text, pos)
+        return (QValidator.State.Invalid, text, pos)
+
+    def valueFromText(self, text: str) -> int:  # type: ignore[override]
+        digits_only = re.sub(r"[^\d]", "", text)
+        if not digits_only:
+            return self.minimum()
+        raw_value = int(digits_only)
+        snapped_value = int(
+            self._STEP_KIB * round(raw_value / self._STEP_KIB)
+        )
+        return max(self.minimum(), min(self.maximum(), snapped_value))
 
 
 _MARKDOWN_PATTERN = re.compile(
@@ -898,8 +923,9 @@ class MainWindow(QMainWindow):
         self.file_download_target_input.setReadOnly(True)
         self.file_download_target_input.setPlaceholderText("No local download target selected.")
 
-        self.file_chunk_size_kib_input = QSpinBox()
-        self.file_chunk_size_kib_input.setRange(1, 102400)
+        self.file_chunk_size_kib_input = GroupedKiBSpinBox()
+        self.file_chunk_size_kib_input.setRange(16, 102400)
+        self.file_chunk_size_kib_input.setSingleStep(16)
         self.file_chunk_size_kib_input.setValue(8192)
         self.file_chunk_size_kib_input.setSuffix(" KiB")
 
