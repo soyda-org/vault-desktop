@@ -340,6 +340,9 @@ class MainWindow(QMainWindow):
         self.keep_vault_open_checkbox.toggled.connect(
             lambda *_: self._handle_keep_vault_open_toggle()
         )
+        self.vault_session_identity_label = QLabel("")
+        self.vault_session_identity_label.setProperty("workspaceFooterText", True)
+        self.vault_session_identity_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.vault_auto_lock_countdown_label = QLabel()
         self.vault_auto_lock_countdown_label.setObjectName("vaultAutoLockCountdown")
         self.vault_auto_lock_countdown_label.setProperty("workspaceFooterText", True)
@@ -1261,6 +1264,7 @@ class MainWindow(QMainWindow):
             },
             preference_widgets={
                 "keep_open": self.keep_vault_open_checkbox,
+                "session_identity": self.vault_session_identity_label,
                 "auto_lock_status": self.vault_auto_lock_countdown_label,
             },
             workspace_nav_buttons={
@@ -6055,6 +6059,8 @@ class MainWindow(QMainWindow):
     def refresh_session_label(self) -> None:
         if not self.desktop_service.is_authenticated():
             self.session_label.setText("No active session.")
+            if hasattr(self, "vault_session_identity_label"):
+                self.vault_session_identity_label.setText("")
             self._refresh_system_state_indicators()
             return
 
@@ -6069,4 +6075,8 @@ class MainWindow(QMainWindow):
             f"Session ID: {session.session_id}\n"
             f"Vault key: {'loaded' if self.desktop_service.has_session_vault_master_key() else 'not loaded'}"
         )
+        if hasattr(self, "vault_session_identity_label"):
+            self.vault_session_identity_label.setText(
+                f"Logged in as {session.identifier}."
+            )
         self._refresh_system_state_indicators()

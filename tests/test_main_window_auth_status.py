@@ -362,6 +362,24 @@ def test_keep_vault_open_checkbox_reflects_saved_preference(app_fixture, monkeyp
     assert window.keep_vault_open_checkbox.isChecked() is True
 
 
+def test_refresh_session_label_updates_vault_footer_identity(app_fixture) -> None:
+    window = MainWindow(get_settings())
+
+    window.desktop_service.session_store.current = DesktopSession(
+        identifier="alice",
+        user_id="user_1",
+        device_id="device_1",
+        session_id="session_1",
+        access_token="token",
+        refresh_token="refresh-token",
+        token_type="bearer",
+    )
+
+    window.refresh_session_label()
+
+    assert window.vault_session_identity_label.text() == "Logged in as alice."
+
+
 def test_workspace_nav_buttons_follow_selected_tab(app_fixture) -> None:
     window = MainWindow(get_settings())
 
