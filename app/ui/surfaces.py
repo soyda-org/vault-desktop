@@ -88,6 +88,7 @@ class SystemWorkspaceView(QWidget):
         log_widgets: dict[str, QWidget],
     ) -> None:
         super().__init__()
+        self.setObjectName("vaultWorkspace")
         self._toolbar_widget: QWidget | None = None
         self.panel_stack = QStackedWidget()
 

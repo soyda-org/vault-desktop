@@ -104,7 +104,7 @@ class ActivityStatusLabel(QLabel):
 def _theme_palette(theme: str) -> dict[str, str]:
     if theme == "dark":
         return {
-            "window": "#0b1220",
+            "window": "#101b31",
             "surface": "#0f172a",
             "panel": "#101b31",
             "surface_alt": "#111c2e",
@@ -2330,6 +2330,10 @@ class MainWindow(QMainWindow):
             #surfacePanel[panelVariant="transparent"] {{
                 background: transparent;
                 border-color: {border};
+            }}
+            #vaultWorkspace {{
+                background: transparent;
+                border: 0;
             }}
             #surfacePanel[panelVariant="secondary"],
             #workspaceCard[cardVariant="secondary"],
