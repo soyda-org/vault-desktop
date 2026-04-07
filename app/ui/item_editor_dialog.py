@@ -188,7 +188,7 @@ class CredentialItemEditorDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.resize(760, 520)
+        self.resize(700, 310)
 
         self._extra_metadata: dict = {}
         self._extra_payload: dict = {}
@@ -199,11 +199,6 @@ class CredentialItemEditorDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(12)
-
-        summary_label = QLabel(summary)
-        summary_label.setObjectName("dialogSummary")
-        summary_label.setWordWrap(True)
-        layout.addWidget(summary_label)
 
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
