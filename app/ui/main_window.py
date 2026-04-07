@@ -1429,8 +1429,8 @@ class MainWindow(QMainWindow):
         splitter.addWidget(left_card)
         splitter.addWidget(detail_card)
         splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([540, 540])
+        splitter.setStretchFactor(1, 3)
+        splitter.setSizes([270, 810])
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
