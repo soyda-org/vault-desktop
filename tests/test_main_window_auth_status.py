@@ -399,7 +399,6 @@ def test_file_action_buttons_use_cleaner_labels(app_fixture) -> None:
     assert window.pick_download_target_button.text() == "Save Path"
     assert window.download_file_button.text() == "Download."
     assert window.cancel_file_download_button.text() == "Cancel."
-    assert window.reset_file_payload_button.text() == "Reset Draft"
 
 
 def test_file_selection_auto_loads_detail(app_fixture, monkeypatch) -> None:

@@ -498,10 +498,6 @@ class MainWindow(QMainWindow):
         self.cancel_file_download_button.setEnabled(False)
         self.cancel_file_download_button.setProperty("tone", "danger")
 
-        self.reset_file_payload_button = QPushButton("Reset Draft")
-        self.reset_file_payload_button.clicked.connect(self.reset_file_create_fields)
-        self.reset_file_payload_button.setProperty("tone", "secondary")
-
         self.file_upload_thread: QThread | None = None
         self.file_upload_worker: FileUploadWorker | None = None
         self.file_download_thread: QThread | None = None
@@ -1608,7 +1604,6 @@ class MainWindow(QMainWindow):
         upload_actions_layout.setSpacing(8)
         upload_actions_layout.addWidget(self.create_file_button)
         upload_actions_layout.addWidget(self.cancel_file_upload_button)
-        upload_actions_layout.addWidget(self.reset_file_payload_button)
         upload_actions_layout.addStretch(1)
 
         upload_path_row = QHBoxLayout()
@@ -5571,7 +5566,6 @@ class MainWindow(QMainWindow):
             self.create_file_button,
             self.pick_download_target_button,
             self.download_file_button,
-            self.reset_file_payload_button,
             self.file_chunk_size_kib_input,
             self.recovery_key_b64_input,
             self.unlock_with_recovery_key_button,
