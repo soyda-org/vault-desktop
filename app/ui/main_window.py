@@ -650,8 +650,12 @@ class MainWindow(QMainWindow):
         self.note_detail_type_input.setAlignment(
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         )
-        self.note_detail_type_input.setMinimumWidth(120)
+        self.note_detail_type_input.setMinimumWidth(0)
         self.note_detail_type_input.setMaximumWidth(220)
+        self.note_detail_type_input.setSizePolicy(
+            QSizePolicy.Policy.Fixed,
+            QSizePolicy.Policy.Fixed,
+        )
         self.note_detail_type_input.setProperty("ghostField", True)
         self.note_detail_type_input.setProperty("autoFilled", True)
 
@@ -4779,6 +4783,16 @@ class MainWindow(QMainWindow):
             self.credential_detail_password_input.text(),
         )
 
+    def _refresh_note_detail_field_widths(self) -> None:
+        if not hasattr(self, "note_detail_type_input"):
+            return
+        self._set_detail_input_width(
+            self.note_detail_type_input,
+            self.note_detail_type_input.text(),
+            minimum=48,
+            maximum=120,
+        )
+
     def _render_credential_detail_fields(self, item: dict) -> None:
         payload = item.get("plaintext_payload") or {}
         metadata = item.get("plaintext_metadata") or {}
@@ -4849,6 +4863,9 @@ class MainWindow(QMainWindow):
 
         self.note_detail_title_input.setText(title_value)
         self.note_detail_type_input.setText(note_type_value.upper())
+        self._refresh_note_detail_field_widths()
+        self.note_detail_title_input.setCursorPosition(0)
+        self.note_detail_type_input.setCursorPosition(0)
         self.note_detail_body_output.setPlainText(body_value)
         self.note_detail_body_output.moveCursor(
             self.note_detail_body_output.textCursor().MoveOperation.Start
