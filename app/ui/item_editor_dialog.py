@@ -18,6 +18,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from app.services.password_generator import PasswordPolicy, generate_password
+
 
 _MARKDOWN_PATTERN = re.compile(
     r"(^#{1,6}\s)|(^[-*+]\s)|(^\d+\.\s)|(```)|(`[^`]+`)|(\[[^\]]+\]\([^)]+\))|(\*\*[^*]+\*\*)|(^>\s)",
@@ -213,7 +215,19 @@ class CredentialItemEditorDialog(QDialog):
 
         self.secret_input = QLineEdit()
         self.secret_input.setEchoMode(QLineEdit.EchoMode.Password)
-        form.addRow("Secret", self.secret_input)
+        secret_row = QHBoxLayout()
+        secret_row.setContentsMargins(0, 0, 0, 0)
+        secret_row.setSpacing(8)
+        secret_row.addWidget(self.secret_input, 1)
+        self.toggle_secret_button = QPushButton("Show")
+        self.toggle_secret_button.setProperty("tone", "secondary")
+        self.toggle_secret_button.clicked.connect(self.toggle_secret_visibility)
+        secret_row.addWidget(self.toggle_secret_button, 0)
+        self.generate_secret_button = QPushButton("Generate")
+        self.generate_secret_button.setProperty("tone", "secondary")
+        self.generate_secret_button.clicked.connect(self.generate_strong_secret)
+        secret_row.addWidget(self.generate_secret_button, 0)
+        form.addRow("Secret", secret_row)
 
         self.url_input = QLineEdit()
         form.addRow("URL", self.url_input)
@@ -245,6 +259,28 @@ class CredentialItemEditorDialog(QDialog):
             metadata_text=metadata_text,
             payload_text=payload_text,
         )
+
+    def toggle_secret_visibility(self) -> None:
+        if self.secret_input.echoMode() == QLineEdit.EchoMode.Password:
+            self.secret_input.setEchoMode(QLineEdit.EchoMode.Normal)
+            self.toggle_secret_button.setText("Hide")
+            return
+        self.secret_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self.toggle_secret_button.setText("Show")
+
+    def generate_strong_secret(self) -> None:
+        password = generate_password(
+            PasswordPolicy(
+                length=32,
+                use_uppercase=True,
+                use_lowercase=True,
+                use_digits=True,
+                use_symbols=True,
+            )
+        )
+        self.secret_input.setText(password)
+        self.secret_input.setEchoMode(QLineEdit.EchoMode.Normal)
+        self.toggle_secret_button.setText("Hide")
 
     def _parse_json_object(self, text: str) -> dict:
         raw = text.strip()

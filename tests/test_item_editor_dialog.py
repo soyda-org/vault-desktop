@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import string
 
 import pytest
 from PySide6.QtWidgets import QApplication
@@ -97,6 +98,50 @@ def test_credential_item_editor_dialog_empty_defaults_render_blank_fields(app_fi
     assert dialog.username_input.text() == ""
     assert dialog.secret_input.text() == ""
     assert dialog.url_input.text() == ""
+
+
+def test_credential_item_editor_dialog_secret_toggle_switches_visibility(app_fixture) -> None:
+    dialog = CredentialItemEditorDialog(
+        title="New Credential",
+        summary="Create credential",
+        action_text="Create Credential",
+        metadata_text="{}",
+        payload_text=json.dumps({"secret": "s3cr3t"}, indent=2),
+    )
+
+    assert dialog.secret_input.echoMode() == dialog.secret_input.EchoMode.Password
+    assert dialog.toggle_secret_button.text() == "Show"
+
+    dialog.toggle_secret_button.click()
+
+    assert dialog.secret_input.echoMode() == dialog.secret_input.EchoMode.Normal
+    assert dialog.toggle_secret_button.text() == "Hide"
+
+    dialog.toggle_secret_button.click()
+
+    assert dialog.secret_input.echoMode() == dialog.secret_input.EchoMode.Password
+    assert dialog.toggle_secret_button.text() == "Show"
+
+
+def test_credential_item_editor_dialog_generate_sets_strong_password(app_fixture) -> None:
+    dialog = CredentialItemEditorDialog(
+        title="New Credential",
+        summary="Create credential",
+        action_text="Create Credential",
+        metadata_text="{}",
+        payload_text="{}",
+    )
+
+    dialog.generate_secret_button.click()
+
+    generated = dialog.secret_input.text()
+    assert len(generated) == 32
+    assert any(char in string.ascii_uppercase for char in generated)
+    assert any(char in string.ascii_lowercase for char in generated)
+    assert any(char in string.digits for char in generated)
+    assert any(char in "!@#$%^&*()-_=+[]{};:,.?/" for char in generated)
+    assert dialog.secret_input.echoMode() == dialog.secret_input.EchoMode.Normal
+    assert dialog.toggle_secret_button.text() == "Hide"
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
