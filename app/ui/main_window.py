@@ -1643,11 +1643,6 @@ class MainWindow(QMainWindow):
         )
         upload_card.setObjectName("flatWorkspacePanel")
 
-        top_divider = QFrame()
-        top_divider.setObjectName("workspaceDividerLine")
-        top_divider.setFrameShape(QFrame.Shape.HLine)
-        top_divider.setFixedWidth(280)
-
         download_actions_layout = QHBoxLayout()
         download_actions_layout.setContentsMargins(0, 0, 0, 0)
         download_actions_layout.setSpacing(8)
@@ -1711,15 +1706,9 @@ class MainWindow(QMainWindow):
         top_row = QHBoxLayout()
         top_row.setContentsMargins(0, 0, 0, 0)
         top_row.setSpacing(12)
-        top_row.addWidget(upload_card, 3)
+        top_row.addWidget(upload_card, 1)
         top_row.addWidget(vertical_divider, 0)
-        top_row.addWidget(download_card, 2)
-
-        divider_row = QHBoxLayout()
-        divider_row.setContentsMargins(0, 0, 0, 0)
-        divider_row.addStretch(1)
-        divider_row.addWidget(top_divider, 0)
-        divider_row.addStretch(1)
+        top_row.addWidget(download_card, 1)
 
         bottom_row = QHBoxLayout()
         bottom_row.setContentsMargins(0, 0, 0, 0)
@@ -1731,7 +1720,6 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(12)
         layout.addLayout(top_row, 0)
-        layout.addLayout(divider_row, 0)
         layout.addLayout(bottom_row, 1)
 
         widget = QWidget()
