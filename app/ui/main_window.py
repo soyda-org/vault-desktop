@@ -4367,7 +4367,8 @@ class MainWindow(QMainWindow):
             selected_file_entry = selected_item.data(Qt.ItemDataRole.UserRole + 1)
             if isinstance(selected_file_entry, dict):
                 selected_file_name = str(
-                    selected_file_entry.get("name")
+                    selected_file_entry.get("plaintext_filename")
+                    or selected_file_entry.get("name")
                     or selected_file_entry.get("plaintext_name")
                     or ""
                 ).strip()

@@ -488,8 +488,8 @@ def test_pick_download_target_prefills_selected_filename(app_fixture, monkeypatc
             items=[
                 {
                     "file_id": "file_1",
-                    "name": "courier-code.zip",
-                    "size": 62181,
+                    "plaintext_filename": "courier-code.zip",
+                    "plaintext_size_bytes": 62181,
                     "state": "active",
                     "current_version": 1,
                 }
