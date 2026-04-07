@@ -178,6 +178,21 @@ def test_main_window_restores_persisted_size(app_fixture, monkeypatch) -> None:
     assert window.height() == 650
 
 
+def test_main_window_restores_persisted_position(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    monkeypatch.setattr(
+        main_window_module.LocalSettingsStore,
+        "load",
+        lambda self: PersistedUiSettings(window_x=120, window_y=90),
+    )
+
+    window = MainWindow(get_settings())
+
+    assert window.x() == 120
+    assert window.y() == 90
+
+
 def test_quick_crypto_passphrase_field_follows_method_mode(app_fixture) -> None:
     window = MainWindow(get_settings())
 

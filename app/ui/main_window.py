@@ -207,6 +207,14 @@ class MainWindow(QMainWindow):
             max(600, self.persisted_ui_settings.window_width),
             max(400, self.persisted_ui_settings.window_height),
         )
+        if (
+            self.persisted_ui_settings.window_x is not None
+            and self.persisted_ui_settings.window_y is not None
+        ):
+            self.move(
+                self.persisted_ui_settings.window_x,
+                self.persisted_ui_settings.window_y,
+            )
         self._apply_theme()
 
         self._last_activity_message = ""
@@ -2708,6 +2716,8 @@ class MainWindow(QMainWindow):
             identifier=self.identifier_input.text().strip() or "alice",
             device_name=self.device_name_input.text().strip() or default_device_name,
             platform=self.platform_input.text().strip() or default_platform,
+            window_x=self.x(),
+            window_y=self.y(),
             window_width=self.width(),
             window_height=self.height(),
             last_tab_index=self.tabs.currentIndex(),
