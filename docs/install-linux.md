@@ -50,7 +50,7 @@ Before first real use:
 
 1. make sure `vault-api` is reachable from the target machine
 2. open the desktop app
-3. set the API base URL if needed
+3. if the API is not running on the same machine, change the API base URL from the default `http://127.0.0.1:8000`
 4. probe the API
 5. sign up or log in
 

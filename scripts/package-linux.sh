@@ -43,7 +43,10 @@ mkdir -p "$RELEASE_DIR"
 cp "$ROOT_DIR/docs/install-linux.md" "$APP_DIR/INSTALL.md"
 
 tar -czf "$ARCHIVE_PATH" -C "$DIST_DIR" vault-desktop
-sha256sum "$ARCHIVE_PATH" > "$CHECKSUM_PATH"
+(
+  cd "$RELEASE_DIR"
+  sha256sum "vault-desktop-linux.tar.gz" > "vault-desktop-linux.tar.gz.sha256"
+)
 
 printf '\nDesktop package created in %s\n' "$APP_DIR"
 printf 'Release archive: %s\n' "$ARCHIVE_PATH"
