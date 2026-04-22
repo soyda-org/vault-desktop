@@ -6,6 +6,7 @@ import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from app.core.app_paths import get_local_app_config_dir
 from vault_crypto.encoding import b64decode_text, b64encode_bytes
 from vault_crypto.envelopes import (
     EncryptedPayloadEnvelope,
@@ -34,7 +35,7 @@ class LocalPinBootstrap:
 class LocalPinBootstrapStore:
     def __init__(self, config_path: Path | None = None) -> None:
         self.config_path = config_path or (
-            Path.home() / ".config" / "vault-desktop" / "pin_bootstrap.json"
+            get_local_app_config_dir() / "pin_bootstrap.json"
         )
 
     def load(self) -> LocalPinBootstrap | None:

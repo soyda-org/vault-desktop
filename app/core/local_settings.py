@@ -6,6 +6,8 @@ from pathlib import Path
 import platform as platform_module
 import socket
 
+from app.core.app_paths import get_local_app_config_dir
+
 
 def detect_local_device_defaults() -> tuple[str, str]:
     raw_name = socket.gethostname().strip()
@@ -39,9 +41,7 @@ class PersistedUiSettings:
 
 class LocalSettingsStore:
     def __init__(self, config_path: Path | None = None) -> None:
-        self.config_path = config_path or (
-            Path.home() / ".config" / "vault-desktop" / "settings.json"
-        )
+        self.config_path = config_path or (get_local_app_config_dir() / "settings.json")
 
     def load(self) -> PersistedUiSettings:
         defaults = build_default_ui_settings()

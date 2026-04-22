@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from app.core import pin_bootstrap
 from app.core.pin_bootstrap import (
     LocalPinBootstrapStore,
     create_local_pin_bootstrap,
@@ -63,3 +64,17 @@ def test_local_pin_bootstrap_store_round_trip_and_clear(tmp_path: Path) -> None:
 
     store.clear()
     assert store.load() is None
+
+
+def test_local_pin_bootstrap_store_uses_windows_appdata(monkeypatch) -> None:
+    monkeypatch.setattr(
+        pin_bootstrap,
+        "get_local_app_config_dir",
+        lambda: Path(r"C:\Users\steve\AppData\Roaming\vault-desktop"),
+    )
+
+    store = LocalPinBootstrapStore()
+
+    assert str(store.config_path).replace("/", "\\") == (
+        r"C:\Users\steve\AppData\Roaming\vault-desktop\pin_bootstrap.json"
+    )

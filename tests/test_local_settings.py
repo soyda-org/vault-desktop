@@ -219,3 +219,29 @@ def test_load_restores_window_geometry_blob(tmp_path: Path) -> None:
     loaded = LocalSettingsStore(config_path=config_path).load()
 
     assert loaded.window_geometry_b64 == "ZmFrZS1nZW9tZXRyeQ=="
+
+
+def test_default_config_path_uses_windows_appdata(monkeypatch) -> None:
+    monkeypatch.setattr(
+        local_settings,
+        "get_local_app_config_dir",
+        lambda: Path(r"C:\Users\steve\AppData\Roaming\vault-desktop"),
+    )
+
+    store = LocalSettingsStore()
+
+    assert str(store.config_path).replace("/", "\\") == (
+        r"C:\Users\steve\AppData\Roaming\vault-desktop\settings.json"
+    )
+
+
+def test_default_config_path_uses_xdg_config_home(monkeypatch) -> None:
+    monkeypatch.setattr(
+        local_settings,
+        "get_local_app_config_dir",
+        lambda: Path("/tmp/xdg-config/vault-desktop"),
+    )
+
+    store = LocalSettingsStore()
+
+    assert store.config_path == Path("/tmp/xdg-config/vault-desktop/settings.json")

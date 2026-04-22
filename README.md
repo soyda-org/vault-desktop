@@ -56,24 +56,33 @@ so network-bound work should stay off the UI thread.
 
 ## Packaging
 
-Current recommended release path is Linux-first packaging via PyInstaller in one-folder mode.
+Current recommended release path is PyInstaller in one-folder mode, with separate host-native packaging on Linux and Windows.
 
 Prerequisites:
 
 1. create the desktop virtual environment
 2. ensure the sibling `vault-crypto` repository is present
-3. run `scripts/package-linux.sh`
+3. run `scripts/package-linux.sh` on Linux or `scripts/package-windows.ps1` on Windows
 
 That script installs `vault-crypto` into the desktop virtualenv, installs the desktop build dependencies,
 and produces:
 
 - a bundled app under `dist/vault-desktop/`
-- a transferable archive under `release/vault-desktop-linux.tar.gz`
-- a SHA-256 checksum file under `release/vault-desktop-linux.tar.gz.sha256`
+- a transferable Linux archive under `release/vault-desktop-linux.tar.gz`
+- a Linux SHA-256 checksum file under `release/vault-desktop-linux.tar.gz.sha256`
+- or a transferable Windows archive under `release/vault-desktop-windows.zip`
+- and a Windows SHA-256 checksum file under `release/vault-desktop-windows.zip.sha256`
 
 For target-machine installation steps, see:
 
 - `docs/install-linux.md`
+- `docs/install-windows.md`
+
+Local desktop preferences are stored per-platform:
+
+- Linux: `~/.config/vault-desktop/`
+- macOS: `~/Library/Application Support/vault-desktop/`
+- Windows: `%APPDATA%\\vault-desktop\\`
 
 ## Related docs
 
