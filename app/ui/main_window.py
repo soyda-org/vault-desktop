@@ -542,7 +542,6 @@ class MainWindow(QMainWindow):
         self.file_download_thread: QThread | None = None
         self.file_download_worker: FileDownloadWorker | None = None
         self._network_action_thread: QThread | None = None
-        self._network_action_worker: NetworkActionWorker | None = None
 
         self.selected_credential_id: str | None = None
         self.selected_credential_current_version: int | None = None
@@ -3160,7 +3159,6 @@ class MainWindow(QMainWindow):
             self.sign_up_button.setEnabled(enabled)
 
     def _cleanup_network_action(self) -> None:
-        self._network_action_worker = None
         self._network_action_thread = None
         self._set_auth_network_controls_enabled(True)
 
@@ -3175,22 +3173,14 @@ class MainWindow(QMainWindow):
         self.status_label.setText(status_text)
         self._set_auth_network_controls_enabled(False)
 
-        thread = QThread(self)
-        worker = NetworkActionWorker(action)
-        worker.moveToThread(thread)
-
-        thread.started.connect(worker.run)
-        worker.succeeded.connect(on_success)
-        worker.failed.connect(self._on_network_action_failed)
-        worker.succeeded.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.succeeded.connect(lambda _result: self._cleanup_network_action())
-        worker.failed.connect(lambda _message: self._cleanup_network_action())
-        thread.finished.connect(worker.deleteLater)
+        thread = NetworkActionWorker(action, self)
+        thread.succeeded.connect(on_success)
+        thread.failed.connect(self._on_network_action_failed)
+        thread.succeeded.connect(lambda _result: self._cleanup_network_action())
+        thread.failed.connect(lambda _message: self._cleanup_network_action())
         thread.finished.connect(thread.deleteLater)
 
         self._network_action_thread = thread
-        self._network_action_worker = worker
         thread.start()
 
     def _handle_probe_result(self, result) -> None:

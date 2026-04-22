@@ -2,19 +2,18 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QThread, Signal
 
 
-class NetworkActionWorker(QObject):
+class NetworkActionWorker(QThread):
     succeeded = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, action: Callable[[], Any]) -> None:
-        super().__init__()
+    def __init__(self, action: Callable[[], Any], parent=None) -> None:
+        super().__init__(parent)
         self._action = action
 
-    @Slot()
-    def run(self) -> None:
+    def run(self) -> None:  # type: ignore[override]
         try:
             result = self._action()
         except Exception as exc:
