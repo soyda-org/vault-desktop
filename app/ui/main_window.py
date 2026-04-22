@@ -380,6 +380,16 @@ class MainWindow(QMainWindow):
         self.system_messages_back_button = QPushButton("Back")
         self.system_messages_back_button.clicked.connect(self._return_from_system_logs)
 
+        self.api_base_url_input = QLineEdit()
+        self.api_base_url_input.setText(self.persisted_ui_settings.api_base_url)
+        self.api_base_url_input.setPlaceholderText("http://127.0.0.1:8000")
+        self.api_base_url_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.api_base_url_input.setProperty("ghostField", True)
+        self.api_base_url_input.setToolTip(
+            "API base URL used for probe, sign up, login, and vault actions."
+        )
+        self.api_base_url_input.returnPressed.connect(self.run_probe)
+
         self.identifier_input = QLineEdit()
         self.identifier_input.setText(self.persisted_ui_settings.identifier)
         self.identifier_input.setPlaceholderText("username")
@@ -1177,9 +1187,7 @@ class MainWindow(QMainWindow):
             lambda: self.tabs.setCurrentIndex(2)
         )
 
-        self.header_label = QLabel(
-            f"App: {settings.app_name} | Environment: {settings.environment} | API: {self.persisted_ui_settings.api_base_url}"
-        )
+        self.header_label = QLabel(self._build_header_label_text())
         self.header_label.setWordWrap(True)
 
         self.screen_eyebrow_label = QLabel()
@@ -1239,6 +1247,7 @@ class MainWindow(QMainWindow):
             vault_state_label=self.vault_state_label,
             api_details_label=self.api_details_label,
             form_widgets={
+                "api_base_url": self.api_base_url_input,
                 "identifier": self.identifier_input,
                 "password": self.password_input,
                 "device_name": self.device_name_input,
@@ -1417,6 +1426,17 @@ class MainWindow(QMainWindow):
         self._refresh_idle_policy()
         self._refresh_navbar_labels()
         self._refresh_note_action_labels()
+
+    def _build_header_label_text(self) -> str:
+        return (
+            f"App: {self.settings.app_name} | "
+            f"Environment: {self.settings.environment} | "
+            f"API: {self.api_client.base_url}"
+        )
+
+    def _refresh_header_label(self) -> None:
+        if hasattr(self, "header_label"):
+            self.header_label.setText(self._build_header_label_text())
 
     def _build_tab(
         self,
@@ -3043,6 +3063,46 @@ class MainWindow(QMainWindow):
             "token_type": session.token_type,
         }
 
+    def _apply_api_base_url_from_input(self, *, show_message: bool) -> bool:
+        candidate = self.api_base_url_input.text().strip().rstrip("/")
+        if not candidate:
+            if show_message:
+                self.status_label.setText("API base URL is required.")
+            return False
+
+        if candidate == self.api_client.base_url:
+            return True
+
+        updated_client = VaultApiClient(candidate)
+        self.api_client = updated_client
+        self.desktop_service.api_client = updated_client
+        self.desktop_service.vault_gateway = AuthenticatedVaultGateway(updated_client)
+        self.api_base_url_input.setText(updated_client.base_url)
+        self.persisted_ui_settings = PersistedUiSettings(
+            api_base_url=updated_client.base_url,
+            identifier=self.persisted_ui_settings.identifier,
+            device_name=self.persisted_ui_settings.device_name,
+            platform=self.persisted_ui_settings.platform,
+            window_geometry_b64=self.persisted_ui_settings.window_geometry_b64,
+            window_x=self.persisted_ui_settings.window_x,
+            window_y=self.persisted_ui_settings.window_y,
+            window_width=self.persisted_ui_settings.window_width,
+            window_height=self.persisted_ui_settings.window_height,
+            last_tab_index=self.persisted_ui_settings.last_tab_index,
+            theme=self.persisted_ui_settings.theme,
+            remember_session=self.persisted_ui_settings.remember_session,
+            keep_vault_open=self.persisted_ui_settings.keep_vault_open,
+            remembered_session=self.persisted_ui_settings.remembered_session,
+        )
+        self._refresh_header_label()
+        self._refresh_system_state_indicators()
+        self._save_ui_preferences()
+        if show_message:
+            self.status_label.setText(
+                f"API base URL updated.\nAPI: {updated_client.base_url}"
+            )
+        return True
+
     def _save_ui_preferences(self) -> None:
         default_device_name, default_platform = detect_local_device_defaults()
         normal_geometry = self.normalGeometry()
@@ -3055,7 +3115,7 @@ class MainWindow(QMainWindow):
             normal_geometry.height() if normal_geometry.isValid() else self.height()
         )
         updated_settings = PersistedUiSettings(
-            api_base_url=self.persisted_ui_settings.api_base_url,
+            api_base_url=self.api_client.base_url,
             identifier=self.identifier_input.text().strip() or "alice",
             device_name=self.device_name_input.text().strip() or default_device_name,
             platform=self.platform_input.text().strip() or default_platform,
@@ -3151,6 +3211,8 @@ class MainWindow(QMainWindow):
         )
 
     def run_probe(self) -> None:
+        if not self._apply_api_base_url_from_input(show_message=True):
+            return
         self._start_network_action(
             status_text="Probing API...",
             action=self.desktop_service.probe,
@@ -3188,6 +3250,8 @@ class MainWindow(QMainWindow):
         self._save_ui_preferences()
 
     def run_open_signup_dialog(self) -> None:
+        if not self._apply_api_base_url_from_input(show_message=True):
+            return
         default_device_name, default_platform = detect_local_device_defaults()
         dialog = SignupDialog(
             api_base_url=self.api_client.base_url,
@@ -3208,6 +3272,8 @@ class MainWindow(QMainWindow):
             self._refresh_action_states()
 
     def run_login(self) -> None:
+        if not self._apply_api_base_url_from_input(show_message=True):
+            return
         identifier = self.identifier_input.text().strip()
         password = self.password_input.text()
         device_name = self.device_name_input.text().strip()

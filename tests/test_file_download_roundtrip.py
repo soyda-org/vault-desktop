@@ -142,11 +142,13 @@ def test_decrypt_downloaded_file_roundtrip(tmp_path) -> None:
         ],
     }
 
+    streamed_chunks: list[dict] = []
     finalize_payload = build_encrypted_file_finalize_payload(
         source_path=sample_path,
         chunk_size_bytes=4,
         prepared_file=prepared,
         master_key_b64=master_key_b64,
+        progress_callback=lambda _current, _total, chunk: streamed_chunks.append(chunk),
     )
 
     file_detail = {
@@ -163,7 +165,7 @@ def test_decrypt_downloaded_file_roundtrip(tmp_path) -> None:
             "ciphertext_sha256_hex": chunk["ciphertext_sha256_hex"],
             "ciphertext_size_bytes": len(base64.b64decode(chunk["ciphertext_b64"])),
         }
-        for chunk in finalize_payload.chunks
+        for chunk in streamed_chunks
     ]
 
     result = decrypt_downloaded_file(
@@ -194,11 +196,13 @@ def test_decrypt_downloaded_file_rejects_chunk_sha_mismatch(tmp_path) -> None:
         ],
     }
 
+    streamed_chunks: list[dict] = []
     finalize_payload = build_encrypted_file_finalize_payload(
         source_path=sample_path,
         chunk_size_bytes=4,
         prepared_file=prepared,
         master_key_b64=master_key_b64,
+        progress_callback=lambda _current, _total, chunk: streamed_chunks.append(chunk),
     )
 
     bad_chunk_payloads = [
@@ -209,7 +213,7 @@ def test_decrypt_downloaded_file_rejects_chunk_sha_mismatch(tmp_path) -> None:
             "ciphertext_sha256_hex": ("0" * 64) if chunk["chunk_index"] == 0 else chunk["ciphertext_sha256_hex"],
             "ciphertext_size_bytes": len(base64.b64decode(chunk["ciphertext_b64"])),
         }
-        for chunk in finalize_payload.chunks
+        for chunk in streamed_chunks
     ]
 
     try:

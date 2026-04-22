@@ -211,6 +211,35 @@ def test_main_window_restores_persisted_size(app_fixture, monkeypatch) -> None:
     assert window.height() == 650
 
 
+def test_main_window_restores_persisted_api_base_url(app_fixture, monkeypatch) -> None:
+    from app.ui import main_window as main_window_module
+
+    monkeypatch.setattr(
+        main_window_module.LocalSettingsStore,
+        "load",
+        lambda self: PersistedUiSettings(api_base_url="http://10.0.0.8:18000"),
+    )
+
+    window = MainWindow(get_settings())
+
+    assert window.api_base_url_input.text() == "http://10.0.0.8:18000"
+    assert window.api_client.base_url == "http://10.0.0.8:18000"
+    assert "http://10.0.0.8:18000" in window.header_label.text()
+
+
+def test_main_window_updates_api_base_url_from_input(app_fixture) -> None:
+    window = MainWindow(get_settings())
+    window.local_settings_store.save = lambda settings: None  # type: ignore[assignment]
+
+    window.api_base_url_input.setText("http://10.0.0.25:18000/")
+
+    assert window._apply_api_base_url_from_input(show_message=False) is True
+    assert window.api_client.base_url == "http://10.0.0.25:18000"
+    assert window.desktop_service.api_client.base_url == "http://10.0.0.25:18000"
+    assert window.persisted_ui_settings.api_base_url == "http://10.0.0.25:18000"
+    assert "http://10.0.0.25:18000" in window.header_label.text()
+
+
 def test_main_window_restores_persisted_position(app_fixture, monkeypatch) -> None:
     from app.ui import main_window as main_window_module
 
@@ -926,6 +955,7 @@ def test_run_login_rejects_empty_password_before_network(app_fixture) -> None:
 
 def test_logout_clears_password_input(app_fixture) -> None:
     window = MainWindow(get_settings())
+    window.local_settings_store.save = lambda settings: None  # type: ignore[assignment]
     window.password_input.setText("super-secret")
 
     window._perform_local_logout("Session cleared locally.")

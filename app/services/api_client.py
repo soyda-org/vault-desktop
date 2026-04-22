@@ -551,7 +551,8 @@ class VaultApiClient:
         plaintext_size_bytes: int,
         encrypted_manifest: dict[str, Any],
         encryption_header: dict[str, Any],
-        chunks: list[dict[str, Any]],
+        chunk_count: int | None = None,
+        chunks: list[dict[str, Any]] | None = None,
         access_token: str | None = None,
     ) -> ObjectCreateResult:
         return self._post_object(
@@ -564,7 +565,32 @@ class VaultApiClient:
                 "plaintext_size_bytes": plaintext_size_bytes,
                 "encrypted_manifest": encrypted_manifest,
                 "encryption_header": encryption_header,
+                "chunk_count": chunk_count,
                 "chunks": chunks,
+            },
+            access_token=access_token,
+        )
+
+    def upload_prepared_file_chunk(
+        self,
+        *,
+        device_name: str,
+        file_id: str,
+        file_version: int,
+        chunk_index: int,
+        object_key: str,
+        ciphertext_b64: str,
+        ciphertext_sha256_hex: str,
+        access_token: str | None = None,
+    ) -> ObjectDetailResult:
+        return self._post_detail(
+            f"/api/v1/vault/files/{file_id}/chunks/{chunk_index}",
+            payload={
+                "device_name": device_name,
+                "file_version": file_version,
+                "object_key": object_key,
+                "ciphertext_b64": ciphertext_b64,
+                "ciphertext_sha256_hex": ciphertext_sha256_hex,
             },
             access_token=access_token,
         )

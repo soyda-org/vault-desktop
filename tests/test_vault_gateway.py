@@ -153,7 +153,8 @@ class FakeApiClient:
         plaintext_size_bytes,
         encrypted_manifest,
         encryption_header,
-        chunks,
+        chunk_count=None,
+        chunks=None,
         access_token=None,
     ):
         self.calls.append(
@@ -166,6 +167,7 @@ class FakeApiClient:
                 plaintext_size_bytes,
                 encrypted_manifest,
                 encryption_header,
+                chunk_count,
                 chunks,
                 access_token,
             )
@@ -174,6 +176,35 @@ class FakeApiClient:
             item={"file_id": file_id},
             error=None,
             status_code=201,
+        )
+
+    def upload_prepared_file_chunk(
+        self,
+        *,
+        device_name,
+        file_id,
+        file_version,
+        chunk_index,
+        object_key,
+        ciphertext_b64,
+        ciphertext_sha256_hex,
+        access_token=None,
+    ):
+        self.calls.append(
+            (
+                "upload_prepared_file_chunk",
+                device_name,
+                file_id,
+                file_version,
+                chunk_index,
+                object_key,
+                access_token,
+            )
+        )
+        return ObjectDetailResult(
+            item={"chunk_index": chunk_index, "object_key": object_key},
+            error=None,
+            status_code=200,
         )
 
 
@@ -333,14 +364,7 @@ def test_authenticated_gateway_finalize_file_uses_access_token() -> None:
         plaintext_size_bytes=16,
         encrypted_manifest={"ciphertext_b64": "YWJj"},
         encryption_header={"nonce_b64": "bm9uY2U="},
-        chunks=[
-            {
-                "chunk_index": 0,
-                "object_key": "files/prepared_file_001/v1/chunk_0000.bin",
-                "ciphertext_b64": "ZmFrZQ==",
-                "ciphertext_sha256_hex": "a" * 64,
-            }
-        ],
+        chunk_count=1,
     )
 
     assert result.error is None
@@ -355,13 +379,7 @@ def test_authenticated_gateway_finalize_file_uses_access_token() -> None:
         16,
         {"ciphertext_b64": "YWJj"},
         {"nonce_b64": "bm9uY2U="},
-        [
-            {
-                "chunk_index": 0,
-                "object_key": "files/prepared_file_001/v1/chunk_0000.bin",
-                "ciphertext_b64": "ZmFrZQ==",
-                "ciphertext_sha256_hex": "a" * 64,
-            }
-        ],
+        1,
+        None,
         "access-token",
     )

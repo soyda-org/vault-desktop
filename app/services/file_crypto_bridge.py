@@ -39,7 +39,7 @@ class EncryptedFileFinalizePayload:
     chunk_size_bytes: int
     encrypted_manifest: dict
     encryption_header: dict
-    chunks: list[dict]
+    chunk_count: int
 
 
 @dataclass(frozen=True)
@@ -88,7 +88,7 @@ def build_encrypted_file_finalize_payload(
     chunk_size_bytes: int,
     prepared_file: dict,
     master_key_b64: str,
-    progress_callback: Callable[[int, int], None] | None = None,
+    progress_callback: Callable[[int, int, dict], None] | None = None,
     should_cancel: Callable[[], bool] | None = None,
 ) -> EncryptedFileFinalizePayload:
     if chunk_size_bytes <= 0:
@@ -129,7 +129,6 @@ def build_encrypted_file_finalize_payload(
         ),
     )
 
-    finalize_chunks: list[dict] = []
     manifest_chunks: list[FileChunkDescriptor] = []
     total_chunks = len(prepared_chunks)
 
@@ -165,15 +164,6 @@ def build_encrypted_file_finalize_payload(
             chunk_envelope_bytes = dumps_canonical_bytes(chunk_envelope.to_dict())
             chunk_sha256_hex = hashlib.sha256(chunk_envelope_bytes).hexdigest()
 
-            finalize_chunks.append(
-                {
-                    "chunk_index": chunk_index,
-                    "object_key": object_key,
-                    "ciphertext_b64": b64encode_bytes(chunk_envelope_bytes),
-                    "ciphertext_sha256_hex": chunk_sha256_hex,
-                }
-            )
-
             manifest_chunks.append(
                 FileChunkDescriptor(
                     chunk_index=chunk_index,
@@ -184,7 +174,16 @@ def build_encrypted_file_finalize_payload(
             )
 
             if progress_callback is not None:
-                progress_callback(chunk_index + 1, total_chunks)
+                progress_callback(
+                    chunk_index + 1,
+                    total_chunks,
+                    {
+                        "chunk_index": chunk_index,
+                        "object_key": object_key,
+                        "ciphertext_b64": b64encode_bytes(chunk_envelope_bytes),
+                        "ciphertext_sha256_hex": chunk_sha256_hex,
+                    },
+                )
 
     raise_if_cancelled()
 
@@ -218,7 +217,7 @@ def build_encrypted_file_finalize_payload(
         chunk_size_bytes=chunk_size_bytes,
         encrypted_manifest={"ciphertext_b64": manifest_envelope.ciphertext_b64},
         encryption_header=manifest_envelope.header.to_dict(),
-        chunks=finalize_chunks,
+        chunk_count=total_chunks,
     )
 
 

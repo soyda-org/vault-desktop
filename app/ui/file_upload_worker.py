@@ -89,7 +89,14 @@ class FileUploadWorker(QObject):
 
             last_progress = -1
 
-            def on_chunk_encrypted(current_chunk: int, total_chunks: int) -> None:
+            uploaded_chunk_preview: list[dict[str, object]] = []
+            preview_limit = 5
+
+            def on_chunk_encrypted(
+                current_chunk: int,
+                total_chunks: int,
+                chunk_payload: dict[str, object],
+            ) -> None:
                 nonlocal last_progress
 
                 progress = 20 + int((current_chunk / max(total_chunks, 1)) * 60)
@@ -109,6 +116,28 @@ class FileUploadWorker(QObject):
                         f"Source: {inspection.source_path}"
                     )
 
+                upload_result = self.desktop_service.upload_prepared_file_chunk(
+                    device_name=self.device_name,
+                    file_id=str(prepared_file["file_id"]),
+                    file_version=int(prepared_file["file_version"]),
+                    chunk_index=int(chunk_payload["chunk_index"]),
+                    object_key=str(chunk_payload["object_key"]),
+                    ciphertext_b64=str(chunk_payload["ciphertext_b64"]),
+                    ciphertext_sha256_hex=str(chunk_payload["ciphertext_sha256_hex"]),
+                )
+                if upload_result.error:
+                    raise RuntimeError(upload_result.error)
+
+                if len(uploaded_chunk_preview) < preview_limit:
+                    uploaded_chunk_preview.append(
+                        {
+                            "chunk_index": chunk_payload["chunk_index"],
+                            "object_key": chunk_payload["object_key"],
+                            "ciphertext_sha256_hex": chunk_payload["ciphertext_sha256_hex"],
+                            "ciphertext_b64_length": len(str(chunk_payload["ciphertext_b64"])),
+                        }
+                    )
+
             finalize_payload = build_encrypted_file_finalize_payload(
                 source_path=self.source_path,
                 chunk_size_bytes=self.chunk_size_bytes,
@@ -121,7 +150,10 @@ class FileUploadWorker(QObject):
             self.payload_preview_ready.emit(
                 finalize_payload.encrypted_manifest,
                 finalize_payload.encryption_header,
-                self._build_chunk_preview(finalize_payload),
+                self._build_chunk_preview(
+                    finalize_payload=finalize_payload,
+                    uploaded_chunk_preview=uploaded_chunk_preview,
+                ),
             )
 
             self._raise_if_cancelled()
@@ -130,7 +162,7 @@ class FileUploadWorker(QObject):
             self.progress_text.emit(
                 "Finalizing encrypted upload...\n"
                 f"File ID: {finalize_payload.file_id}\n"
-                f"Chunk count: {len(finalize_payload.chunks)}"
+                f"Chunk count: {finalize_payload.chunk_count}"
             )
 
             result = self.desktop_service.finalize_file(
@@ -141,7 +173,7 @@ class FileUploadWorker(QObject):
                 plaintext_size_bytes=finalize_payload.total_plaintext_size,
                 encrypted_manifest=finalize_payload.encrypted_manifest,
                 encryption_header=finalize_payload.encryption_header,
-                chunks=finalize_payload.chunks,
+                chunk_count=finalize_payload.chunk_count,
             )
             if result.error:
                 raise RuntimeError(result.error)
@@ -161,36 +193,16 @@ class FileUploadWorker(QObject):
         finally:
             self.finished.emit()
 
-    def _build_chunk_preview(self, finalize_payload) -> object:
-        chunks = list(finalize_payload.chunks)
-        should_render_full_chunks = (
-            len(chunks) <= 8
-            and all(len(str(chunk.get("ciphertext_b64", ""))) <= 2048 for chunk in chunks)
-        )
-
-        if should_render_full_chunks:
-            return chunks
-
-        preview_count = min(5, len(chunks))
-        preview = []
-        for chunk in chunks[:preview_count]:
-            preview.append(
-                {
-                    "chunk_index": chunk.get("chunk_index"),
-                    "object_key": chunk.get("object_key"),
-                    "ciphertext_sha256_hex": chunk.get("ciphertext_sha256_hex"),
-                    "ciphertext_b64_length": len(str(chunk.get("ciphertext_b64", ""))),
-                }
-            )
-
+    def _build_chunk_preview(self, finalize_payload, uploaded_chunk_preview) -> object:
+        preview_count = len(uploaded_chunk_preview)
         return {
             "display_mode": "summary_only",
-            "reason": "encrypted chunk payload too large for QTextEdit rendering",
+            "reason": "chunk payloads are streamed to the API during encryption",
             "file_id": finalize_payload.file_id,
             "file_version": finalize_payload.file_version,
             "total_plaintext_size": finalize_payload.total_plaintext_size,
             "chunk_size_bytes": finalize_payload.chunk_size_bytes,
-            "chunk_count": len(chunks),
+            "chunk_count": finalize_payload.chunk_count,
             "preview_count": preview_count,
-            "preview": preview,
+            "preview": uploaded_chunk_preview,
         }

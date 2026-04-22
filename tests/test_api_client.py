@@ -268,14 +268,7 @@ def test_finalize_file_posts_authenticated_payload(monkeypatch) -> None:
         plaintext_size_bytes=16,
         encrypted_manifest={"ciphertext_b64": "YWJj"},
         encryption_header={"nonce_b64": "bm9uY2U="},
-        chunks=[
-            {
-                "chunk_index": 0,
-                "object_key": "files/prepared_file_001/v1/chunk_0000.bin",
-                "ciphertext_b64": "ZmFrZQ==",
-                "ciphertext_sha256_hex": "df520036f82f6d5c33e0666d8a48e45789fd03dfe3b5f37d663b0faaeeee48b2",
-            }
-        ],
+        chunk_count=1,
         access_token="access-token",
     )
 
@@ -288,4 +281,5 @@ def test_finalize_file_posts_authenticated_payload(monkeypatch) -> None:
     assert captured["json"]["file_id"] == "prepared_file_001"
     assert captured["json"]["plaintext_filename"] == "sample.bin"
     assert captured["json"]["plaintext_size_bytes"] == 16
-    assert len(captured["json"]["chunks"]) == 1
+    assert captured["json"]["chunk_count"] == 1
+    assert captured["json"]["chunks"] is None

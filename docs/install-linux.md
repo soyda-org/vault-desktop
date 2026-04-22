@@ -50,7 +50,7 @@ Before first real use:
 
 1. make sure `vault-api` is reachable from the target machine
 2. open the desktop app
-3. if the API is not running on the same machine, change the API base URL from the default `http://127.0.0.1:8000`
+3. if the API is not running on the same machine, replace the default API base URL field value `http://127.0.0.1:8000` with the VM or host address you can actually reach, then click `Probe API`
 4. probe the API
 5. sign up or log in
 
@@ -59,3 +59,7 @@ Before first real use:
 - this package is Linux-specific
 - the bundled app does not require a sibling `vault-crypto` repo on the target machine
 - local UI preferences are still stored on the target machine in the user config directory
+- the chosen API base URL is persisted in `~/.config/vault-desktop/settings.json`
+- if the API runs inside a VM and the desktop runs on another machine, the VM must publish the API beyond `127.0.0.1`; for the compose stack that means setting `VAULT_API_PUBLISH_HOST=0.0.0.0` in `vault-infra/compose/.env` before starting the stack
+- file uploads are encrypted locally and streamed chunk by chunk to the API, which avoids buffering the full encrypted payload in desktop memory during large uploads
+- large file support also depends on the server schema being migrated; on the compose stack the API now runs `alembic upgrade head` at startup

@@ -61,13 +61,23 @@ def test_build_encrypted_file_finalize_payload_returns_real_encrypted_payloads(t
     assert result.file_version == 1
     assert result.total_plaintext_size == 10
     assert result.chunk_size_bytes == 4
-    assert len(result.chunks) == 3
+    assert result.chunk_count == 3
 
     assert result.encryption_header["object_type"] == "file_manifest"
     assert result.encryption_header["object_id"] == "file_001"
     assert "ciphertext_b64" in result.encrypted_manifest
 
-    first_chunk = result.chunks[0]
+    captured_chunks: list[dict] = []
+
+    build_encrypted_file_finalize_payload(
+        source_path=path,
+        chunk_size_bytes=4,
+        prepared_file=prepared,
+        master_key_b64=master_key_b64,
+        progress_callback=lambda _current, _total, chunk: captured_chunks.append(chunk),
+    )
+
+    first_chunk = captured_chunks[0]
     assert first_chunk["object_key"] == "files/file_001/v1/chunk_0000.bin"
     assert first_chunk["ciphertext_b64"] != base64.b64encode(b"abcd").decode("ascii")
 
@@ -124,7 +134,7 @@ def test_build_encrypted_file_finalize_payload_reports_progress_per_chunk(tmp_pa
         chunk_size_bytes=4,
         prepared_file=prepared,
         master_key_b64=master_key_b64,
-        progress_callback=lambda current, total: progress_calls.append((current, total)),
+        progress_callback=lambda current, total, _chunk: progress_calls.append((current, total)),
     )
 
     assert progress_calls == [(1, 3), (2, 3), (3, 3)]
@@ -181,7 +191,7 @@ def test_build_encrypted_file_finalize_payload_can_cancel_between_chunks(tmp_pat
             chunk_size_bytes=4,
             prepared_file=prepared,
             master_key_b64=master_key_b64,
-            progress_callback=lambda current, total: progress_calls.append((current, total)),
+            progress_callback=lambda current, total, _chunk: progress_calls.append((current, total)),
             should_cancel=lambda: len(progress_calls) >= 1,
         )
         assert False, "Expected UploadCancelledError"

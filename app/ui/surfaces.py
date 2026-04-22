@@ -124,7 +124,7 @@ class SystemWorkspaceView(QWidget):
         messages_row.addStretch(1)
         connect_layout.addLayout(messages_row)
 
-        for key in ("identifier", "password", "device_name", "platform"):
+        for key in ("api_base_url", "identifier", "password", "device_name", "platform"):
             form_widgets[key].setMinimumWidth(260)
             form_widgets[key].setMaximumWidth(560)
             content_column.addWidget(form_widgets[key], 0)

@@ -8,7 +8,8 @@ from app.ui.file_upload_worker import FileUploadWorker
 class FakeDesktopService:
     def __init__(self) -> None:
         self.prepare_calls: list[tuple[str, int]] = []
-        self.finalize_calls: list[tuple[str, str, int, str, int, int]] = []
+        self.upload_chunk_calls: list[tuple[str, str, int, int]] = []
+        self.finalize_calls: list[tuple[str, str, int, str, int, int | None]] = []
 
     def prepare_file(self, *, device_name: str, chunk_count: int) -> ObjectDetailResult:
         self.prepare_calls.append((device_name, chunk_count))
@@ -35,7 +36,8 @@ class FakeDesktopService:
         plaintext_size_bytes: int,
         encrypted_manifest: dict,
         encryption_header: dict,
-        chunks: list[dict],
+        chunk_count: int | None = None,
+        chunks: list[dict] | None = None,
     ) -> ObjectCreateResult:
         self.finalize_calls.append(
             (
@@ -44,13 +46,35 @@ class FakeDesktopService:
                 file_version,
                 plaintext_filename,
                 plaintext_size_bytes,
-                len(chunks),
+                chunk_count,
             )
         )
         return ObjectCreateResult(
             item={"file_id": file_id},
             error=None,
             status_code=201,
+        )
+
+    def upload_prepared_file_chunk(
+        self,
+        *,
+        device_name: str,
+        file_id: str,
+        file_version: int,
+        chunk_index: int,
+        object_key: str,
+        ciphertext_b64: str,
+        ciphertext_sha256_hex: str,
+    ) -> ObjectDetailResult:
+        self.upload_chunk_calls.append((device_name, file_id, file_version, chunk_index))
+        return ObjectDetailResult(
+            item={
+                "chunk_index": chunk_index,
+                "object_key": object_key,
+                "ciphertext_sha256_hex": ciphertext_sha256_hex,
+            },
+            error=None,
+            status_code=200,
         )
 
 

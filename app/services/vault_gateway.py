@@ -147,10 +147,26 @@ class VaultGateway(Protocol):
         device_name: str,
         file_id: str,
         file_version: int,
+        plaintext_filename: str,
+        plaintext_size_bytes: int,
         encrypted_manifest: dict,
         encryption_header: dict,
-        chunks: list[dict],
+        chunk_count: int | None = None,
+        chunks: list[dict] | None = None,
     ) -> ObjectCreateResult: ...
+
+    def upload_prepared_file_chunk(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        file_id: str,
+        file_version: int,
+        chunk_index: int,
+        object_key: str,
+        ciphertext_b64: str,
+        ciphertext_sha256_hex: str,
+    ) -> ObjectDetailResult: ...
 
 
 class AuthenticatedVaultGateway:
@@ -435,7 +451,8 @@ class AuthenticatedVaultGateway:
         plaintext_size_bytes: int,
         encrypted_manifest: dict,
         encryption_header: dict,
-        chunks: list[dict],
+        chunk_count: int | None = None,
+        chunks: list[dict] | None = None,
     ) -> ObjectCreateResult:
         return self.api_client.finalize_file(
             device_name=device_name,
@@ -445,7 +462,31 @@ class AuthenticatedVaultGateway:
             plaintext_size_bytes=plaintext_size_bytes,
             encrypted_manifest=encrypted_manifest,
             encryption_header=encryption_header,
+            chunk_count=chunk_count,
             chunks=chunks,
+            access_token=session.access_token,
+        )
+
+    def upload_prepared_file_chunk(
+        self,
+        session: DesktopSession,
+        *,
+        device_name: str,
+        file_id: str,
+        file_version: int,
+        chunk_index: int,
+        object_key: str,
+        ciphertext_b64: str,
+        ciphertext_sha256_hex: str,
+    ) -> ObjectDetailResult:
+        return self.api_client.upload_prepared_file_chunk(
+            device_name=device_name,
+            file_id=file_id,
+            file_version=file_version,
+            chunk_index=chunk_index,
+            object_key=object_key,
+            ciphertext_b64=ciphertext_b64,
+            ciphertext_sha256_hex=ciphertext_sha256_hex,
             access_token=session.access_token,
         )
 

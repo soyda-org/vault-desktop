@@ -210,7 +210,8 @@ class FakeVaultGateway:
         plaintext_size_bytes,
         encrypted_manifest,
         encryption_header,
-        chunks,
+        chunk_count=None,
+        chunks=None,
     ):
         self.calls.append(
             (
@@ -220,7 +221,7 @@ class FakeVaultGateway:
                 file_version,
                 plaintext_filename,
                 plaintext_size_bytes,
-                len(chunks),
+                chunk_count if chunk_count is not None else len(chunks or []),
                 session.access_token,
             )
         )
@@ -228,6 +229,35 @@ class FakeVaultGateway:
             item={"file_id": file_id},
             error=None,
             status_code=201,
+        )
+
+    def upload_prepared_file_chunk(
+        self,
+        session,
+        *,
+        device_name,
+        file_id,
+        file_version,
+        chunk_index,
+        object_key,
+        ciphertext_b64,
+        ciphertext_sha256_hex,
+    ):
+        self.calls.append(
+            (
+                "upload_prepared_file_chunk",
+                device_name,
+                file_id,
+                file_version,
+                chunk_index,
+                object_key,
+                session.access_token,
+            )
+        )
+        return ObjectDetailResult(
+            item={"chunk_index": chunk_index, "object_key": object_key},
+            error=None,
+            status_code=200,
         )
 
 
@@ -307,7 +337,8 @@ class OneFinalize401ThenSuccessGateway(FakeVaultGateway):
         plaintext_size_bytes,
         encrypted_manifest,
         encryption_header,
-        chunks,
+        chunk_count=None,
+        chunks=None,
     ):
         self.calls.append(
             (
@@ -317,7 +348,7 @@ class OneFinalize401ThenSuccessGateway(FakeVaultGateway):
                 file_version,
                 plaintext_filename,
                 plaintext_size_bytes,
-                len(chunks),
+                chunk_count if chunk_count is not None else len(chunks or []),
                 session.access_token,
             )
         )
@@ -485,7 +516,7 @@ def test_finalize_file_requires_session() -> None:
         plaintext_size_bytes=16,
         encrypted_manifest={"ciphertext_b64": "YWJj"},
         encryption_header={"nonce_b64": "bm9uY2U="},
-        chunks=[{"chunk_index": 0, "object_key": "files/prepared_file_001/v1/chunk_0000.bin", "ciphertext_b64": "ZmFrZQ==", "ciphertext_sha256_hex": "a" * 64}],
+        chunk_count=1,
     )
 
     assert result.item is None
@@ -506,7 +537,7 @@ def test_finalize_file_uses_gateway_with_current_session() -> None:
         plaintext_size_bytes=16,
         encrypted_manifest={"ciphertext_b64": "YWJj"},
         encryption_header={"nonce_b64": "bm9uY2U="},
-        chunks=[{"chunk_index": 0, "object_key": "files/prepared_file_001/v1/chunk_0000.bin", "ciphertext_b64": "ZmFrZQ==", "ciphertext_sha256_hex": "a" * 64}],
+        chunk_count=1,
     )
 
     assert result.error is None

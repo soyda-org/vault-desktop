@@ -534,7 +534,8 @@ class VaultDesktopService:
         plaintext_size_bytes: int,
         encrypted_manifest: dict,
         encryption_header: dict,
-        chunks: list[dict],
+        chunk_count: int | None = None,
+        chunks: list[dict] | None = None,
     ) -> ObjectCreateResult:
         return self._execute_create_with_refresh(
             lambda session: self.vault_gateway.finalize_file(
@@ -546,7 +547,32 @@ class VaultDesktopService:
                 plaintext_size_bytes=plaintext_size_bytes,
                 encrypted_manifest=encrypted_manifest,
                 encryption_header=encryption_header,
+                chunk_count=chunk_count,
                 chunks=chunks,
+            )
+        )
+
+    def upload_prepared_file_chunk(
+        self,
+        *,
+        device_name: str,
+        file_id: str,
+        file_version: int,
+        chunk_index: int,
+        object_key: str,
+        ciphertext_b64: str,
+        ciphertext_sha256_hex: str,
+    ) -> ObjectDetailResult:
+        return self._fetch_detail_write_with_refresh(
+            lambda session: self.vault_gateway.upload_prepared_file_chunk(
+                session,
+                device_name=device_name,
+                file_id=file_id,
+                file_version=file_version,
+                chunk_index=chunk_index,
+                object_key=object_key,
+                ciphertext_b64=ciphertext_b64,
+                ciphertext_sha256_hex=ciphertext_sha256_hex,
             )
         )
 
