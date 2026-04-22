@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Slot
 
 
 class NetworkActionWorker(QObject):
@@ -13,6 +13,7 @@ class NetworkActionWorker(QObject):
         super().__init__()
         self._action = action
 
+    @Slot()
     def run(self) -> None:
         try:
             result = self._action()
